@@ -10,7 +10,6 @@ const express = require('express');
 const config = require('./config');
 const db = require('./db');
 const { findAndCreateMatch } = require('./matching');
-const { sendTelegramMessage, buildMatchNotification } = require('./telegram');
 
 const app = express();
 
@@ -36,6 +35,11 @@ const KNOWN_ROUTES = [
 function isValidDate(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
 }
+
+// GET /requests — публичная страница со списком всех заявок (без контактов)
+app.get('/requests', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'requests.html'));
+});
 
 // POST /api/requests — сохранить новую заявку и попытаться найти совпадение
 app.post('/api/requests', (req, res) => {
@@ -71,15 +75,29 @@ app.post('/api/requests', (req, res) => {
   const info = insert.run(name, contact, travelDate, routeFrom, routeTo, peopleCount, comment);
   const requestId = info.lastInsertRowid;
 
-  // Пытаемся найти совпадение сразу после сохранения
+  // Пытаемся найти совпадение сразу после сохранения.
+  // Уведомлений администратору по этому событию нет (Telegram-бот не используется) —
+  // найденные совпадения видны в публичном списке заявок (GET /api/requests) и в
+  // /admin, администратор просто периодически туда заглядывает.
   const match = findAndCreateMatch(requestId);
 
-  if (match) {
-    // Не блокируем ответ пользователю ожиданием Telegram — просто запускаем отправку
-    sendTelegramMessage(buildMatchNotification(match.group, match.members));
-  }
-
   res.json({ ok: true, matched: Boolean(match) });
+});
+
+// GET /api/requests — публичный список заявок (для страницы со списком).
+// Контакты (WeChat/телефон) сюда не отдаём — это не приватная информация
+// напоказ всему интернету. Кто хочет откликнуться, увидит маршрут/дату и
+// поймёт, что заявка активна; связаться с автором заявки может администратор
+// через /admin, у него есть полные данные.
+app.get('/api/requests', (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT id, travel_date, route_from, route_to, people_count, comment, status, created_at
+       FROM requests
+       ORDER BY travel_date ASC, created_at DESC`
+    )
+    .all();
+  res.json({ ok: true, requests: rows });
 });
 
 // ---------------------------------------------------------------------------

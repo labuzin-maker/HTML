@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>所有拼车申请</title>
+<meta name="description" content="查看所有已提交的拼车申请:日期、路线、人数和状态(出于隐私保护,不显示联系方式)。">
+<link rel="stylesheet" href="/style.css">
+<style>
+  /* Небольшие правки специально для этой страницы (широкая таблица на мобильном) */
+  td, th { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page wide">
+
+  <div class="top-bar">
+    <div>
+      <h1>所有拼车申请</h1>
+      <p class="lead" style="margin:0;">出于隐私保护,这里不显示联系方式——如果看到合适的申请,请自己也提交一份,系统会自动帮你们匹配。</p>
+    </div>
+    <a class="btn btn-outline btn-small" href="/">+ 提交新申请</a>
+  </div>
+
+  <div id="notice" class="notice notice-error" hidden></div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table id="requests-table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>路线</th>
+            <th>人数</th>
+            <th>状态</th>
+            <th>备注</th>
+            <th>提交时间</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted" id="empty-hint" hidden>暂时还没有任何申请,来提交第一个吧!</p>
+  </div>
+
+</div>
+
+<script>
+  // Публичный статус-лейблы на китайском (для этой страницы; в админ-панели те же
+  // статусы показаны по-русски — см. public/admin.js).
+  const STATUS_LABELS = {
+    new: '新申请',
+    matched: '已匹配',
+    confirmed: '已确认',
+    rejected: '已拒绝',
+  };
+  const STATUS_CLASS = {
+    new: 'badge-new',
+    matched: 'badge-matched',
+    confirmed: 'badge-confirmed',
+    rejected: 'badge-rejected',
+  };
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  async function loadRequests() {
+    const notice = document.getElementById('notice');
+    try {
+      const res = await fetch('/api/requests');
+      const data = await res.json();
+      renderRequests(data.requests || []);
+    } catch (err) {
+      notice.textContent = '加载失败,请刷新页面重试';
+      notice.hidden = false;
+    }
+  }
+
+  function renderRequests(requests) {
+    const tbody = document.querySelector('#requests-table tbody');
+    const emptyHint = document.getElementById('empty-hint');
+    tbody.innerHTML = '';
+
+    if (requests.length === 0) {
+      emptyHint.hidden = false;
+      return;
+    }
+    emptyHint.hidden = true;
+
+    for (const r of requests) {
+      const tr = document.createElement('tr');
+      const label = STATUS_LABELS[r.status] || r.status;
+      const cls = STATUS_CLASS[r.status] || 'badge-new';
+      tr.innerHTML = `
+        <td>${escapeHtml(r.travel_date)}</td>
+        <td>${escapeHtml(r.route_from)} → ${escapeHtml(r.route_to)}</td>
+        <td>${r.people_count}</td>
+        <td><span class="badge ${cls}">${label}</span></td>
+        <td>${escapeHtml(r.comment || '—')}</td>
+        <td class="muted">${escapeHtml(r.created_at)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  loadRequests();
+</script>
+</body>
+</html>

@@ -24,10 +24,6 @@ module.exports = {
   MAX_GROUP_SIZE: toInt(process.env.MAX_GROUP_SIZE, 4),
   DATE_TOLERANCE_DAYS: toInt(process.env.DATE_TOLERANCE_DAYS, 1),
 
-  // --- Telegram-бот ---
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  TELEGRAM_ADMIN_CHAT_ID: process.env.TELEGRAM_ADMIN_CHAT_ID || '',
-
   // --- Админ-панель (простая защита паролем, HTTP Basic Auth) ---
   ADMIN_USER: process.env.ADMIN_USER || 'admin',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'change-me',
