@@ -152,6 +152,47 @@ app.get('/api/admin/requests', (req, res) => {
   res.json({ ok: true, requests: rows });
 });
 
+// DELETE /api/admin/requests/:id — удалить заявку.
+// Если заявка состояла в группе, её также нужно аккуратно убрать оттуда:
+// пересчитать total_people по оставшимся участникам, а если участников
+// не осталось вообще — удалить и саму группу (незачем хранить пустую).
+app.delete('/api/admin/requests/:id', (req, res) => {
+  const requestId = Number(req.params.id);
+  const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(requestId);
+  if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
+
+  const deleteRequest = db.transaction(() => {
+    // Группы, куда входила эта заявка (обычно не больше одной, но на всякий случай — все)
+    const groupIds = db
+      .prepare('SELECT group_id FROM group_requests WHERE request_id = ?')
+      .all(requestId)
+      .map((r) => r.group_id);
+
+    // ON DELETE CASCADE (см. db.js) сам подчистит строку в group_requests
+    db.prepare('DELETE FROM requests WHERE id = ?').run(requestId);
+
+    for (const groupId of groupIds) {
+      const remaining = db
+        .prepare(
+          `SELECT r.people_count FROM requests r
+           JOIN group_requests gr ON gr.request_id = r.id
+           WHERE gr.group_id = ?`
+        )
+        .all(groupId);
+
+      if (remaining.length === 0) {
+        db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
+      } else {
+        const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
+        db.prepare('UPDATE groups SET total_people = ? WHERE id = ?').run(totalPeople, groupId);
+      }
+    }
+  });
+
+  deleteRequest();
+  res.json({ ok: true });
+});
+
 // ---------------------------------------------------------------------------
 // Админ API: группы
 // ---------------------------------------------------------------------------

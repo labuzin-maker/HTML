@@ -70,10 +70,32 @@ function renderRequests(requests) {
       <td>${escapeHtml(r.comment || '—')}</td>
       <td>${statusBadge(r.status)}</td>
       <td class="muted">${escapeHtml(r.created_at)}</td>
+      <td><button type="button" class="btn btn-danger btn-small delete-req-btn" data-id="${r.id}">Удалить</button></td>
     `;
     tbody.appendChild(tr);
   }
 }
+
+// Делегируем клик на всю таблицу — строки перерисовываются целиком при
+// каждом обновлении, поэтому проще один раз слушать контейнер, чем
+// навешивать обработчик на каждую новую кнопку.
+document.querySelector('#requests-table tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.delete-req-btn');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  if (!confirm(`Удалить заявку #${id}? Если она была в группе — группа пересчитается или удалится, если участников не останется.`)) {
+    return;
+  }
+
+  try {
+    await apiSend(`/api/admin/requests/${id}`, 'DELETE');
+    showNotice('Заявка удалена', 'success');
+    await refreshAll();
+  } catch (err) {
+    showNotice(err.message, 'error');
+  }
+});
 
 document.getElementById('create-group-btn').addEventListener('click', async () => {
   const ids = Array.from(document.querySelectorAll('.req-checkbox:checked')).map((el) => Number(el.value));

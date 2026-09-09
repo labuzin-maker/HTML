@@ -21,6 +21,7 @@ fs.mkdirSync(path.dirname(config.DB_FILE), { recursive: true });
 
 const db = new Database(config.DB_FILE);
 db.pragma('journal_mode = WAL'); // чуть надёжнее и быстрее при параллельных запросах
+db.pragma('foreign_keys = ON'); // без этого SQLite не применяет ON DELETE CASCADE ниже
 
 db.exec(`
   -- Заявки от пользователей (туристов)
