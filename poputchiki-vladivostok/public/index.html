@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>海参崴拼车拼友</title>
+<meta name="description" content="填写行程,系统会自动帮您匹配同一天、同路线的拼车伙伴,一起分摊交通费用。">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+
+  <h1>海参崴拼车拼友</h1>
+  <p class="lead">填写一次行程信息,系统会自动帮您寻找同一天、同路线的伙伴,一起分摊车费。</p>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <form id="request-form" class="card">
+
+    <div class="field">
+      <label for="name">姓名 / 称呼</label>
+      <input type="text" id="name" name="name" placeholder="怎么称呼您" required maxlength="60">
+    </div>
+
+    <div class="field">
+      <label for="contact">联系方式(微信号或电话)</label>
+      <input type="text" id="contact" name="contact" placeholder="方便联系您的微信号或电话" required maxlength="80">
+    </div>
+
+    <div class="field">
+      <label for="travel_date">出行日期</label>
+      <input type="date" id="travel_date" name="travel_date" required>
+    </div>
+
+    <div class="field">
+      <label for="route">路线</label>
+      <select id="route" name="route" required>
+        <option value="" disabled selected>请选择路线</option>
+        <option value="机场|市中心">机场 → 市中心</option>
+        <option value="市中心|机场">市中心 → 机场</option>
+        <option value="市中心|俄罗斯岛">市中心 → 俄罗斯岛</option>
+        <option value="俄罗斯岛|市中心">俄罗斯岛 → 市中心</option>
+        <option value="火车站|市中心">火车站 → 市中心</option>
+        <option value="other">其他(自己填写)</option>
+      </select>
+
+      <div id="route-custom" class="route-custom" hidden>
+        <input type="text" id="route_from_custom" placeholder="出发地" maxlength="60">
+        <input type="text" id="route_to_custom" placeholder="目的地" maxlength="60">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="people_count">出行人数</label>
+      <input type="number" id="people_count" name="people_count" min="1" value="1" required>
+      <p class="hint">单次申请人数较多时,系统会按限额匹配,具体以提交后的提示为准。</p>
+    </div>
+
+    <div class="field">
+      <label for="comment">备注(可选)</label>
+      <textarea id="comment" name="comment" placeholder="其他补充信息,比如航班时间、行李数量等" maxlength="300"></textarea>
+    </div>
+
+    <div class="field checkbox-row">
+      <input type="checkbox" id="consent" name="consent" required>
+      <label for="consent">我同意本平台使用我填写的联系方式,用于匹配拼车伙伴并与我联系,仅用于本次拼车服务。</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submit-btn">提交申请</button>
+  </form>
+
+</div>
+
+<script>
+  // Логика формы: показать/скрыть кастомные поля маршрута и отправить заявку через fetch.
+  const routeSelect = document.getElementById('route');
+  const routeCustom = document.getElementById('route-custom');
+  const routeFromCustom = document.getElementById('route_from_custom');
+  const routeToCustom = document.getElementById('route_to_custom');
+  const form = document.getElementById('request-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const notice = document.getElementById('notice');
+
+  routeSelect.addEventListener('change', () => {
+    const isOther = routeSelect.value === 'other';
+    routeCustom.hidden = !isOther;
+    routeFromCustom.required = isOther;
+    routeToCustom.required = isOther;
+  });
+
+  function showNotice(text, type) {
+    notice.textContent = text;
+    notice.className = 'notice notice-' + type;
+    notice.hidden = false;
+    notice.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    let routeFrom, routeTo;
+    if (routeSelect.value === 'other') {
+      routeFrom = routeFromCustom.value.trim();
+      routeTo = routeToCustom.value.trim();
+      if (!routeFrom || !routeTo) {
+        showNotice('请填写出发地和目的地', 'error');
+        return;
+      }
+    } else if (routeSelect.value) {
+      [routeFrom, routeTo] = routeSelect.value.split('|');
+    } else {
+      showNotice('请选择路线', 'error');
+      return;
+    }
+
+    const payload = {
+      name: document.getElementById('name').value,
+      contact: document.getElementById('contact').value,
+      travel_date: document.getElementById('travel_date').value,
+      route_from: routeFrom,
+      route_to: routeTo,
+      people_count: Number(document.getElementById('people_count').value),
+      comment: document.getElementById('comment').value,
+      consent: document.getElementById('consent').checked,
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中…';
+
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        showNotice((data.errors && data.errors.join('; ')) || '提交失败,请稍后重试', 'error');
+      } else {
+        form.reset();
+        routeCustom.hidden = true;
+        if (data.matched) {
+          showNotice('申请已提交!已经为您找到合适的拼车伙伴,我们会尽快通过您填写的联系方式联系您。', 'success');
+        } else {
+          showNotice('申请已提交!暂时还没有匹配到同路线同日期的伙伴,一旦有人加入我们会尽快联系您。', 'success');
+        }
+      }
+    } catch (err) {
+      showNotice('网络错误,请检查网络后重试', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '提交申请';
+    }
+  });
+</script>
+</body>
+</html>

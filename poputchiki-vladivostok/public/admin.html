@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Админ-панель · Попутчики во Владивосток</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page wide">
+
+  <div class="top-bar">
+    <div>
+      <h1>Попутчики во Владивосток</h1>
+      <p class="muted">Админ-панель: заявки и группы</p>
+    </div>
+    <button class="btn btn-outline btn-small" id="refresh-btn">Обновить</button>
+  </div>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <div class="card">
+    <div class="top-bar">
+      <h2>Заявки</h2>
+      <div class="row">
+        <select id="status-filter">
+          <option value="">Все статусы</option>
+          <option value="new">Новая</option>
+          <option value="matched">Есть совпадение</option>
+          <option value="confirmed">Подтверждена</option>
+          <option value="rejected">Отклонена</option>
+        </select>
+        <button class="btn btn-outline btn-small" id="create-group-btn">Создать группу из выбранных</button>
+      </div>
+    </div>
+    <p class="hint">Отметьте несколько заявок со статусом «новая», чтобы вручную объединить их в группу
+      (на случай, если автоматический мэтчинг что-то не поймал).</p>
+    <div class="table-wrap">
+      <table id="requests-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Контакт</th>
+            <th>Дата</th>
+            <th>Маршрут</th>
+            <th>Чел.</th>
+            <th>Комментарий</th>
+            <th>Статус</th>
+            <th>Подана</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Группы</h2>
+    <div id="groups-list"></div>
+  </div>
+
+</div>
+
+<script src="/admin.js"></script>
+</body>
+</html>
