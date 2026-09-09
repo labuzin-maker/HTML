@@ -25,6 +25,11 @@ const config = require('./config');
 
 /**
  * Найти подходящих активных кандидатов для заявки request (не включая её саму).
+ *
+ * Маршрут может состоять из нескольких точек ("сложный маршрут", как у
+ * авиакомпаний) — сравниваем route_stops целиком, точным совпадением JSON-строки.
+ * Это значит, что порядок точек имеет значение: "机场→俄罗斯岛→市中心" и
+ * "俄罗斯岛→机场→市中心" — разные маршруты и не смэтчатся между собой.
  */
 function findCandidates(request) {
   // ABS(julianday(a) - julianday(b)) — разница дат в днях, работает для дат в формате YYYY-MM-DD
@@ -32,15 +37,13 @@ function findCandidates(request) {
     SELECT * FROM requests
     WHERE id != ?
       AND status = 'new'
-      AND route_from = ?
-      AND route_to = ?
+      AND route_stops = ?
       AND ABS(julianday(travel_date) - julianday(?)) <= ?
     ORDER BY created_at ASC
   `);
   return stmt.all(
     request.id,
-    request.route_from,
-    request.route_to,
+    request.route_stops,
     request.travel_date,
     config.DATE_TOLERANCE_DAYS
   );
@@ -80,10 +83,16 @@ function findAndCreateMatch(requestId) {
   // Создаём группу и переводим все заявки в статус "matched" одной транзакцией
   const createGroup = db.transaction(() => {
     const insertGroup = db.prepare(`
-      INSERT INTO groups (travel_date, route_from, route_to, total_people, status)
-      VALUES (?, ?, ?, ?, 'matched')
+      INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
+      VALUES (?, ?, ?, ?, ?, 'matched')
     `);
-    const info = insertGroup.run(request.travel_date, request.route_from, request.route_to, total);
+    const info = insertGroup.run(
+      request.travel_date,
+      request.route_from,
+      request.route_to,
+      request.route_stops,
+      total
+    );
     const groupId = info.lastInsertRowid;
 
     const linkRequest = db.prepare('INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)');

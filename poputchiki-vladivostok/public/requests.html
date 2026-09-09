@@ -115,6 +115,19 @@
       .replace(/>/g, '&gt;');
   }
 
+  // Маршрут может состоять из нескольких точек (route_stops, JSON-массив) —
+  // показываем полную цепочку; на старых записях без route_stops откатываемся
+  // к паре route_from/route_to.
+  function formatRoute(r) {
+    try {
+      const stops = JSON.parse(r.route_stops);
+      if (Array.isArray(stops) && stops.length > 0) return stops.map(escapeHtml).join(' → ');
+    } catch (e) {
+      // route_stops пустой/невалидный — используем запасной вариант ниже
+    }
+    return `${escapeHtml(r.route_from)} → ${escapeHtml(r.route_to)}`;
+  }
+
   let lastRequests = [];
 
   async function loadRequests() {
@@ -148,7 +161,7 @@
       const cls = STATUS_CLASS[r.status] || 'badge-new';
       tr.innerHTML = `
         <td>${escapeHtml(r.travel_date)}</td>
-        <td>${escapeHtml(r.route_from)} → ${escapeHtml(r.route_to)}</td>
+        <td>${formatRoute(r)}</td>
         <td>${r.people_count}</td>
         <td><span class="badge ${cls}">${label}</span></td>
         <td>${escapeHtml(r.comment || '—')}</td>

@@ -65,8 +65,9 @@ function encodeRfc2047(text) {
  * Собрать текст уведомления о новой заявке.
  */
 function buildNewRequestMessage(request) {
+  const route = Array.isArray(request.route_stops) ? request.route_stops.join(' → ') : '';
   const lines = [
-    `Маршрут: ${request.route_from} → ${request.route_to}`,
+    `Маршрут: ${route}`,
     `Дата: ${request.travel_date}`,
     `Человек: ${request.people_count}`,
     `Имя: ${request.name}`,

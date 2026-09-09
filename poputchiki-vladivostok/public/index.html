@@ -28,6 +28,33 @@
   }
   body.show-ru .lang-toggle{background:var(--accent);color:#fff;border-color:var(--accent);}
   .top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+
+  /* Конструктор маршрута из нескольких точек ("сложный маршрут", как у
+     авиакомпаний) — выбираешь точку, жмёшь "добавить", она попадает в
+     список ниже; порядок точек в списке = порядок маршрута. */
+  .stop-picker{display:flex;gap:8px;}
+  .stop-picker select{flex:1;}
+  .stop-custom-row{display:flex;gap:8px;margin-top:8px;}
+  .stop-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .stop-list li{
+    display:flex;align-items:center;gap:10px;
+    background:var(--card-soft, #f4f1ea);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:9px 12px;
+    font-size:14px;
+  }
+  .stop-list .stop-num{
+    flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .stop-list .stop-name{flex:1;}
+  .stop-list .stop-remove{
+    background:none;border:none;color:var(--ink-soft);font-size:18px;
+    cursor:pointer;line-height:1;padding:0 4px;
+  }
+  .stop-list .stop-arrow{color:var(--ink-soft);font-size:13px;margin-left:-2px;}
 </style>
 </head>
 <body>
@@ -69,23 +96,31 @@
     </div>
 
     <div class="field">
-      <label for="route">路线</label>
-      <p class="ru">Маршрут</p>
-      <select id="route" name="route" required>
-        <option value="" data-zh="请选择路线" data-ru="выберите маршрут" disabled selected>请选择路线</option>
-        <option value="机场|市中心" data-zh="机场 → 市中心" data-ru="Аэропорт → центр">机场 → 市中心</option>
-        <option value="市中心|机场" data-zh="市中心 → 机场" data-ru="Центр → аэропорт">市中心 → 机场</option>
-        <option value="市中心|俄罗斯岛" data-zh="市中心 → 俄罗斯岛" data-ru="Центр → остров Русский">市中心 → 俄罗斯岛</option>
-        <option value="俄罗斯岛|市中心" data-zh="俄罗斯岛 → 市中心" data-ru="Остров Русский → центр">俄罗斯岛 → 市中心</option>
-        <option value="火车站|市中心" data-zh="火车站 → 市中心" data-ru="Вокзал → центр">火车站 → 市中心</option>
-        <option value="other" data-zh="其他(自己填写)" data-ru="Другое (свой вариант)">其他(自己填写)</option>
-      </select>
+      <label for="stop-select">路线(可以添加多个途经点)</label>
+      <p class="ru">Маршрут (можно добавить несколько точек по порядку)</p>
 
-      <div id="route-custom" class="route-custom" hidden>
-        <input type="text" id="route_from_custom" placeholder="出发地" maxlength="60">
-        <input type="text" id="route_to_custom" placeholder="目的地" maxlength="60">
+      <div class="stop-picker">
+        <select id="stop-select">
+          <option value="机场" data-zh="机场" data-ru="Аэропорт">机场</option>
+          <option value="市中心" data-zh="市中心" data-ru="Центр">市中心</option>
+          <option value="火车站" data-zh="火车站" data-ru="Ж/д вокзал">火车站</option>
+          <option value="俄罗斯岛" data-zh="俄罗斯岛" data-ru="Остров Русский">俄罗斯岛</option>
+          <option value="灯塔" data-zh="灯塔" data-ru="Токаревский маяк">灯塔</option>
+          <option value="鹰巢山观景台" data-zh="鹰巢山观景台" data-ru="Смотровая «Орлиное гнездо»">鹰巢山观景台</option>
+          <option value="海洋水族馆" data-zh="海洋水族馆" data-ru="Приморский океанариум">海洋水族馆</option>
+          <option value="other" data-zh="其他(自己填写)" data-ru="Другое (свой вариант)">其他(自己填写)</option>
+        </select>
+        <button type="button" class="btn btn-outline btn-small" id="add-stop-btn" style="white-space:nowrap;">+ 添加</button>
       </div>
-      <p class="ru" id="route-custom-hint" hidden>Откуда / куда — впишите вручную</p>
+
+      <div class="stop-custom-row" id="stop-custom-row" hidden>
+        <input type="text" id="stop-custom-input" placeholder="填写地点名称" maxlength="60">
+      </div>
+      <p class="ru" id="stop-custom-hint" hidden>Впишите название точки вручную</p>
+
+      <ul class="stop-list" id="stop-list"></ul>
+      <p class="hint">至少添加 2 个途经点(出发地和目的地),按添加顺序组成路线。</p>
+      <p class="ru">Добавьте минимум 2 точки (откуда и куда) — маршрут складывается в том порядке, в котором вы их добавляете.</p>
     </div>
 
     <div class="field">
@@ -126,7 +161,7 @@
     document.body.classList.toggle('show-ru', show);
     // Для <select> русский текст нельзя показать отдельной строкой —
     // добавляем/убираем его в самом тексте опции.
-    document.querySelectorAll('#route option').forEach((opt) => {
+    document.querySelectorAll('#stop-select option').forEach((opt) => {
       const zh = opt.dataset.zh;
       const ru = opt.dataset.ru;
       opt.textContent = show && ru ? `${zh} (${ru})` : zh;
@@ -143,22 +178,65 @@
     try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
   });
 
-  // --- Логика формы: показать/скрыть кастомные поля маршрута и отправить заявку через fetch ---
-  const routeSelect = document.getElementById('route');
-  const routeCustom = document.getElementById('route-custom');
-  const routeCustomHint = document.getElementById('route-custom-hint');
-  const routeFromCustom = document.getElementById('route_from_custom');
-  const routeToCustom = document.getElementById('route_to_custom');
+  // --- Конструктор маршрута: точки добавляются по одной, порядок = порядок маршрута ---
+  const MAX_STOPS = 6;
+  const stopSelect = document.getElementById('stop-select');
+  const stopCustomRow = document.getElementById('stop-custom-row');
+  const stopCustomHint = document.getElementById('stop-custom-hint');
+  const stopCustomInput = document.getElementById('stop-custom-input');
+  const addStopBtn = document.getElementById('add-stop-btn');
+  const stopListEl = document.getElementById('stop-list');
   const form = document.getElementById('request-form');
   const submitBtn = document.getElementById('submit-btn');
   const notice = document.getElementById('notice');
 
-  routeSelect.addEventListener('change', () => {
-    const isOther = routeSelect.value === 'other';
-    routeCustom.hidden = !isOther;
-    routeCustomHint.hidden = !isOther;
-    routeFromCustom.required = isOther;
-    routeToCustom.required = isOther;
+  let routeStops = [];
+
+  stopSelect.addEventListener('change', () => {
+    const isOther = stopSelect.value === 'other';
+    stopCustomRow.hidden = !isOther;
+    stopCustomHint.hidden = !isOther;
+    if (isOther) stopCustomInput.focus();
+  });
+
+  function renderStopList() {
+    stopListEl.innerHTML = '';
+    routeStops.forEach((stop, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        ${i > 0 ? '<span class="stop-arrow">→</span>' : ''}
+        <span class="stop-num">${i + 1}</span>
+        <span class="stop-name">${stop.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+        <button type="button" class="stop-remove" data-i="${i}" aria-label="删除">✕</button>
+      `;
+      stopListEl.appendChild(li);
+    });
+  }
+
+  stopListEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.stop-remove');
+    if (!btn) return;
+    routeStops.splice(Number(btn.dataset.i), 1);
+    renderStopList();
+  });
+
+  addStopBtn.addEventListener('click', () => {
+    if (routeStops.length >= MAX_STOPS) return;
+
+    let value;
+    if (stopSelect.value === 'other') {
+      value = stopCustomInput.value.trim();
+      if (!value) {
+        stopCustomInput.focus();
+        return;
+      }
+      stopCustomInput.value = '';
+    } else {
+      value = stopSelect.value;
+    }
+
+    routeStops.push(value);
+    renderStopList();
   });
 
   // text: китайский текст; ru: русский перевод (показывается только при включённом переводе)
@@ -180,18 +258,8 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    let routeFrom, routeTo;
-    if (routeSelect.value === 'other') {
-      routeFrom = routeFromCustom.value.trim();
-      routeTo = routeToCustom.value.trim();
-      if (!routeFrom || !routeTo) {
-        showNotice('请填写出发地和目的地', 'Заполните поле «откуда» и «куда»', 'error');
-        return;
-      }
-    } else if (routeSelect.value) {
-      [routeFrom, routeTo] = routeSelect.value.split('|');
-    } else {
-      showNotice('请选择路线', 'Выберите маршрут', 'error');
+    if (routeStops.length < 2) {
+      showNotice('请至少添加两个途经点(出发地和目的地)', 'Добавьте минимум 2 точки маршрута (откуда и куда)', 'error');
       return;
     }
 
@@ -199,8 +267,7 @@
       name: document.getElementById('name').value,
       contact: document.getElementById('contact').value,
       travel_date: document.getElementById('travel_date').value,
-      route_from: routeFrom,
-      route_to: routeTo,
+      route_stops: routeStops,
       people_count: Number(document.getElementById('people_count').value),
       comment: document.getElementById('comment').value,
       consent: document.getElementById('consent').checked,
@@ -225,8 +292,10 @@
         );
       } else {
         form.reset();
-        routeCustom.hidden = true;
-        routeCustomHint.hidden = true;
+        routeStops = [];
+        renderStopList();
+        stopCustomRow.hidden = true;
+        stopCustomHint.hidden = true;
         if (data.matched) {
           showNotice(
             '申请已提交!已经为您找到合适的拼车伙伴,我们会尽快通过您填写的联系方式联系您。',

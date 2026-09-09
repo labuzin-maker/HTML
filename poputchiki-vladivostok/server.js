@@ -21,20 +21,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Публичное API: форма подачи заявки
 // ---------------------------------------------------------------------------
 
-// Список маршрутов, разрешённых для выбора (кроме варианта "其他" / "другое",
-// где пользователь вводит свой текст). Дублируется на фронтенде в index.html —
-// если понадобится единый источник правды, можно отдавать этот список через
-// отдельный GET /api/routes.
-const KNOWN_ROUTES = [
-  ['机场', '市中心'],
-  ['市中心', '机场'],
-  ['市中心', '俄罗斯岛'],
-  ['俄罗斯岛', '市中心'],
-  ['火车站', '市中心'],
-];
-
 function isValidDate(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+const MAX_ROUTE_STOPS = 6; // разумный потолок на длину маршрута — не ограничение из ТЗ, просто защита от абсурда
+
+// Проверяет и нормализует присланный маршрут: массив точек по порядку
+// (как "сложный маршрут" у авиакомпаний — минимум 2 точки, порядок важен).
+// Список конкретных точек (аэропорт/центр/маяк и т.д.) — это справочник для
+// формы (public/index.html), сервер его не навязывает: свободный ввод через
+// "其他" всегда был возможен, так и остаётся.
+function normalizeRouteStops(value) {
+  if (!Array.isArray(value)) return null;
+  const stops = value.map((s) => String(s || '').trim()).filter(Boolean);
+  if (stops.length < 2 || stops.length > MAX_ROUTE_STOPS) return null;
+  if (stops.some((s) => s.length > 60)) return null;
+  return stops;
 }
 
 // GET /requests — публичная страница со списком всех заявок (без контактов)
@@ -49,8 +52,7 @@ app.post('/api/requests', (req, res) => {
   const name = String(body.name || '').trim();
   const contact = String(body.contact || '').trim();
   const travelDate = String(body.travel_date || '').trim();
-  const routeFrom = String(body.route_from || '').trim();
-  const routeTo = String(body.route_to || '').trim();
+  const routeStops = normalizeRouteStops(body.route_stops);
   const peopleCount = parseInt(body.people_count, 10);
   const comment = body.comment ? String(body.comment).trim() : null;
   const consent = Boolean(body.consent);
@@ -60,7 +62,7 @@ app.post('/api/requests', (req, res) => {
   if (!name) errors.push('姓名不能为空');
   if (!contact) errors.push('请填写联系方式');
   if (!isValidDate(travelDate)) errors.push('请选择正确的出行日期');
-  if (!routeFrom || !routeTo) errors.push('请选择或填写路线');
+  if (!routeStops) errors.push('请至少选择两个途经点(出发地和目的地)');
   if (!Number.isInteger(peopleCount) || peopleCount < 1) errors.push('人数至少为1人');
   if (peopleCount > config.MAX_GROUP_SIZE) errors.push(`单次申请人数不能超过 ${config.MAX_GROUP_SIZE} 人`);
   if (!consent) errors.push('请勾选同意授权处理联系方式');
@@ -69,18 +71,22 @@ app.post('/api/requests', (req, res) => {
     return res.status(400).json({ ok: false, errors });
   }
 
+  const routeFrom = routeStops[0];
+  const routeTo = routeStops[routeStops.length - 1];
+  const routeStopsJson = JSON.stringify(routeStops);
+
   const insert = db.prepare(`
-    INSERT INTO requests (name, contact, travel_date, route_from, route_to, people_count, comment, consent, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'new')
+    INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new')
   `);
-  const info = insert.run(name, contact, travelDate, routeFrom, routeTo, peopleCount, comment);
+  const info = insert.run(name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment);
   const requestId = info.lastInsertRowid;
 
   // Push-уведомление администратору о новой заявке (см. notify.js).
   // Не блокируем ответ пользователю ожиданием отправки — просто запускаем её.
   sendPushNotification(
     '🚗 Новая заявка на попутчиков',
-    buildNewRequestMessage({ name, contact, travel_date: travelDate, route_from: routeFrom, route_to: routeTo, people_count: peopleCount, comment })
+    buildNewRequestMessage({ name, contact, travel_date: travelDate, route_stops: routeStops, people_count: peopleCount, comment })
   );
 
   // Пытаемся найти совпадение сразу после сохранения. Отдельного уведомления
@@ -99,7 +105,7 @@ app.post('/api/requests', (req, res) => {
 app.get('/api/requests', (req, res) => {
   const rows = db
     .prepare(
-      `SELECT id, travel_date, route_from, route_to, people_count, comment, status, created_at
+      `SELECT id, travel_date, route_from, route_to, route_stops, people_count, comment, status, created_at
        FROM requests
        ORDER BY travel_date ASC, created_at DESC`
     )
@@ -252,10 +258,10 @@ app.post('/api/admin/groups', (req, res) => {
   const createGroup = db.transaction(() => {
     const info = db
       .prepare(
-        `INSERT INTO groups (travel_date, route_from, route_to, total_people, status)
-         VALUES (?, ?, ?, ?, 'matched')`
+        `INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
+         VALUES (?, ?, ?, ?, ?, 'matched')`
       )
-      .run(first.travel_date, first.route_from, first.route_to, totalPeople);
+      .run(first.travel_date, first.route_from, first.route_to, first.route_stops, totalPeople);
 
     const groupId = info.lastInsertRowid;
     const linkRequest = db.prepare('INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)');
@@ -292,6 +298,16 @@ app.put('/api/admin/groups/:id/price', (req, res) => {
 // Шаблон сообщения для ручной отправки участнику в WeChat.
 // Это заглушка первого этапа: реальную интеграцию с WeChat можно добавить позже,
 // подставив сюда вызов соответствующего API вместо возврата текста в админку.
+function formatRoute(group) {
+  try {
+    const stops = JSON.parse(group.route_stops);
+    if (Array.isArray(stops) && stops.length > 0) return stops.join(' → ');
+  } catch (e) {
+    // route_stops повреждён/отсутствует — просто откатываемся к route_from/route_to ниже
+  }
+  return `${group.route_from} → ${group.route_to}`;
+}
+
 function buildWeChatMessage(member, group) {
   const perPerson = group.price ? Math.round((group.price / group.total_people) * 100) / 100 : null;
   const priceLine = group.price
@@ -302,7 +318,7 @@ function buildWeChatMessage(member, group) {
     `您好,${member.name}!`,
     '已为您匹配到同行的拼车伙伴 🚗',
     `日期:${group.travel_date}`,
-    `路线:${group.route_from} → ${group.route_to}`,
+    `路线:${formatRoute(group)}`,
     `总人数:${group.total_people} 人`,
     priceLine,
     '请确认是否参加,谢谢!',

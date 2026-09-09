@@ -23,6 +23,19 @@ function statusBadge(status) {
   return `<span class="badge badge-${status}">${label}</span>`;
 }
 
+// Маршрут может состоять из нескольких точек (route_stops, JSON-массив) —
+// показываем полную цепочку; на старых записях без route_stops (до миграции)
+// откатываемся к паре route_from/route_to.
+function formatRoute(obj) {
+  try {
+    const stops = JSON.parse(obj.route_stops);
+    if (Array.isArray(stops) && stops.length > 0) return stops.map(escapeHtml).join(' → ');
+  } catch (e) {
+    // route_stops пустой/невалидный — используем запасной вариант ниже
+  }
+  return `${escapeHtml(obj.route_from)} → ${escapeHtml(obj.route_to)}`;
+}
+
 async function apiGet(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error('Ошибка запроса: ' + res.status);
@@ -65,7 +78,7 @@ function renderRequests(requests) {
       <td>${escapeHtml(r.name)}</td>
       <td>${escapeHtml(r.contact)}</td>
       <td>${escapeHtml(r.travel_date)}</td>
-      <td>${escapeHtml(r.route_from)} → ${escapeHtml(r.route_to)}</td>
+      <td>${formatRoute(r)}</td>
       <td>${r.people_count}</td>
       <td>${escapeHtml(r.comment || '—')}</td>
       <td>${statusBadge(r.status)}</td>
@@ -152,7 +165,7 @@ function renderGroups(groups) {
       <div class="top-bar">
         <div>
           <strong>Группа #${g.id}</strong> ${statusBadge(g.status)}
-          <div class="muted">${escapeHtml(g.travel_date)} · ${escapeHtml(g.route_from)} → ${escapeHtml(g.route_to)} · ${g.total_people} чел.</div>
+          <div class="muted">${escapeHtml(g.travel_date)} · ${formatRoute(g)} · ${g.total_people} чел.</div>
         </div>
       </div>
 
