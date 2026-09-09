@@ -102,11 +102,20 @@ app.post('/api/requests', (req, res) => {
 // напоказ всему интернету. Кто хочет откликнуться, увидит маршрут/дату и
 // поймёт, что заявка активна; связаться с автором заявки может администратор
 // через /admin, у него есть полные данные.
+//
+// Из публичного списка убираем то, что больше не актуально (в /admin эти
+// заявки остаются видны — там нужна полная история):
+//  - дата поездки уже прошла;
+//  - группа уже "отработала" — подтверждена (confirmed) или отклонена
+//    (rejected): люди либо уже договорились, либо дело закрыто, тут им
+//    искать пару больше не нужно.
 app.get('/api/requests', (req, res) => {
   const rows = db
     .prepare(
       `SELECT id, travel_date, route_from, route_to, route_stops, people_count, comment, status, created_at
        FROM requests
+       WHERE date(travel_date) >= date('now')
+         AND status NOT IN ('confirmed', 'rejected')
        ORDER BY travel_date ASC, created_at DESC`
     )
     .all();
@@ -263,6 +272,16 @@ app.post('/api/admin/groups', (req, res) => {
   // За дату/маршрут группы берём значения первой заявки.
   const first = requests[0];
   const totalPeople = requests.reduce((sum, r) => sum + r.people_count, 0);
+
+  // Лимит на размер группы (вместимость машины) действует и здесь — раньше
+  // проверялся только в авто-мэтчинге (matching.js), ручное создание могло
+  // случайно собрать группу больше MAX_GROUP_SIZE.
+  if (totalPeople > config.MAX_GROUP_SIZE) {
+    return res.status(400).json({
+      ok: false,
+      error: `В группе получится ${totalPeople} человек — это больше лимита в ${config.MAX_GROUP_SIZE}. Выберите заявки с меньшим суммарным числом человек.`,
+    });
+  }
 
   const createGroup = db.transaction(() => {
     const info = db
