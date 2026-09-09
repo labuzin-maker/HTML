@@ -9,6 +9,26 @@
 <style>
   /* Небольшие правки специально для этой страницы (широкая таблица на мобильном) */
   td, th { white-space: nowrap; }
+
+  /* Тот же переключатель перевода, что на главной форме (см. public/index.html) */
+  .ru{display:none;font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:3px;}
+  body.show-ru .ru{display:block;}
+  th .ru{margin-top:2px;text-transform:none;letter-spacing:0;font-weight:400;}
+  .lang-toggle{
+    align-self:flex-start;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--ink-soft);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  body.show-ru .lang-toggle{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
 </style>
 </head>
 <body>
@@ -17,9 +37,14 @@
   <div class="top-bar">
     <div>
       <h1>所有拼车申请</h1>
+      <p class="ru" style="font-size:13px;margin-top:-2px;">Все заявки на попутчиков</p>
       <p class="lead" style="margin:0;">出于隐私保护,这里不显示联系方式——如果看到合适的申请,请自己也提交一份,系统会自动帮你们匹配。</p>
+      <p class="ru">Из соображений приватности контакты здесь не показаны — если видите подходящую заявку, подайте свою, система сама найдёт совпадение.</p>
     </div>
-    <a class="btn btn-outline btn-small" href="/">+ 提交新申请</a>
+    <div class="top-actions">
+      <button type="button" class="lang-toggle" id="lang-toggle">RU 翻译</button>
+      <a class="btn btn-outline btn-small" href="/">+ 提交新申请</a>
+    </div>
   </div>
 
   <div id="notice" class="notice notice-error" hidden></div>
@@ -29,30 +54,52 @@
       <table id="requests-table">
         <thead>
           <tr>
-            <th>日期</th>
-            <th>路线</th>
-            <th>人数</th>
-            <th>状态</th>
-            <th>备注</th>
-            <th>提交时间</th>
+            <th>日期<br><span class="ru">Дата</span></th>
+            <th>路线<br><span class="ru">Маршрут</span></th>
+            <th>人数<br><span class="ru">Чел.</span></th>
+            <th>状态<br><span class="ru">Статус</span></th>
+            <th>备注<br><span class="ru">Комментарий</span></th>
+            <th>提交时间<br><span class="ru">Подана</span></th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
-    <p class="muted" id="empty-hint" hidden>暂时还没有任何申请,来提交第一个吧!</p>
+    <p class="muted" id="empty-hint" hidden>
+      暂时还没有任何申请,来提交第一个吧!
+      <span class="ru" style="display:inline;margin-top:0;">Пока нет ни одной заявки — подайте первую!</span>
+    </p>
   </div>
 
 </div>
 
 <script>
-  // Публичный статус-лейблы на китайском (для этой страницы; в админ-панели те же
-  // статусы показаны по-русски — см. public/admin.js).
+  // --- Переключатель "показывать русский перевод" (тот же механизм, что на главной форме) ---
+  const LANG_KEY = 'poputchiki_show_ru';
+  const langToggle = document.getElementById('lang-toggle');
+
+  function applyLangState(show) {
+    document.body.classList.toggle('show-ru', show);
+  }
+
+  let showRu = false;
+  try { showRu = localStorage.getItem(LANG_KEY) === '1'; } catch (e) {}
+  applyLangState(showRu);
+
+  langToggle.addEventListener('click', () => {
+    showRu = !showRu;
+    applyLangState(showRu);
+    try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
+    renderRequests(lastRequests); // перерисовать статусы в таблице с/без перевода
+  });
+
+  // Публичный статус-лейблы на китайском + русский перевод в скобках (для этой
+  // страницы; в админ-панели те же статусы показаны по-русски — см. public/admin.js).
   const STATUS_LABELS = {
-    new: '新申请',
-    matched: '已匹配',
-    confirmed: '已确认',
-    rejected: '已拒绝',
+    new: { zh: '新申请', ru: 'новая' },
+    matched: { zh: '已匹配', ru: 'есть совпадение' },
+    confirmed: { zh: '已确认', ru: 'подтверждена' },
+    rejected: { zh: '已拒绝', ru: 'отклонена' },
   };
   const STATUS_CLASS = {
     new: 'badge-new',
@@ -68,12 +115,15 @@
       .replace(/>/g, '&gt;');
   }
 
+  let lastRequests = [];
+
   async function loadRequests() {
     const notice = document.getElementById('notice');
     try {
       const res = await fetch('/api/requests');
       const data = await res.json();
-      renderRequests(data.requests || []);
+      lastRequests = data.requests || [];
+      renderRequests(lastRequests);
     } catch (err) {
       notice.textContent = '加载失败,请刷新页面重试';
       notice.hidden = false;
@@ -93,7 +143,8 @@
 
     for (const r of requests) {
       const tr = document.createElement('tr');
-      const label = STATUS_LABELS[r.status] || r.status;
+      const st = STATUS_LABELS[r.status] || { zh: r.status, ru: '' };
+      const label = showRu && st.ru ? `${st.zh} (${st.ru})` : st.zh;
       const cls = STATUS_CLASS[r.status] || 'badge-new';
       tr.innerHTML = `
         <td>${escapeHtml(r.travel_date)}</td>

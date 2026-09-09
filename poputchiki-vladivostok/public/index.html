@@ -6,6 +6,29 @@
 <title>海参崴拼车拼友</title>
 <meta name="description" content="填写行程,系统会自动帮您匹配同一天、同路线的拼车伙伴,一起分摊交通费用。">
 <link rel="stylesheet" href="/style.css">
+<style>
+  /* Русский перевод показывается под китайским текстом только если на
+     <body> стоит класс show-ru — переключается кнопкой ниже и запоминается
+     в localStorage конкретного браузера. По умолчанию выключено, чтобы
+     обычные посетители (китайские туристы) видели чистый китайский текст. */
+  .ru{display:none;font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:3px;}
+  body.show-ru .ru{display:block;}
+  .lang-toggle{
+    align-self:flex-start;
+    background:var(--card-soft, var(--surface));
+    border:1px solid var(--border);
+    color:var(--ink-soft);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  body.show-ru .lang-toggle{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+</style>
 </head>
 <body>
 <div class="page">
@@ -13,9 +36,14 @@
   <div class="top-bar">
     <div>
       <h1>海参崴拼车拼友</h1>
+      <p class="ru" style="font-size:13px;margin-top:-2px;">Попутчики во Владивосток</p>
       <p class="lead" style="margin-bottom:0;">填写一次行程信息,系统会自动帮您寻找同一天、同路线的伙伴,一起分摊车费。</p>
+      <p class="ru">Заполните информацию о поездке — система автоматически найдёт попутчиков с той же датой и маршрутом, чтобы разделить стоимость проезда.</p>
     </div>
-    <a class="btn btn-outline btn-small" href="/requests" style="white-space:nowrap;">查看所有申请</a>
+    <div class="top-actions">
+      <button type="button" class="lang-toggle" id="lang-toggle">RU 翻译</button>
+      <a class="btn btn-outline btn-small" href="/requests" style="white-space:nowrap;">查看所有申请</a>
+    </div>
   </div>
 
   <div id="notice" class="notice" hidden></div>
@@ -24,62 +52,101 @@
 
     <div class="field">
       <label for="name">姓名 / 称呼</label>
+      <p class="ru">Имя / как вас называть</p>
       <input type="text" id="name" name="name" placeholder="怎么称呼您" required maxlength="60">
     </div>
 
     <div class="field">
       <label for="contact">联系方式(微信号或电话)</label>
+      <p class="ru">Контакт (WeChat ID или номер телефона)</p>
       <input type="text" id="contact" name="contact" placeholder="方便联系您的微信号或电话" required maxlength="80">
     </div>
 
     <div class="field">
       <label for="travel_date">出行日期</label>
+      <p class="ru">Дата поездки</p>
       <input type="date" id="travel_date" name="travel_date" required>
     </div>
 
     <div class="field">
       <label for="route">路线</label>
+      <p class="ru">Маршрут</p>
       <select id="route" name="route" required>
-        <option value="" disabled selected>请选择路线</option>
-        <option value="机场|市中心">机场 → 市中心</option>
-        <option value="市中心|机场">市中心 → 机场</option>
-        <option value="市中心|俄罗斯岛">市中心 → 俄罗斯岛</option>
-        <option value="俄罗斯岛|市中心">俄罗斯岛 → 市中心</option>
-        <option value="火车站|市中心">火车站 → 市中心</option>
-        <option value="other">其他(自己填写)</option>
+        <option value="" data-zh="请选择路线" data-ru="выберите маршрут" disabled selected>请选择路线</option>
+        <option value="机场|市中心" data-zh="机场 → 市中心" data-ru="Аэропорт → центр">机场 → 市中心</option>
+        <option value="市中心|机场" data-zh="市中心 → 机场" data-ru="Центр → аэропорт">市中心 → 机场</option>
+        <option value="市中心|俄罗斯岛" data-zh="市中心 → 俄罗斯岛" data-ru="Центр → остров Русский">市中心 → 俄罗斯岛</option>
+        <option value="俄罗斯岛|市中心" data-zh="俄罗斯岛 → 市中心" data-ru="Остров Русский → центр">俄罗斯岛 → 市中心</option>
+        <option value="火车站|市中心" data-zh="火车站 → 市中心" data-ru="Вокзал → центр">火车站 → 市中心</option>
+        <option value="other" data-zh="其他(自己填写)" data-ru="Другое (свой вариант)">其他(自己填写)</option>
       </select>
 
       <div id="route-custom" class="route-custom" hidden>
         <input type="text" id="route_from_custom" placeholder="出发地" maxlength="60">
         <input type="text" id="route_to_custom" placeholder="目的地" maxlength="60">
       </div>
+      <p class="ru" id="route-custom-hint" hidden>Откуда / куда — впишите вручную</p>
     </div>
 
     <div class="field">
       <label for="people_count">出行人数</label>
+      <p class="ru">Количество человек</p>
       <input type="number" id="people_count" name="people_count" min="1" value="1" required>
       <p class="hint">单次申请人数较多时,系统会按限额匹配,具体以提交后的提示为准。</p>
+      <p class="ru">Если укажете больше человек, чем допускает лимит группы — система сообщит об этом после отправки.</p>
     </div>
 
     <div class="field">
       <label for="comment">备注(可选)</label>
+      <p class="ru">Комментарий (необязательно)</p>
       <textarea id="comment" name="comment" placeholder="其他补充信息,比如航班时间、行李数量等" maxlength="300"></textarea>
+      <p class="ru">Например: время рейса, количество багажа и т.п.</p>
     </div>
 
     <div class="field checkbox-row">
       <input type="checkbox" id="consent" name="consent" required>
-      <label for="consent">我同意本平台使用我填写的联系方式,用于匹配拼车伙伴并与我联系,仅用于本次拼车服务。</label>
+      <div>
+        <label for="consent">我同意本平台使用我填写的联系方式,用于匹配拼车伙伴并与我联系,仅用于本次拼车服务。</label>
+        <p class="ru">Я согласен, что платформа использует указанный контакт для поиска попутчиков и связи со мной — только в рамках этой услуги.</p>
+      </div>
     </div>
 
     <button type="submit" class="btn btn-primary" id="submit-btn">提交申请</button>
+    <p class="ru" style="text-align:center;margin-top:6px;">Отправить заявку</p>
   </form>
 
 </div>
 
 <script>
-  // Логика формы: показать/скрыть кастомные поля маршрута и отправить заявку через fetch.
+  // --- Переключатель "показывать русский перевод" ---
+  const LANG_KEY = 'poputchiki_show_ru';
+  const langToggle = document.getElementById('lang-toggle');
+
+  function applyLangState(show) {
+    document.body.classList.toggle('show-ru', show);
+    // Для <select> русский текст нельзя показать отдельной строкой —
+    // добавляем/убираем его в самом тексте опции.
+    document.querySelectorAll('#route option').forEach((opt) => {
+      const zh = opt.dataset.zh;
+      const ru = opt.dataset.ru;
+      opt.textContent = show && ru ? `${zh} (${ru})` : zh;
+    });
+  }
+
+  let showRu = false;
+  try { showRu = localStorage.getItem(LANG_KEY) === '1'; } catch (e) {}
+  applyLangState(showRu);
+
+  langToggle.addEventListener('click', () => {
+    showRu = !showRu;
+    applyLangState(showRu);
+    try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
+  });
+
+  // --- Логика формы: показать/скрыть кастомные поля маршрута и отправить заявку через fetch ---
   const routeSelect = document.getElementById('route');
   const routeCustom = document.getElementById('route-custom');
+  const routeCustomHint = document.getElementById('route-custom-hint');
   const routeFromCustom = document.getElementById('route_from_custom');
   const routeToCustom = document.getElementById('route_to_custom');
   const form = document.getElementById('request-form');
@@ -89,12 +156,22 @@
   routeSelect.addEventListener('change', () => {
     const isOther = routeSelect.value === 'other';
     routeCustom.hidden = !isOther;
+    routeCustomHint.hidden = !isOther;
     routeFromCustom.required = isOther;
     routeToCustom.required = isOther;
   });
 
-  function showNotice(text, type) {
-    notice.textContent = text;
+  // text: китайский текст; ru: русский перевод (показывается только при включённом переводе)
+  function showNotice(text, ru, type) {
+    notice.innerHTML = '';
+    notice.appendChild(document.createTextNode(text));
+    if (ru) {
+      const ruLine = document.createElement('div');
+      ruLine.className = 'ru';
+      ruLine.style.marginTop = '4px';
+      ruLine.textContent = ru;
+      notice.appendChild(ruLine);
+    }
     notice.className = 'notice notice-' + type;
     notice.hidden = false;
     notice.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -108,13 +185,13 @@
       routeFrom = routeFromCustom.value.trim();
       routeTo = routeToCustom.value.trim();
       if (!routeFrom || !routeTo) {
-        showNotice('请填写出发地和目的地', 'error');
+        showNotice('请填写出发地和目的地', 'Заполните поле «откуда» и «куда»', 'error');
         return;
       }
     } else if (routeSelect.value) {
       [routeFrom, routeTo] = routeSelect.value.split('|');
     } else {
-      showNotice('请选择路线', 'error');
+      showNotice('请选择路线', 'Выберите маршрут', 'error');
       return;
     }
 
@@ -141,18 +218,31 @@
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        showNotice((data.errors && data.errors.join('; ')) || '提交失败,请稍后重试', 'error');
+        showNotice(
+          (data.errors && data.errors.join('; ')) || '提交失败,请稍后重试',
+          'Не удалось отправить, попробуйте позже',
+          'error'
+        );
       } else {
         form.reset();
         routeCustom.hidden = true;
+        routeCustomHint.hidden = true;
         if (data.matched) {
-          showNotice('申请已提交!已经为您找到合适的拼车伙伴,我们会尽快通过您填写的联系方式联系您。', 'success');
+          showNotice(
+            '申请已提交!已经为您找到合适的拼车伙伴,我们会尽快通过您填写的联系方式联系您。',
+            'Заявка отправлена! Мы уже нашли подходящих попутчиков — скоро свяжемся с вами по указанному контакту.',
+            'success'
+          );
         } else {
-          showNotice('申请已提交!暂时还没有匹配到同路线同日期的伙伴,一旦有人加入我们会尽快联系您。', 'success');
+          showNotice(
+            '申请已提交!暂时还没有匹配到同路线同日期的伙伴,一旦有人加入我们会尽快联系您。',
+            'Заявка отправлена! Пока подходящих попутчиков нет — как только кто-то присоединится, мы вам напишем.',
+            'success'
+          );
         }
       }
     } catch (err) {
-      showNotice('网络错误,请检查网络后重试', 'error');
+      showNotice('网络错误,请检查网络后重试', 'Ошибка сети, проверьте подключение и попробуйте снова', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = '提交申请';
