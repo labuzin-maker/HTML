@@ -4,7 +4,7 @@
   "description": "Сервис поиска попутчиков во Владивостоке (трансфер аэропорт/город/остров Русский)",
   "main": "server.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=20 <23"
   },
   "scripts": {
     "start": "node server.js",
