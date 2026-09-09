@@ -9,7 +9,7 @@ const express = require('express');
 
 const config = require('./config');
 const db = require('./db');
-const { findAndCreateMatch } = require('./matching');
+const { findAndCreateMatch, findPartialMatches } = require('./matching');
 const { sendPushNotification, buildNewRequestMessage } = require('./notify');
 
 const app = express();
@@ -197,6 +197,15 @@ app.delete('/api/admin/requests/:id', (req, res) => {
 
   deleteRequest();
   res.json({ ok: true });
+});
+
+// GET /api/admin/partial-matches — пары заявок с близкой датой и пересекающимся
+// (но не полностью совпадающим) маршрутом — подсказка админу, что этим людям,
+// возможно, стоит договориться и подкорректировать маршрут, чтобы поехать
+// вместе. Это не авто-группировка — решение и создание группы (через
+// POST /api/admin/groups) остаются за администратором.
+app.get('/api/admin/partial-matches', (req, res) => {
+  res.json({ ok: true, pairs: findPartialMatches() });
 });
 
 // ---------------------------------------------------------------------------

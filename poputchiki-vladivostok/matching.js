@@ -112,4 +112,59 @@ function findAndCreateMatch(requestId) {
   return { group, members: chosen };
 }
 
-module.exports = { findAndCreateMatch, findCandidates };
+function daysBetween(a, b) {
+  return Math.abs((new Date(a) - new Date(b)) / 86400000);
+}
+
+/**
+ * Найти "частичные совпадения" — пары заявок со статусом "new", у которых
+ * даты близки (в пределах DATE_TOLERANCE_DAYS) и маршруты пересекаются хотя
+ * бы в одной точке, но НЕ совпадают полностью (иначе это уже обычный
+ * авто-мэтч из findAndCreateMatch, и заявки туда бы не попали со статусом "new").
+ *
+ * Это не авто-группировка — это подсказка для админ-панели: "вот два
+ * человека, которым, возможно, стоит договориться и скорректировать
+ * маршрут, чтобы поехать вместе". Решение и дальшейшие действия (ручное
+ * создание группы через уже существующий POST /api/admin/groups) — за
+ * администратором.
+ *
+ * Считается по всем активным заявкам сразу (не по одной новой) — сравнение
+ * маршрутов через JSON нельзя сделать в SQL, поэтому просто перебираем все
+ * пары в JS; при небольшом количестве активных заявок (десятки, не тысячи)
+ * это быстро и просто.
+ */
+function findPartialMatches() {
+  const rows = db.prepare("SELECT * FROM requests WHERE status = 'new' ORDER BY created_at ASC").all();
+
+  const parsed = rows.map((r) => {
+    let stops = [];
+    try {
+      stops = JSON.parse(r.route_stops) || [];
+    } catch (e) {
+      stops = [];
+    }
+    return { request: r, stops };
+  });
+
+  const pairs = [];
+  for (let i = 0; i < parsed.length; i++) {
+    for (let j = i + 1; j < parsed.length; j++) {
+      const a = parsed[i];
+      const b = parsed[j];
+
+      if (daysBetween(a.request.travel_date, b.request.travel_date) > config.DATE_TOLERANCE_DAYS) continue;
+
+      const sameRoute = JSON.stringify(a.stops) === JSON.stringify(b.stops);
+      if (sameRoute) continue; // это обычный точный мэтч, а не частичный — сюда не попадаем
+
+      const sharedStops = a.stops.filter((s) => b.stops.includes(s));
+      if (sharedStops.length === 0) continue;
+
+      pairs.push({ requestA: a.request, requestB: b.request, sharedStops });
+    }
+  }
+
+  return pairs;
+}
+
+module.exports = { findAndCreateMatch, findCandidates, findPartialMatches };

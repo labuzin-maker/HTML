@@ -253,8 +253,64 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+// --- Частичные совпадения ------------------------------------------------
+
+async function loadPartialMatches() {
+  const data = await apiGet('/api/admin/partial-matches');
+  renderPartialMatches(data.pairs);
+}
+
+function renderPartialMatches(pairs) {
+  const container = document.getElementById('partial-matches-list');
+  container.innerHTML = '';
+
+  if (!pairs || pairs.length === 0) {
+    container.innerHTML = '<p class="muted">Сейчас таких пар нет.</p>';
+    return;
+  }
+
+  pairs.forEach((pair) => {
+    const { requestA: a, requestB: b, sharedStops } = pair;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = '#fafbfc';
+
+    const renderSide = (r) => `
+      <div>
+        <strong>${escapeHtml(r.name)}</strong> (${escapeHtml(r.contact)})
+        <div class="muted">${escapeHtml(r.travel_date)} · ${formatRoute(r)} · ${r.people_count} чел.</div>
+        ${r.comment ? `<div class="muted">Комментарий: ${escapeHtml(r.comment)}</div>` : ''}
+      </div>
+    `;
+
+    card.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:flex-start;">
+        ${renderSide(a)}
+        <span class="muted" style="padding:0 8px;">↔</span>
+        ${renderSide(b)}
+      </div>
+      <p class="hint" style="margin-top:12px;">Общая точка маршрута: <strong>${sharedStops.map(escapeHtml).join(', ')}</strong></p>
+      <div class="row" style="margin-top:8px;">
+        <button type="button" class="btn btn-outline btn-small merge-partial-btn">Создать группу из этих двух</button>
+      </div>
+    `;
+
+    card.querySelector('.merge-partial-btn').addEventListener('click', async () => {
+      try {
+        await apiSend('/api/admin/groups', 'POST', { request_ids: [a.id, b.id] });
+        showNotice('Группа создана вручную', 'success');
+        await refreshAll();
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    });
+
+    container.appendChild(card);
+  });
+}
+
 async function refreshAll() {
-  await Promise.all([loadRequests(), loadGroups()]);
+  await Promise.all([loadRequests(), loadGroups(), loadPartialMatches()]);
 }
 
 document.getElementById('refresh-btn').addEventListener('click', refreshAll);
