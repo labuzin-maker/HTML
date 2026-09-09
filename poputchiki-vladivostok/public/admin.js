@@ -24,7 +24,11 @@ const STOP_TRANSLATIONS = {
 };
 
 function translateStop(stop) {
-  return STOP_TRANSLATIONS[stop] || stop;
+  const translated = STOP_TRANSLATIONS[stop];
+  // Точки не из готового списка (свободный ввод через «其他» на форме)
+  // помечаем отдельно — переводить их некому, но должно быть видно, что
+  // это не стандартная точка, а то, что турист вписал сам.
+  return translated || `${stop} (свой вариант)`;
 }
 
 const noticeEl = document.getElementById('notice');
