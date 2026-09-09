@@ -9,6 +9,24 @@ const STATUS_LABELS = {
   rejected: 'отклонена',
 };
 
+// Готовые точки маршрута (см. выпадающий список в public/index.html) —
+// переводим на русский для админки, чтобы не гадать по китайским иероглифам,
+// кто куда хочет. Свободный текст (вариант «其他» на форме) перевести
+// неоткуда — показываем как есть.
+const STOP_TRANSLATIONS = {
+  '机场': 'Аэропорт',
+  '市中心': 'Центр',
+  '火车站': 'Вокзал',
+  '俄罗斯岛': 'Остров Русский',
+  '灯塔': 'Токаревский маяк',
+  '鹰巢山观景台': 'Смотровая «Орлиное гнездо»',
+  '海洋水族馆': 'Океанариум',
+};
+
+function translateStop(stop) {
+  return STOP_TRANSLATIONS[stop] || stop;
+}
+
 const noticeEl = document.getElementById('notice');
 
 function showNotice(text, type) {
@@ -29,11 +47,11 @@ function statusBadge(status) {
 function formatRoute(obj) {
   try {
     const stops = JSON.parse(obj.route_stops);
-    if (Array.isArray(stops) && stops.length > 0) return stops.map(escapeHtml).join(' → ');
+    if (Array.isArray(stops) && stops.length > 0) return stops.map(translateStop).map(escapeHtml).join(' → ');
   } catch (e) {
     // route_stops пустой/невалидный — используем запасной вариант ниже
   }
-  return `${escapeHtml(obj.route_from)} → ${escapeHtml(obj.route_to)}`;
+  return `${escapeHtml(translateStop(obj.route_from))} → ${escapeHtml(translateStop(obj.route_to))}`;
 }
 
 async function apiGet(url) {
