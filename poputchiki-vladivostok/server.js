@@ -10,6 +10,7 @@ const express = require('express');
 const config = require('./config');
 const db = require('./db');
 const { findAndCreateMatch } = require('./matching');
+const { sendPushNotification, buildNewRequestMessage } = require('./notify');
 
 const app = express();
 
@@ -75,10 +76,16 @@ app.post('/api/requests', (req, res) => {
   const info = insert.run(name, contact, travelDate, routeFrom, routeTo, peopleCount, comment);
   const requestId = info.lastInsertRowid;
 
-  // Пытаемся найти совпадение сразу после сохранения.
-  // Уведомлений администратору по этому событию нет (Telegram-бот не используется) —
-  // найденные совпадения видны в публичном списке заявок (GET /api/requests) и в
-  // /admin, администратор просто периодически туда заглядывает.
+  // Push-уведомление администратору о новой заявке (см. notify.js).
+  // Не блокируем ответ пользователю ожиданием отправки — просто запускаем её.
+  sendPushNotification(
+    '🚗 Новая заявка на попутчиков',
+    buildNewRequestMessage({ name, contact, travel_date: travelDate, route_from: routeFrom, route_to: routeTo, people_count: peopleCount, comment })
+  );
+
+  // Пытаемся найти совпадение сразу после сохранения. Отдельного уведомления
+  // именно про совпадение нет — статус виден в публичном списке заявок
+  // (GET /api/requests) и в /admin, администратор увидит его там же.
   const match = findAndCreateMatch(requestId);
 
   res.json({ ok: true, matched: Boolean(match) });

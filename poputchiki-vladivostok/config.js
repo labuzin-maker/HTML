@@ -27,4 +27,8 @@ module.exports = {
   // --- Админ-панель (простая защита паролем, HTTP Basic Auth) ---
   ADMIN_USER: process.env.ADMIN_USER || 'admin',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'change-me',
+
+  // --- Push-уведомления о новых заявках через ntfy (см. notify.js) ---
+  NTFY_SERVER: process.env.NTFY_SERVER || 'https://ntfy.sh',
+  NTFY_TOPIC: process.env.NTFY_TOPIC || '',
 };
