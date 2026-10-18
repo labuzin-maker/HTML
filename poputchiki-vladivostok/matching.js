@@ -19,8 +19,12 @@
 //    небольших чисел (обычно 1-4 человека в заявке) он даёт разумный
 //    результат и легко понимается. Более сложные случаи админ всегда может
 //    поправить руками через ручное создание группы в админ-панели.
+//
+// Все запросы к БД теперь асинхронные (Turso/libSQL — облачная база, см.
+// db.js) — отсюда async/await везде, где раньше были синхронные вызовы
+// better-sqlite3.
 
-const db = require('./db');
+const { client, withTransaction } = require('./db');
 const config = require('./config');
 
 /**
@@ -31,35 +35,34 @@ const config = require('./config');
  * Это значит, что порядок точек имеет значение: "机场→俄罗斯岛→市中心" и
  * "俄罗斯岛→机场→市中心" — разные маршруты и не смэтчатся между собой.
  */
-function findCandidates(request) {
+async function findCandidates(request) {
   // ABS(julianday(a) - julianday(b)) — разница дат в днях, работает для дат в формате YYYY-MM-DD
-  const stmt = db.prepare(`
-    SELECT * FROM requests
-    WHERE id != ?
-      AND status = 'new'
-      AND route_stops = ?
-      AND ABS(julianday(travel_date) - julianday(?)) <= ?
-    ORDER BY created_at ASC
-  `);
-  return stmt.all(
-    request.id,
-    request.route_stops,
-    request.travel_date,
-    config.DATE_TOLERANCE_DAYS
-  );
+  const rs = await client.execute({
+    sql: `
+      SELECT * FROM requests
+      WHERE id != ?
+        AND status = 'new'
+        AND route_stops = ?
+        AND ABS(julianday(travel_date) - julianday(?)) <= ?
+      ORDER BY created_at ASC
+    `,
+    args: [request.id, request.route_stops, request.travel_date, config.DATE_TOLERANCE_DAYS],
+  });
+  return rs.rows;
 }
 
 /**
  * Попытаться найти и создать группу для только что сохранённой заявки.
  * Возвращает объект { group, members } если группа создана, иначе null.
  */
-function findAndCreateMatch(requestId) {
-  const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(requestId);
+async function findAndCreateMatch(requestId) {
+  const requestRs = await client.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [requestId] });
+  const request = requestRs.rows[0];
   if (!request || request.status !== 'new') {
     return null; // заявки не существует или она уже куда-то определена
   }
 
-  const candidates = findCandidates(request);
+  const candidates = await findCandidates(request);
 
   // Жадно набираем группу: начинаем с самой заявки, дальше добавляем
   // кандидатов по очереди, пока не упрёмся в MAX_GROUP_SIZE.
@@ -81,35 +84,28 @@ function findAndCreateMatch(requestId) {
   }
 
   // Создаём группу и переводим все заявки в статус "matched" одной транзакцией
-  const createGroup = db.transaction(() => {
-    const insertGroup = db.prepare(`
-      INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
-      VALUES (?, ?, ?, ?, ?, 'matched')
-    `);
-    const info = insertGroup.run(
-      request.travel_date,
-      request.route_from,
-      request.route_to,
-      request.route_stops,
-      total
-    );
-    const groupId = info.lastInsertRowid;
-
-    const linkRequest = db.prepare('INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)');
-    const markMatched = db.prepare("UPDATE requests SET status = 'matched' WHERE id = ?");
+  const groupId = await withTransaction(async (tx) => {
+    const info = await tx.execute({
+      sql: `INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
+            VALUES (?, ?, ?, ?, ?, 'matched')`,
+      args: [request.travel_date, request.route_from, request.route_to, request.route_stops, total],
+    });
+    const newGroupId = Number(info.lastInsertRowid);
 
     for (const member of chosen) {
-      linkRequest.run(groupId, member.id);
-      markMatched.run(member.id);
+      await tx.execute({
+        sql: 'INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)',
+        args: [newGroupId, member.id],
+      });
+      await tx.execute({ sql: "UPDATE requests SET status = 'matched' WHERE id = ?", args: [member.id] });
     }
 
-    return groupId;
+    return newGroupId;
   });
 
-  const groupId = createGroup();
-  const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
+  const groupRs = await client.execute({ sql: 'SELECT * FROM groups WHERE id = ?', args: [groupId] });
 
-  return { group, members: chosen };
+  return { group: groupRs.rows[0], members: chosen };
 }
 
 function daysBetween(a, b) {
@@ -133,10 +129,10 @@ function daysBetween(a, b) {
  * пары в JS; при небольшом количестве активных заявок (десятки, не тысячи)
  * это быстро и просто.
  */
-function findPartialMatches() {
-  const rows = db.prepare("SELECT * FROM requests WHERE status = 'new' ORDER BY created_at ASC").all();
+async function findPartialMatches() {
+  const rs = await client.execute("SELECT * FROM requests WHERE status = 'new' ORDER BY created_at ASC");
 
-  const parsed = rows.map((r) => {
+  const parsed = rs.rows.map((r) => {
     let stops = [];
     try {
       stops = JSON.parse(r.route_stops) || [];

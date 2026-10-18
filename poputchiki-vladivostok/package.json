@@ -4,7 +4,7 @@
   "description": "Сервис поиска попутчиков во Владивостоке (трансфер аэропорт/город/остров Русский)",
   "main": "server.js",
   "engines": {
-    "node": ">=20 <23"
+    "node": ">=18"
   },
   "scripts": {
     "start": "node server.js",
@@ -12,7 +12,7 @@
   },
   "license": "UNLICENSED",
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "@libsql/client": "^0.18.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"
   }

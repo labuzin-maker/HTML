@@ -3,12 +3,16 @@
 // Структура простая и линейная (без роутеров/контроллеров в отдельных
 // файлах) — для проекта такого размера это легче читать и расширять.
 // Когда роутов станет много, их можно вынести в папку routes/.
+//
+// Все обращения к БД асинхронные (Turso/libSQL, см. db.js) — поэтому каждый
+// роут теперь async, а Express 4 сам не ловит отклонённые промисы из async
+// хендлеров (в отличие от Express 5), отсюда обёртка asyncHandler ниже.
 
 const path = require('path');
 const express = require('express');
 
 const config = require('./config');
-const db = require('./db');
+const { client, withTransaction, initDb } = require('./db');
 const { findAndCreateMatch, findPartialMatches } = require('./matching');
 const { sendPushNotification, buildNewRequestMessage } = require('./notify');
 
@@ -16,6 +20,13 @@ const app = express();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Оборачивает async-роут так, чтобы отклонённый промис дошёл до error-мидлвари
+function asyncHandler(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Публичное API: форма подачи заявки
@@ -46,56 +57,61 @@ app.get('/requests', (req, res) => {
 });
 
 // POST /api/requests — сохранить новую заявку и попытаться найти совпадение
-app.post('/api/requests', (req, res) => {
-  const body = req.body || {};
+app.post(
+  '/api/requests',
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
 
-  const name = String(body.name || '').trim();
-  const contact = String(body.contact || '').trim();
-  const travelDate = String(body.travel_date || '').trim();
-  const routeStops = normalizeRouteStops(body.route_stops);
-  const peopleCount = parseInt(body.people_count, 10);
-  const comment = body.comment ? String(body.comment).trim() : null;
-  const consent = Boolean(body.consent);
+    const name = String(body.name || '').trim();
+    const contact = String(body.contact || '').trim();
+    const travelDate = String(body.travel_date || '').trim();
+    const routeStops = normalizeRouteStops(body.route_stops);
+    const peopleCount = parseInt(body.people_count, 10);
+    const comment = body.comment ? String(body.comment).trim() : null;
+    const consent = Boolean(body.consent);
 
-  // Серверная валидация — не доверяем только фронтенду
-  const errors = [];
-  if (!name) errors.push('姓名不能为空');
-  if (!contact) errors.push('请填写联系方式');
-  if (!isValidDate(travelDate)) errors.push('请选择正确的出行日期');
-  if (!routeStops) errors.push('请至少选择两个途经点(出发地和目的地)');
-  if (!Number.isInteger(peopleCount) || peopleCount < 1) errors.push('人数至少为1人');
-  if (peopleCount > config.MAX_GROUP_SIZE) errors.push(`单次申请人数不能超过 ${config.MAX_GROUP_SIZE} 人`);
-  if (!consent) errors.push('请勾选同意授权处理联系方式');
+    // Серверная валидация — не доверяем только фронтенду
+    const errors = [];
+    if (!name) errors.push('姓名不能为空');
+    if (!contact) errors.push('请填写联系方式');
+    if (!isValidDate(travelDate)) errors.push('请选择正确的出行日期');
+    if (!routeStops) errors.push('请至少选择两个途经点(出发地和目的地)');
+    if (!Number.isInteger(peopleCount) || peopleCount < 1) errors.push('人数至少为1人');
+    if (peopleCount > config.MAX_GROUP_SIZE) errors.push(`单次申请人数不能超过 ${config.MAX_GROUP_SIZE} 人`);
+    if (!consent) errors.push('请勾选同意授权处理联系方式');
 
-  if (errors.length > 0) {
-    return res.status(400).json({ ok: false, errors });
-  }
+    if (errors.length > 0) {
+      return res.status(400).json({ ok: false, errors });
+    }
 
-  const routeFrom = routeStops[0];
-  const routeTo = routeStops[routeStops.length - 1];
-  const routeStopsJson = JSON.stringify(routeStops);
+    const routeFrom = routeStops[0];
+    const routeTo = routeStops[routeStops.length - 1];
+    const routeStopsJson = JSON.stringify(routeStops);
 
-  const insert = db.prepare(`
-    INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new')
-  `);
-  const info = insert.run(name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment);
-  const requestId = info.lastInsertRowid;
+    const info = await client.execute({
+      sql: `
+        INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new')
+      `,
+      args: [name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment],
+    });
+    const requestId = Number(info.lastInsertRowid);
 
-  // Push-уведомление администратору о новой заявке (см. notify.js).
-  // Не блокируем ответ пользователю ожиданием отправки — просто запускаем её.
-  sendPushNotification(
-    '🚗 Новая заявка на попутчиков',
-    buildNewRequestMessage({ name, contact, travel_date: travelDate, route_stops: routeStops, people_count: peopleCount, comment })
-  );
+    // Push-уведомление администратору о новой заявке (см. notify.js).
+    // Не блокируем ответ пользователю ожиданием отправки — просто запускаем её.
+    sendPushNotification(
+      '🚗 Новая заявка на попутчиков',
+      buildNewRequestMessage({ name, contact, travel_date: travelDate, route_stops: routeStops, people_count: peopleCount, comment })
+    );
 
-  // Пытаемся найти совпадение сразу после сохранения. Отдельного уведомления
-  // именно про совпадение нет — статус виден в публичном списке заявок
-  // (GET /api/requests) и в /admin, администратор увидит его там же.
-  const match = findAndCreateMatch(requestId);
+    // Пытаемся найти совпадение сразу после сохранения. Отдельного уведомления
+    // именно про совпадение нет — статус виден в публичном списке заявок
+    // (GET /api/requests) и в /admin, администратор увидит его там же.
+    const match = await findAndCreateMatch(requestId);
 
-  res.json({ ok: true, matched: Boolean(match) });
-});
+    res.json({ ok: true, matched: Boolean(match) });
+  })
+);
 
 // GET /api/requests — публичный список заявок (для страницы со списком).
 // Контакты (WeChat/телефон) сюда не отдаём — это не приватная информация
@@ -109,18 +125,19 @@ app.post('/api/requests', (req, res) => {
 //  - группа уже "отработала" — подтверждена (confirmed) или отклонена
 //    (rejected): люди либо уже договорились, либо дело закрыто, тут им
 //    искать пару больше не нужно.
-app.get('/api/requests', (req, res) => {
-  const rows = db
-    .prepare(
+app.get(
+  '/api/requests',
+  asyncHandler(async (req, res) => {
+    const rs = await client.execute(
       `SELECT id, travel_date, route_from, route_to, route_stops, people_count, comment, status, created_at
        FROM requests
        WHERE date(travel_date) >= date('now')
          AND status NOT IN ('confirmed', 'rejected')
        ORDER BY travel_date ASC, created_at DESC`
-    )
-    .all();
-  res.json({ ok: true, requests: rows });
-});
+    );
+    res.json({ ok: true, requests: rs.rows });
+  })
+);
 
 // ---------------------------------------------------------------------------
 // Защита админ-раздела: простой HTTP Basic Auth
@@ -156,172 +173,187 @@ app.get('/admin', (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /api/admin/requests?status=new — список заявок, опционально с фильтром по статусу
-app.get('/api/admin/requests', (req, res) => {
-  const { status } = req.query;
-  let rows;
-  if (status) {
-    rows = db.prepare('SELECT * FROM requests WHERE status = ? ORDER BY created_at DESC').all(status);
-  } else {
-    rows = db.prepare('SELECT * FROM requests ORDER BY created_at DESC').all();
-  }
-  res.json({ ok: true, requests: rows });
-});
+app.get(
+  '/api/admin/requests',
+  asyncHandler(async (req, res) => {
+    const { status } = req.query;
+    const rs = status
+      ? await client.execute({ sql: 'SELECT * FROM requests WHERE status = ? ORDER BY created_at DESC', args: [status] })
+      : await client.execute('SELECT * FROM requests ORDER BY created_at DESC');
+    res.json({ ok: true, requests: rs.rows });
+  })
+);
 
 // DELETE /api/admin/requests/:id — удалить заявку.
 // Если заявка состояла в группе, её также нужно аккуратно убрать оттуда:
 // пересчитать total_people по оставшимся участникам, а если участников
 // не осталось вообще — удалить и саму группу (незачем хранить пустую).
-app.delete('/api/admin/requests/:id', (req, res) => {
-  const requestId = Number(req.params.id);
-  const request = db.prepare('SELECT * FROM requests WHERE id = ?').get(requestId);
-  if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
+app.delete(
+  '/api/admin/requests/:id',
+  asyncHandler(async (req, res) => {
+    const requestId = Number(req.params.id);
+    const requestRs = await client.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [requestId] });
+    const request = requestRs.rows[0];
+    if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
 
-  const deleteRequest = db.transaction(() => {
-    // Группы, куда входила эта заявка (обычно не больше одной, но на всякий случай — все)
-    const groupIds = db
-      .prepare('SELECT group_id FROM group_requests WHERE request_id = ?')
-      .all(requestId)
-      .map((r) => r.group_id);
+    await withTransaction(async (tx) => {
+      // Группы, куда входила эта заявка (обычно не больше одной, но на всякий случай — все)
+      const groupIdsRs = await tx.execute({
+        sql: 'SELECT group_id FROM group_requests WHERE request_id = ?',
+        args: [requestId],
+      });
+      const groupIds = groupIdsRs.rows.map((r) => r.group_id);
 
-    // ON DELETE CASCADE (см. db.js) сам подчистит строку в group_requests
-    db.prepare('DELETE FROM requests WHERE id = ?').run(requestId);
+      // ON DELETE CASCADE (см. db.js) сам подчистит строку в group_requests
+      await tx.execute({ sql: 'DELETE FROM requests WHERE id = ?', args: [requestId] });
 
-    for (const groupId of groupIds) {
-      const remaining = db
-        .prepare(
-          `SELECT r.people_count FROM requests r
-           JOIN group_requests gr ON gr.request_id = r.id
-           WHERE gr.group_id = ?`
-        )
-        .all(groupId);
+      for (const groupId of groupIds) {
+        const remainingRs = await tx.execute({
+          sql: `SELECT r.people_count FROM requests r
+                JOIN group_requests gr ON gr.request_id = r.id
+                WHERE gr.group_id = ?`,
+          args: [groupId],
+        });
+        const remaining = remainingRs.rows;
 
-      if (remaining.length === 0) {
-        db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
-      } else {
-        const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
-        db.prepare('UPDATE groups SET total_people = ? WHERE id = ?').run(totalPeople, groupId);
+        if (remaining.length === 0) {
+          await tx.execute({ sql: 'DELETE FROM groups WHERE id = ?', args: [groupId] });
+        } else {
+          const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
+          await tx.execute({ sql: 'UPDATE groups SET total_people = ? WHERE id = ?', args: [totalPeople, groupId] });
+        }
       }
-    }
-  });
+    });
 
-  deleteRequest();
-  res.json({ ok: true });
-});
+    res.json({ ok: true });
+  })
+);
 
 // GET /api/admin/partial-matches — пары заявок с близкой датой и пересекающимся
 // (но не полностью совпадающим) маршрутом — подсказка админу, что этим людям,
 // возможно, стоит договориться и подкорректировать маршрут, чтобы поехать
 // вместе. Это не авто-группировка — решение и создание группы (через
 // POST /api/admin/groups) остаются за администратором.
-app.get('/api/admin/partial-matches', (req, res) => {
-  res.json({ ok: true, pairs: findPartialMatches() });
-});
+app.get(
+  '/api/admin/partial-matches',
+  asyncHandler(async (req, res) => {
+    res.json({ ok: true, pairs: await findPartialMatches() });
+  })
+);
 
 // ---------------------------------------------------------------------------
 // Админ API: группы
 // ---------------------------------------------------------------------------
 
 // Достаём группу вместе со списком участников (заявок)
-function getGroupWithMembers(groupId) {
-  const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
+async function getGroupWithMembers(groupId) {
+  const groupRs = await client.execute({ sql: 'SELECT * FROM groups WHERE id = ?', args: [groupId] });
+  const group = groupRs.rows[0];
   if (!group) return null;
-  const members = db
-    .prepare(
-      `SELECT r.* FROM requests r
-       JOIN group_requests gr ON gr.request_id = r.id
-       WHERE gr.group_id = ?
-       ORDER BY r.created_at ASC`
-    )
-    .all(groupId);
-  return { ...group, members };
+  const membersRs = await client.execute({
+    sql: `SELECT r.* FROM requests r
+          JOIN group_requests gr ON gr.request_id = r.id
+          WHERE gr.group_id = ?
+          ORDER BY r.created_at ASC`,
+    args: [groupId],
+  });
+  return { ...group, members: membersRs.rows };
 }
 
 // GET /api/admin/groups — список всех групп с участниками
-app.get('/api/admin/groups', (req, res) => {
-  const groups = db.prepare('SELECT * FROM groups ORDER BY created_at DESC').all();
-  const withMembers = groups.map((g) => getGroupWithMembers(g.id));
-  res.json({ ok: true, groups: withMembers });
-});
+app.get(
+  '/api/admin/groups',
+  asyncHandler(async (req, res) => {
+    const groupsRs = await client.execute('SELECT * FROM groups ORDER BY created_at DESC');
+    const withMembers = await Promise.all(groupsRs.rows.map((g) => getGroupWithMembers(g.id)));
+    res.json({ ok: true, groups: withMembers });
+  })
+);
 
 // POST /api/admin/groups — создать группу вручную из выбранных заявок
 // body: { request_ids: number[] }
-app.post('/api/admin/groups', (req, res) => {
-  const requestIds = Array.isArray(req.body?.request_ids) ? req.body.request_ids.map(Number) : [];
+app.post(
+  '/api/admin/groups',
+  asyncHandler(async (req, res) => {
+    const requestIds = Array.isArray(req.body?.request_ids) ? req.body.request_ids.map(Number) : [];
 
-  if (requestIds.length === 0) {
-    return res.status(400).json({ ok: false, error: 'Не выбраны заявки для группы' });
-  }
-
-  const placeholders = requestIds.map(() => '?').join(',');
-  const requests = db.prepare(`SELECT * FROM requests WHERE id IN (${placeholders})`).all(...requestIds);
-
-  if (requests.length !== requestIds.length) {
-    return res.status(400).json({ ok: false, error: 'Часть заявок не найдена' });
-  }
-
-  const alreadyGrouped = requests.filter((r) => r.status !== 'new');
-  if (alreadyGrouped.length > 0) {
-    return res.status(400).json({
-      ok: false,
-      error: `Заявки уже не в статусе "новая": ${alreadyGrouped.map((r) => r.id).join(', ')}`,
-    });
-  }
-
-  // Для ручного создания группы не требуем совпадения маршрута/даты у всех
-  // заявок — админ мог осознанно объединить похожие, но не идентичные заявки.
-  // За дату/маршрут группы берём значения первой заявки.
-  const first = requests[0];
-  const totalPeople = requests.reduce((sum, r) => sum + r.people_count, 0);
-
-  // Лимит на размер группы (вместимость машины) действует и здесь — раньше
-  // проверялся только в авто-мэтчинге (matching.js), ручное создание могло
-  // случайно собрать группу больше MAX_GROUP_SIZE.
-  if (totalPeople > config.MAX_GROUP_SIZE) {
-    return res.status(400).json({
-      ok: false,
-      error: `В группе получится ${totalPeople} человек — это больше лимита в ${config.MAX_GROUP_SIZE}. Выберите заявки с меньшим суммарным числом человек.`,
-    });
-  }
-
-  const createGroup = db.transaction(() => {
-    const info = db
-      .prepare(
-        `INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
-         VALUES (?, ?, ?, ?, ?, 'matched')`
-      )
-      .run(first.travel_date, first.route_from, first.route_to, first.route_stops, totalPeople);
-
-    const groupId = info.lastInsertRowid;
-    const linkRequest = db.prepare('INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)');
-    const markMatched = db.prepare("UPDATE requests SET status = 'matched' WHERE id = ?");
-
-    for (const r of requests) {
-      linkRequest.run(groupId, r.id);
-      markMatched.run(r.id);
+    if (requestIds.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Не выбраны заявки для группы' });
     }
 
-    return groupId;
-  });
+    const placeholders = requestIds.map(() => '?').join(',');
+    const requestsRs = await client.execute({
+      sql: `SELECT * FROM requests WHERE id IN (${placeholders})`,
+      args: requestIds,
+    });
+    const requests = requestsRs.rows;
 
-  const groupId = createGroup();
-  res.json({ ok: true, group: getGroupWithMembers(groupId) });
-});
+    if (requests.length !== requestIds.length) {
+      return res.status(400).json({ ok: false, error: 'Часть заявок не найдена' });
+    }
+
+    const alreadyGrouped = requests.filter((r) => r.status !== 'new');
+    if (alreadyGrouped.length > 0) {
+      return res.status(400).json({
+        ok: false,
+        error: `Заявки уже не в статусе "новая": ${alreadyGrouped.map((r) => r.id).join(', ')}`,
+      });
+    }
+
+    // Для ручного создания группы не требуем совпадения маршрута/даты у всех
+    // заявок — админ мог осознанно объединить похожие, но не идентичные заявки.
+    // За дату/маршрут группы берём значения первой заявки.
+    const first = requests[0];
+    const totalPeople = requests.reduce((sum, r) => sum + r.people_count, 0);
+
+    // Лимит на размер группы (вместимость машины) действует и здесь — раньше
+    // проверялся только в авто-мэтчинге (matching.js), ручное создание могло
+    // случайно собрать группу больше MAX_GROUP_SIZE.
+    if (totalPeople > config.MAX_GROUP_SIZE) {
+      return res.status(400).json({
+        ok: false,
+        error: `В группе получится ${totalPeople} человек — это больше лимита в ${config.MAX_GROUP_SIZE}. Выберите заявки с меньшим суммарным числом человек.`,
+      });
+    }
+
+    const groupId = await withTransaction(async (tx) => {
+      const info = await tx.execute({
+        sql: `INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
+              VALUES (?, ?, ?, ?, ?, 'matched')`,
+        args: [first.travel_date, first.route_from, first.route_to, first.route_stops, totalPeople],
+      });
+      const newGroupId = Number(info.lastInsertRowid);
+
+      for (const r of requests) {
+        await tx.execute({ sql: 'INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)', args: [newGroupId, r.id] });
+        await tx.execute({ sql: "UPDATE requests SET status = 'matched' WHERE id = ?", args: [r.id] });
+      }
+
+      return newGroupId;
+    });
+
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
 
 // PUT /api/admin/groups/:id/price — установить цену поездки для группы
-app.put('/api/admin/groups/:id/price', (req, res) => {
-  const groupId = Number(req.params.id);
-  const price = Number(req.body?.price);
+app.put(
+  '/api/admin/groups/:id/price',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const price = Number(req.body?.price);
 
-  if (!Number.isFinite(price) || price < 0) {
-    return res.status(400).json({ ok: false, error: 'Некорректная цена' });
-  }
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ ok: false, error: 'Некорректная цена' });
+    }
 
-  const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
-  if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+    const groupRs = await client.execute({ sql: 'SELECT * FROM groups WHERE id = ?', args: [groupId] });
+    if (!groupRs.rows[0]) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
 
-  db.prepare('UPDATE groups SET price = ? WHERE id = ?').run(price, groupId);
-  res.json({ ok: true, group: getGroupWithMembers(groupId) });
-});
+    await client.execute({ sql: 'UPDATE groups SET price = ? WHERE id = ?', args: [price, groupId] });
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
 
 // Шаблон сообщения для ручной отправки участнику в WeChat.
 // Это заглушка первого этапа: реальную интеграцию с WeChat можно добавить позже,
@@ -354,55 +386,74 @@ function buildWeChatMessage(member, group) {
 }
 
 // POST /api/admin/groups/:id/confirm — подтвердить группу
-app.post('/api/admin/groups/:id/confirm', (req, res) => {
-  const groupId = Number(req.params.id);
-  const group = getGroupWithMembers(groupId);
-  if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+app.post(
+  '/api/admin/groups/:id/confirm',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const group = await getGroupWithMembers(groupId);
+    if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
 
-  const confirmGroup = db.transaction(() => {
-    db.prepare(
-      "UPDATE groups SET status = 'confirmed', confirmed_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?"
-    ).run(groupId);
-    const markConfirmed = db.prepare("UPDATE requests SET status = 'confirmed' WHERE id = ?");
-    for (const m of group.members) {
-      markConfirmed.run(m.id);
-    }
-  });
-  confirmGroup();
+    await withTransaction(async (tx) => {
+      await tx.execute({
+        sql: "UPDATE groups SET status = 'confirmed', confirmed_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?",
+        args: [groupId],
+      });
+      for (const m of group.members) {
+        await tx.execute({ sql: "UPDATE requests SET status = 'confirmed' WHERE id = ?", args: [m.id] });
+      }
+    });
 
-  const updatedGroup = getGroupWithMembers(groupId);
+    const updatedGroup = await getGroupWithMembers(groupId);
 
-  // Заглушка отправки в WeChat: возвращаем готовые тексты сообщений,
-  // чтобы админ мог скопировать их и отправить руками каждому участнику.
-  const messages = updatedGroup.members.map((m) => ({
-    request_id: m.id,
-    name: m.name,
-    contact: m.contact,
-    message: buildWeChatMessage(m, updatedGroup),
-  }));
+    // Заглушка отправки в WeChat: возвращаем готовые тексты сообщений,
+    // чтобы админ мог скопировать их и отправить руками каждому участнику.
+    const messages = updatedGroup.members.map((m) => ({
+      request_id: m.id,
+      name: m.name,
+      contact: m.contact,
+      message: buildWeChatMessage(m, updatedGroup),
+    }));
 
-  res.json({ ok: true, group: updatedGroup, messages });
-});
+    res.json({ ok: true, group: updatedGroup, messages });
+  })
+);
 
 // POST /api/admin/groups/:id/reject — отклонить группу
-app.post('/api/admin/groups/:id/reject', (req, res) => {
-  const groupId = Number(req.params.id);
-  const group = getGroupWithMembers(groupId);
-  if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+app.post(
+  '/api/admin/groups/:id/reject',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const group = await getGroupWithMembers(groupId);
+    if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
 
-  const rejectGroup = db.transaction(() => {
-    db.prepare("UPDATE groups SET status = 'rejected' WHERE id = ?").run(groupId);
-    const markRejected = db.prepare("UPDATE requests SET status = 'rejected' WHERE id = ?");
-    for (const m of group.members) {
-      markRejected.run(m.id);
-    }
-  });
-  rejectGroup();
+    await withTransaction(async (tx) => {
+      await tx.execute({ sql: "UPDATE groups SET status = 'rejected' WHERE id = ?", args: [groupId] });
+      for (const m of group.members) {
+        await tx.execute({ sql: "UPDATE requests SET status = 'rejected' WHERE id = ?", args: [m.id] });
+      }
+    });
 
-  res.json({ ok: true, group: getGroupWithMembers(groupId) });
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
+
+// Единая error-мидлварь: сюда попадают все ошибки, переданные через next(err)
+// (в т.ч. отклонённые промисы из asyncHandler).
+app.use((err, req, res, next) => {
+  console.error('Ошибка запроса:', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ ok: false, error: 'Внутренняя ошибка сервера' });
 });
 
-app.listen(config.PORT, () => {
-  console.log(`Сервер "Попутчики во Владивосток" запущен: http://localhost:${config.PORT}`);
-  console.log(`Админ-панель: http://localhost:${config.PORT}/admin (логин/пароль см. .env)`);
+async function start() {
+  await initDb();
+  app.listen(config.PORT, () => {
+    console.log(`Сервер "Попутчики во Владивосток" запущен: http://localhost:${config.PORT}`);
+    console.log(`Админ-панель: http://localhost:${config.PORT}/admin (логин/пароль см. .env)`);
+  });
+}
+
+start().catch((err) => {
+  console.error('Не удалось запустить сервер:', err);
+  process.exit(1);
 });

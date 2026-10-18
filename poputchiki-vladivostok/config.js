@@ -14,10 +14,12 @@ module.exports = {
   // Порт HTTP-сервера
   PORT: toInt(process.env.PORT, 3000),
 
-  // Путь к файлу базы данных SQLite
-  DB_FILE: process.env.DB_FILE
-    ? path.resolve(__dirname, process.env.DB_FILE)
-    : path.join(__dirname, 'data', 'db.sqlite'),
+  // База данных — Turso (облачный SQLite-совместимый сервис, см. db.js).
+  // Без TURSO_DATABASE_URL в .env по умолчанию используется обычный локальный
+  // файл (../data/db.sqlite) — для разработки и тестов Turso-аккаунт не нужен,
+  // тот же код работает и с файлом, и с настоящим Turso.
+  TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, 'data', 'db.sqlite')}`,
+  TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN || '',
 
   // --- Настройки мэтчинга (см. matching.js) ---
   MIN_GROUP_SIZE: toInt(process.env.MIN_GROUP_SIZE, 2),
