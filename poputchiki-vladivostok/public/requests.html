@@ -100,6 +100,20 @@
     renderRequests(lastRequests); // перерисовать статусы в таблице с/без перевода
   });
 
+  // Готовые точки маршрута (тот же справочник, что в форме public/index.html
+  // и в админке public/admin.js) — переводим на русский, когда включён
+  // переключатель RU, чтобы было понятно, куда именно едет заявитель, не
+  // разбирая китайские иероглифы.
+  const STOP_TRANSLATIONS = {
+    '机场': 'Аэропорт',
+    '市中心': 'Центр',
+    '火车站': 'Вокзал',
+    '俄罗斯岛': 'Остров Русский',
+    '灯塔': 'Токаревский маяк',
+    '鹰巢山观景台': 'Смотровая «Орлиное гнездо»',
+    '海洋水族馆': 'Океанариум',
+  };
+
   // Публичный статус-лейблы на китайском + русский перевод в скобках (для этой
   // страницы; в админ-панели те же статусы показаны по-русски — см. public/admin.js).
   const STATUS_LABELS = {
@@ -122,17 +136,28 @@
       .replace(/>/g, '&gt;');
   }
 
+  // Точка маршрута на китайском + русский перевод в скобках, только когда
+  // включён RU (см. STOP_TRANSLATIONS выше). Свободный ввод («其他» на форме)
+  // переводить неоткуда — помечаем как "свой вариант", чтобы было видно, что
+  // это не стандартная точка, а не просто непереведённый текст.
+  function formatStop(stop) {
+    const zh = escapeHtml(stop);
+    if (!showRu) return zh;
+    const ru = STOP_TRANSLATIONS[stop];
+    return `${zh} (${ru || 'свой вариант'})`;
+  }
+
   // Маршрут может состоять из нескольких точек (route_stops, JSON-массив) —
   // показываем полную цепочку; на старых записях без route_stops откатываемся
   // к паре route_from/route_to.
   function formatRoute(r) {
     try {
       const stops = JSON.parse(r.route_stops);
-      if (Array.isArray(stops) && stops.length > 0) return stops.map(escapeHtml).join(' → ');
+      if (Array.isArray(stops) && stops.length > 0) return stops.map(formatStop).join(' → ');
     } catch (e) {
       // route_stops пустой/невалидный — используем запасной вариант ниже
     }
-    return `${escapeHtml(r.route_from)} → ${escapeHtml(r.route_to)}`;
+    return `${formatStop(r.route_from)} → ${formatStop(r.route_to)}`;
   }
 
   let lastRequests = [];
