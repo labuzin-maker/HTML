@@ -64,6 +64,15 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+// GET /home — тот же app.html, под другим адресом. iOS Safari умеет
+// "залипать" на старой иконке для уже посещённого URL (даже после смены
+// файла иконки), поэтому для свежей установки на экран "Домой" нужен
+// адрес, который Safari ещё не видел — так Safari гарантированно
+// запрашивает иконку заново, а не берёт её из своего внутреннего кэша.
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
 // POST /api/requests — сохранить новую заявку и попытаться найти совпадение
 app.post(
   '/api/requests',
