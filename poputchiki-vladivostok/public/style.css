@@ -271,6 +271,11 @@ th {
   color: var(--danger);
 }
 
+.badge-cancelled {
+  background: #eef1f5;
+  color: var(--ink-soft);
+}
+
 .top-bar {
   display: flex;
   justify-content: space-between;

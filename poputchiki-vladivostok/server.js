@@ -9,6 +9,7 @@
 // хендлеров (в отличие от Express 5), отсюда обёртка asyncHandler ниже.
 
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 
 const config = require('./config');
@@ -49,6 +50,39 @@ function normalizeRouteStops(value) {
   if (stops.length < 2 || stops.length > MAX_ROUTE_STOPS) return null;
   if (stops.some((s) => s.length > 60)) return null;
   return stops;
+}
+
+// Убрать заявку request_id из всех групп, куда она входила, и пересчитать/
+// удалить эти группы по оставшимся участникам. Используется и при жёстком
+// удалении заявки админом (строка requests уже удалена, ON DELETE CASCADE
+// сам убрал group_requests — тут просто пересчёт), и при самостоятельной
+// отмене туристом (строка requests остаётся, статус меняется на 'cancelled',
+// а связь в group_requests для неё удаляем явно сами).
+async function detachRequestFromGroups(tx, requestId) {
+  const groupIdsRs = await tx.execute({
+    sql: 'SELECT group_id FROM group_requests WHERE request_id = ?',
+    args: [requestId],
+  });
+  const groupIds = groupIdsRs.rows.map((r) => r.group_id);
+
+  await tx.execute({ sql: 'DELETE FROM group_requests WHERE request_id = ?', args: [requestId] });
+
+  for (const groupId of groupIds) {
+    const remainingRs = await tx.execute({
+      sql: `SELECT r.people_count FROM requests r
+            JOIN group_requests gr ON gr.request_id = r.id
+            WHERE gr.group_id = ?`,
+      args: [groupId],
+    });
+    const remaining = remainingRs.rows;
+
+    if (remaining.length === 0) {
+      await tx.execute({ sql: 'DELETE FROM groups WHERE id = ?', args: [groupId] });
+    } else {
+      const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
+      await tx.execute({ sql: 'UPDATE groups SET total_people = ? WHERE id = ?', args: [totalPeople, groupId] });
+    }
+  }
 }
 
 // GET /requests — публичная страница со списком всех заявок (без контактов)
@@ -105,12 +139,18 @@ app.post(
     const routeTo = routeStops[routeStops.length - 1];
     const routeStopsJson = JSON.stringify(routeStops);
 
+    // Секрет для самостоятельной отмены заявки туристом (см. POST
+    // /api/requests/:id/cancel ниже) — отдаём его один раз в ответе,
+    // фронтенд сохраняет в localStorage. Без аккаунтов/логина это
+    // единственный способ доказать "это моя заявка", не раскрывая чужие.
+    const cancelToken = crypto.randomUUID();
+
     const info = await client.execute({
       sql: `
-        INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new')
+        INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status, cancel_token)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new', ?)
       `,
-      args: [name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment],
+      args: [name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment, cancelToken],
     });
     const requestId = Number(info.lastInsertRowid);
 
@@ -126,7 +166,40 @@ app.post(
     // (GET /api/requests) и в /admin, администратор увидит его там же.
     const match = await findAndCreateMatch(requestId);
 
-    res.json({ ok: true, matched: Boolean(match) });
+    res.json({ ok: true, matched: Boolean(match), request_id: requestId, cancel_token: cancelToken });
+  })
+);
+
+// POST /api/requests/:id/cancel — турист сам отменяет свою заявку, по токену
+// из ответа на POST /api/requests (без логина — body: { cancel_token }).
+// Если заявка уже была в группе — убираем её оттуда (пересчёт/удаление
+// группы, см. detachRequestFromGroups), саму заявку не удаляем, а помечаем
+// статусом 'cancelled' — чтобы в /admin была видна полная история
+// (в отличие от 'rejected', которую проставляет админ).
+app.post(
+  '/api/requests/:id/cancel',
+  asyncHandler(async (req, res) => {
+    const requestId = Number(req.params.id);
+    const token = String(req.body?.cancel_token || '');
+
+    const requestRs = await client.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [requestId] });
+    const request = requestRs.rows[0];
+    if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
+
+    if (!request.cancel_token || request.cancel_token !== token) {
+      return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+    }
+
+    if (request.status !== 'new' && request.status !== 'matched') {
+      return res.status(400).json({ ok: false, error: 'Эту заявку уже нельзя отменить' });
+    }
+
+    await withTransaction(async (tx) => {
+      await detachRequestFromGroups(tx, requestId);
+      await tx.execute({ sql: "UPDATE requests SET status = 'cancelled' WHERE id = ?", args: [requestId] });
+    });
+
+    res.json({ ok: true });
   })
 );
 
@@ -149,7 +222,7 @@ app.get(
       `SELECT id, travel_date, route_from, route_to, route_stops, people_count, comment, status, created_at
        FROM requests
        WHERE date(travel_date) >= date('now')
-         AND status NOT IN ('confirmed', 'rejected')
+         AND status NOT IN ('confirmed', 'rejected', 'cancelled')
        ORDER BY travel_date ASC, created_at DESC`
     );
     res.json({ ok: true, requests: rs.rows });
@@ -214,32 +287,8 @@ app.delete(
     if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
 
     await withTransaction(async (tx) => {
-      // Группы, куда входила эта заявка (обычно не больше одной, но на всякий случай — все)
-      const groupIdsRs = await tx.execute({
-        sql: 'SELECT group_id FROM group_requests WHERE request_id = ?',
-        args: [requestId],
-      });
-      const groupIds = groupIdsRs.rows.map((r) => r.group_id);
-
-      // ON DELETE CASCADE (см. db.js) сам подчистит строку в group_requests
+      await detachRequestFromGroups(tx, requestId);
       await tx.execute({ sql: 'DELETE FROM requests WHERE id = ?', args: [requestId] });
-
-      for (const groupId of groupIds) {
-        const remainingRs = await tx.execute({
-          sql: `SELECT r.people_count FROM requests r
-                JOIN group_requests gr ON gr.request_id = r.id
-                WHERE gr.group_id = ?`,
-          args: [groupId],
-        });
-        const remaining = remainingRs.rows;
-
-        if (remaining.length === 0) {
-          await tx.execute({ sql: 'DELETE FROM groups WHERE id = ?', args: [groupId] });
-        } else {
-          const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
-          await tx.execute({ sql: 'UPDATE groups SET total_people = ? WHERE id = ?', args: [totalPeople, groupId] });
-        }
-      }
     });
 
     res.json({ ok: true });

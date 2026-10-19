@@ -7,6 +7,7 @@ const STATUS_LABELS = {
   matched: 'есть совпадение',
   confirmed: 'подтверждена',
   rejected: 'отклонена',
+  cancelled: 'отменена туристом',
 };
 
 // Готовые точки маршрута (см. выпадающий список в public/index.html) —

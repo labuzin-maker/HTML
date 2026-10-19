@@ -86,9 +86,11 @@ async function initDb() {
       people_count  INTEGER NOT NULL,               -- количество человек в заявке
       comment       TEXT,                           -- необязательный комментарий
       consent       INTEGER NOT NULL DEFAULT 0,     -- согласие на обработку контактов (0/1)
-      -- статус: new (новая) | matched (найдено совпадение) | confirmed (подтверждена) | rejected (отклонена)
+      -- статус: new (новая) | matched (найдено совпадение) | confirmed (подтверждена) |
+      --         rejected (отклонена админом) | cancelled (отменена самим туристом)
       status        TEXT NOT NULL DEFAULT 'new',
-      created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+      created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+      cancel_token  TEXT                            -- секрет для самостоятельной отмены заявки туристом (см. server.js)
     );
 
     -- Группы попутчиков (результат мэтчинга или ручного создания админом)
@@ -122,6 +124,7 @@ async function initDb() {
   // сортировки и отображения там, где полный список не нужен.
   await ensureColumn('requests', 'route_stops', 'route_stops TEXT');
   await ensureColumn('groups', 'route_stops', 'route_stops TEXT');
+  await ensureColumn('requests', 'cancel_token', 'cancel_token TEXT');
 
   // Бэкфилл старых строк (если переезжаем с версии БД до этой миграции)
   const oldRequests = await client.execute(

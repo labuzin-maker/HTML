@@ -85,6 +85,12 @@
 
   <div id="notice" class="notice" hidden></div>
 
+  <div id="my-requests-card" class="card" hidden>
+    <h2>我的申请</h2>
+    <p class="ru" style="margin-top:-8px;margin-bottom:12px;">Мои заявки (хранится в этом браузере)</p>
+    <div id="my-requests-list"></div>
+  </div>
+
   <form id="request-form" class="card">
 
     <div class="field">
@@ -216,6 +222,85 @@
 
   let routeStops = [];
 
+  // --- "Мои заявки": локально хранимый список (без логина/аккаунта) —
+  // id + секретный cancel_token, которые вернул сервер при подаче заявки
+  // (см. POST /api/requests). По нему можно самостоятельно её отменить.
+  const MY_REQUESTS_KEY = 'poputchik_my_requests';
+
+  function loadMyRequests() {
+    try { return JSON.parse(localStorage.getItem(MY_REQUESTS_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveMyRequests(list) {
+    try { localStorage.setItem(MY_REQUESTS_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function escapeHtmlLocal(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderMyRequests() {
+    const list = loadMyRequests();
+    const card = document.getElementById('my-requests-card');
+    const container = document.getElementById('my-requests-list');
+
+    if (list.length === 0) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    container.innerHTML = list
+      .map(
+        (r, i) => `
+      <div class="row" style="justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+        <div>
+          <div>${escapeHtmlLocal(r.route_label)}</div>
+          <div class="muted" style="font-size:12px;">${escapeHtmlLocal(r.travel_date)}</div>
+        </div>
+        <button type="button" class="btn btn-outline btn-small cancel-my-req-btn" data-i="${i}">取消 / Отменить</button>
+      </div>
+    `
+      )
+      .join('');
+  }
+
+  document.getElementById('my-requests-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.cancel-my-req-btn');
+    if (!btn) return;
+
+    const i = Number(btn.dataset.i);
+    const list = loadMyRequests();
+    const entry = list[i];
+    if (!entry) return;
+
+    if (!confirm('确定取消这份申请吗?\nТочно отменить эту заявку?')) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/requests/${entry.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancel_token: entry.cancel_token }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // И при успехе, и при осмысленной ошибке сервера (например, заявку уже
+      // не отменить — она подтверждена/отклонена/уже отменена) убираем её из
+      // локального списка — действовать с ней всё равно больше нельзя.
+      // Оставляем в списке только при настоящей сетевой ошибке (catch ниже).
+      list.splice(i, 1);
+      saveMyRequests(list);
+      renderMyRequests();
+
+      if (!data.ok) {
+        alert(data.error || '取消失败 / Не удалось отменить');
+      }
+    } catch (err) {
+      alert('网络错误,请稍后重试 / Ошибка сети, попробуйте позже');
+      btn.disabled = false;
+    }
+  });
+
+  renderMyRequests();
+
   stopSelect.addEventListener('change', () => {
     const isOther = stopSelect.value === 'other';
     stopCustomRow.hidden = !isOther;
@@ -315,6 +400,18 @@
           'error'
         );
       } else {
+        if (data.request_id && data.cancel_token) {
+          const list = loadMyRequests();
+          list.push({
+            id: data.request_id,
+            cancel_token: data.cancel_token,
+            route_label: routeStops.join(' → '),
+            travel_date: payload.travel_date,
+          });
+          saveMyRequests(list);
+          renderMyRequests();
+        }
+
         form.reset();
         routeStops = [];
         renderStopList();
