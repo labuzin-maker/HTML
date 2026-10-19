@@ -79,7 +79,7 @@
     </div>
     <div class="top-actions">
       <button type="button" class="lang-toggle" id="lang-toggle">RU 翻译</button>
-      <a class="btn btn-outline btn-small" href="/requests" style="white-space:nowrap;">查看所有申请</a>
+      <a class="btn btn-outline btn-small" href="/requests" id="view-requests-link" style="white-space:nowrap;">查看所有申请</a>
     </div>
   </div>
 
@@ -189,6 +189,18 @@
     applyLangState(showRu);
     try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
   });
+
+  // Внутри обёртки /app (единая иконка на экране "Домой", вкладки через
+  // iframe — см. public/app.html) эта кнопка не должна грузить /requests
+  // прямо в своём iframe (там нет пути назад) — вместо этого просим
+  // родительскую страницу переключить вкладку снизу. При обычном открытии
+  // страницы напрямую (не внутри /app) ссылка работает как обычно.
+  if (window.self !== window.top) {
+    document.getElementById('view-requests-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'poputchik-navigate', tab: 'requests' }, window.location.origin);
+    });
+  }
 
   // --- Конструктор маршрута: точки добавляются по одной, порядок = порядок маршрута ---
   const MAX_STOPS = 6;

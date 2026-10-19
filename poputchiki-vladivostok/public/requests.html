@@ -50,7 +50,7 @@
     </div>
     <div class="top-actions">
       <button type="button" class="lang-toggle" id="lang-toggle">RU 翻译</button>
-      <a class="btn btn-outline btn-small" href="/">+ 提交新申请</a>
+      <a class="btn btn-outline btn-small" href="/" id="add-request-link">+ 提交新申请</a>
     </div>
   </div>
 
@@ -99,6 +99,16 @@
     try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
     renderRequests(lastRequests); // перерисовать статусы в таблице с/без перевода
   });
+
+  // Внутри обёртки /app эта кнопка не должна грузить "/" прямо в своём
+  // iframe (там нет пути назад) — вместо этого просим родительскую
+  // страницу переключить вкладку снизу на "Форма" (см. public/app.html).
+  if (window.self !== window.top) {
+    document.getElementById('add-request-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'poputchik-navigate', tab: 'form' }, window.location.origin);
+    });
+  }
 
   // Готовые точки маршрута (тот же справочник, что в форме public/index.html
   // и в админке public/admin.js) — переводим на русский, когда включён

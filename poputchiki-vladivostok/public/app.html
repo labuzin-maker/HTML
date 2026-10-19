@@ -107,20 +107,34 @@
     admin: document.getElementById('frame-admin'),
   };
 
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
+  function switchTab(tab) {
+    if (!frames[tab]) return;
 
-      buttons.forEach((b) => b.classList.toggle('active', b === btn));
-      Object.entries(frames).forEach(([name, frame]) => {
-        frame.classList.toggle('active', name === tab);
-      });
-
-      const frame = frames[tab];
-      if (frame.dataset.src && !frame.src) {
-        frame.src = frame.dataset.src;
-      }
+    buttons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    Object.entries(frames).forEach(([name, frame]) => {
+      frame.classList.toggle('active', name === tab);
     });
+
+    const frame = frames[tab];
+    if (frame.dataset.src && !frame.src) {
+      frame.src = frame.dataset.src;
+    }
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Кнопки внутри самих страниц ("查看所有申请" на форме, "+ 提交新申请" в
+  // списке) при запуске внутри этой обёртки не должны грузить другую
+  // страницу прямо в своём iframe (там нет кнопки "назад", а нижняя панель
+  // осталась бы подсвечена на старой вкладке) — вместо этого они шлют сюда
+  // сообщение, и мы просто переключаем вкладку снизу.
+  window.addEventListener('message', (e) => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data && e.data.type === 'poputchik-navigate') {
+      switchTab(e.data.tab);
+    }
   });
 </script>
 </body>
