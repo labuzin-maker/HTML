@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><style>
+:root{
+  --bg: #FFF9F1;
+  --card: #FFFFFF;
+  --card-soft: #FFF2E2;
+  --ink: #3A2E27;
+  --ink-soft: #8C7B6C;
+  --accent: #E8663F;
+  --accent-dark: #C64F2C;
+  --line: #F1E2CE;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  width:1080px;height:1440px;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+.slide{
+  width:1080px;height:1440px;
+  padding:88px 76px 72px;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+.eyebrow{
+  display:inline-block;
+  align-self:flex-start;
+  padding:10px 26px;
+  background:var(--card-soft);
+  color:var(--accent-dark);
+  border-radius:999px;
+  font-size:26px;
+  font-weight:600;
+  letter-spacing:.02em;
+}
+h1{
+  font-size:74px;
+  line-height:1.35;
+  margin:36px 0 16px;
+  font-weight:700;
+  text-wrap:balance;
+}
+h2{
+  font-size:64px;
+  line-height:1.3;
+  margin:36px 0 28px;
+  font-weight:700;
+  text-wrap:balance;
+}
+.sub{
+  color:var(--ink-soft);
+  font-size:32px;
+  margin:0 0 8px;
+}
+.body-text{
+  font-size:38px;
+  line-height:1.72;
+  color:var(--ink);
+  margin:0;
+}
+.art{
+  width:100%;
+  border-radius:36px;
+  margin:44px 0;
+  display:block;
+}
+.card{
+  background:var(--card);
+  border:2px solid var(--line);
+  border-radius:36px;
+  padding:44px 44px;
+  margin-top:12px;
+}
+.steps{list-style:none;margin:0;padding:0;}
+.steps li{
+  display:flex;
+  gap:26px;
+  margin-bottom:34px;
+  align-items:flex-start;
+}
+.steps li:last-child{margin-bottom:0;}
+.steps .num{
+  flex:0 0 auto;
+  width:56px;height:56px;
+  border-radius:50%;
+  background:var(--accent);
+  color:#fff;
+  font-size:30px;
+  font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.steps .txt{
+  padding-top:8px;
+  font-size:36px;
+  line-height:1.55;
+}
+.spacer{flex:1;}
+.brandline{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:26px;
+  color:var(--ink-soft);
+  border-top:2px solid var(--line);
+  padding-top:28px;
+  margin-top:auto;
+}
+.qr-row{
+  display:flex;
+  gap:32px;
+  margin-top:20px;
+}
+.qr-card{
+  flex:1;
+  background:var(--card);
+  border:2px solid var(--line);
+  border-radius:36px;
+  padding:36px 28px 32px;
+  text-align:center;
+}
+.qr-card img{
+  width:100%;
+  max-width:340px;
+  border-radius:16px;
+  display:block;
+  margin:0 auto 24px;
+}
+.qr-label{
+  font-size:34px;
+  font-weight:700;
+  margin:0 0 6px;
+}
+.qr-sub{
+  font-size:26px;
+  color:var(--ink-soft);
+  margin:0;
+}
+.hint{
+  font-size:28px;
+  line-height:1.6;
+  color:var(--ink);
+  background:var(--card-soft);
+  border-radius:28px;
+  padding:32px 36px;
+  margin-top:20px;
+}
+.hint b{color:var(--accent-dark);}
+.swipe-hint{
+  color:var(--accent-dark);
+  font-weight:700;
+}
+</style></head>
+<body><div class="slide">
+  <span class="eyebrow">03 · 为什么想分享</span>
+  <h2>反正同一趣车,分摄一下而已</h2>
+  <svg class="art" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" rx="20" fill="#FFEFDA"/>
+    <path d="M110 140 L130 104 Q138 94 154 94 L246 94 Q262 94 270 104 L290 140 Z" fill="#FFFFFF" stroke="#F1D9B8" stroke-width="3"/>
+    <rect x="110" y="132" width="180" height="26" rx="12" fill="#E8663F"/>
+    <circle cx="150" cy="112" r="12" fill="#F4B27E"/>
+    <circle cx="200" cy="108" r="12" fill="#F4B27E"/>
+    <circle cx="250" cy="112" r="12" fill="#F4B27E"/>
+    <circle cx="145" cy="164" r="16" fill="#3A2E27"/>
+    <circle cx="255" cy="164" r="16" fill="#3A2E27"/>
+    <g transform="translate(320,50)">
+      <circle r="34" fill="#FFFFFF" stroke="#F1D9B8" stroke-width="3"/>
+      <path d="M0 0 L0 -34 A34 34 0 0 1 29.4 17 Z" fill="#E8663F"/>
+      <path d="M0 0 L29.4 17 A34 34 0 0 1 -29.4 17 Z" fill="#F2955F"/>
+      <path d="M0 0 L-29.4 17 A34 34 0 0 1 0 -34 Z" fill="#F4B27E"/>
+    </g>
+    <text x="320" y="106" font-size="22" fill="#8C7B6C" text-anchor="middle" font-family="Arial">AA</text>
+</svg>
+  <p class="body-text">机场—市中心、市中心—俄罗斯岛这些路线,一个人打车不便宜。凑够两三个人分摄,人均能省下不少,而且时间上其实没差多少——反正都是去同一个地方。</p>
+  <div class="spacer"></div>
+  <div class="brandline"><span>宾至指南</span><span>4 / 6</span></div>
+</div></body></html>
