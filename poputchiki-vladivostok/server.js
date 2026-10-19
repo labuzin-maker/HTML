@@ -56,6 +56,14 @@ app.get('/requests', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'requests.html'));
 });
 
+// GET /app — единая "обёртка" для установки на экран "Домой" на iPhone:
+// одна иконка, внутри вкладки на форму/список/админку через iframe (см.
+// public/app.html). Сами страницы (/, /requests, /admin) продолжают
+// работать и напрямую — /app просто даёт их совместную оболочку.
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
 // POST /api/requests — сохранить новую заявку и попытаться найти совпадение
 app.post(
   '/api/requests',

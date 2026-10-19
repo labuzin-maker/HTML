@@ -1,7 +1,7 @@
 {
   "name": "海参崴拼车拼友 (Попутчики во Владивосток)",
   "short_name": "Попутчик",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f5f6f8",

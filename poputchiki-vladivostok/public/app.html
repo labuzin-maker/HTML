@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Попутчик</title>
+
+<!-- PWA: одна иконка на экране "Домой" на iPhone, внутри — все три страницы
+     сервиса как вкладки (форма / список / админка), переключаются без
+     перезагрузки адресной строки. -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2f6fed">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Попутчик">
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #f5f6f8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  }
+  .frames {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+  .frames iframe {
+    display: none;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .frames iframe.active {
+    display: block;
+  }
+  nav.tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    background: #ffffff;
+    border-top: 1px solid #e3e6ea;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabbar button {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 9px 4px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-family: inherit;
+    font-size: 11px;
+    color: #6b7280;
+    cursor: pointer;
+  }
+  nav.tabbar button .icon {
+    font-size: 21px;
+    line-height: 1;
+  }
+  nav.tabbar button.active {
+    color: #2f6fed;
+  }
+</style>
+</head>
+<body>
+
+<div class="frames">
+  <iframe id="frame-form" class="active" src="/"></iframe>
+  <iframe id="frame-requests" data-src="/requests"></iframe>
+  <iframe id="frame-admin" data-src="/admin"></iframe>
+</div>
+
+<nav class="tabbar">
+  <button type="button" class="active" data-tab="form">
+    <span class="icon">📝</span>
+    <span>Форма</span>
+  </button>
+  <button type="button" data-tab="requests">
+    <span class="icon">📋</span>
+    <span>Список</span>
+  </button>
+  <button type="button" data-tab="admin">
+    <span class="icon">🔧</span>
+    <span>Админка</span>
+  </button>
+</nav>
+
+<script>
+  // Вкладки "Список" и "Админка" подгружаются лениво (src ставится только
+  // при первом открытии) — чтобы при запуске приложения не делать три
+  // запроса разом и не будить /admin (Basic Auth) без необходимости.
+  const buttons = document.querySelectorAll('.tabbar button');
+  const frames = {
+    form: document.getElementById('frame-form'),
+    requests: document.getElementById('frame-requests'),
+    admin: document.getElementById('frame-admin'),
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+
+      buttons.forEach((b) => b.classList.toggle('active', b === btn));
+      Object.entries(frames).forEach(([name, frame]) => {
+        frame.classList.toggle('active', name === tab);
+      });
+
+      const frame = frames[tab];
+      if (frame.dataset.src && !frame.src) {
+        frame.src = frame.dataset.src;
+      }
+    });
+  });
+</script>
+</body>
+</html>
