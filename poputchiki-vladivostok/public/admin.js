@@ -179,6 +179,15 @@ function renderGroups(groups) {
     card.className = 'card';
     card.style.background = '#fafbfc';
 
+    // Ссылка на общий чат группы для конкретного участника (см. public/chat.html) —
+    // тот же секрет (cancel_token), что и для самостоятельной отмены заявки.
+    // Обычно её видно один раз в тексте для WeChat сразу после подтверждения
+    // группы — кнопка здесь нужна, чтобы достать её повторно в любой момент
+    // (например, для собственной проверки или если текст для WeChat потерялся).
+    function chatLinkFor(member) {
+      return `${location.origin}/chat?group=${g.id}&request=${member.id}&token=${encodeURIComponent(member.cancel_token)}`;
+    }
+
     const membersRows = g.members
       .map(
         (m) => `<tr>
@@ -186,6 +195,7 @@ function renderGroups(groups) {
           <td>${escapeHtml(m.contact)}</td>
           <td>${m.people_count}</td>
           <td>${escapeHtml(m.comment || '—')}</td>
+          <td><button type="button" class="btn btn-outline btn-small copy-chat-link-btn" data-id="${m.id}">Ссылка на чат</button></td>
         </tr>`
       )
       .join('');
@@ -202,7 +212,7 @@ function renderGroups(groups) {
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Имя</th><th>Контакт</th><th>Чел.</th><th>Комментарий</th></tr></thead>
+          <thead><tr><th>Имя</th><th>Контакт</th><th>Чел.</th><th>Комментарий</th><th></th></tr></thead>
           <tbody>${membersRows}</tbody>
         </table>
       </div>
@@ -237,6 +247,21 @@ function renderGroups(groups) {
         </div>
       </div>
     `;
+
+    card.querySelectorAll('.copy-chat-link-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const member = g.members.find((m) => m.id === Number(btn.dataset.id));
+        if (!member) return;
+        const link = chatLinkFor(member);
+        try {
+          await navigator.clipboard.writeText(link);
+          showNotice('Ссылка скопирована: ' + link, 'success');
+        } catch (err) {
+          // Clipboard API недоступен (например, не-HTTPS или старый браузер) — просто показываем ссылку
+          showNotice(link, 'success');
+        }
+      });
+    });
 
     card.querySelector('.price-save-btn')?.addEventListener('click', async () => {
       const price = Number(card.querySelector('.price-input').value);
