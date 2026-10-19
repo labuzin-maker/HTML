@@ -114,6 +114,20 @@ async function initDb() {
       PRIMARY KEY (group_id, request_id)
     );
 
+    -- Общий чат группы (все участники + админ видят одну ленту сообщений) —
+    -- для согласования деталей после того, как группа найдена/подтверждена.
+    -- Это НЕ приватный чат "турист ↔ админ" (тот — отдельный сторонний
+    -- виджет на сайте, с этой таблицей не связан).
+    CREATE TABLE IF NOT EXISTS group_messages (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id      INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      author_name   TEXT NOT NULL,                 -- имя заявителя или "Админ"
+      author_role   TEXT NOT NULL,                 -- 'member' | 'admin'
+      body          TEXT NOT NULL,
+      created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id, id);
     CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);
     CREATE INDEX IF NOT EXISTS idx_requests_route_date ON requests(route_from, route_to, travel_date);
   `);

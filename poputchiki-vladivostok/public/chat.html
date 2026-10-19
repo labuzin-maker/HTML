@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>群聊</title>
+
+<meta name="theme-color" content="#2f6fed">
+<link rel="apple-touch-icon" href="/icons/icon-v2-180.png">
+<link rel="icon" href="/icons/favicon-v2-32.png" sizes="32x32">
+<link rel="stylesheet" href="/style.css">
+<style>
+  body { display: flex; flex-direction: column; height: 100vh; margin: 0; }
+  .page { display: flex; flex-direction: column; flex: 1; min-height: 0; padding-bottom: 0; }
+
+  .chat-header { padding-bottom: 8px; }
+
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 2px 12px;
+  }
+
+  .msg {
+    max-width: 78%;
+    padding: 9px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg .author {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.7;
+    margin-bottom: 2px;
+  }
+  .msg.mine { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.other { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.admin { align-self: flex-start; background: var(--warning-bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+  .chat-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 0 16px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-row textarea {
+    flex: 1;
+    min-height: 40px;
+    max-height: 100px;
+    resize: none;
+  }
+  .chat-input-row button {
+    flex: none;
+    align-self: flex-end;
+  }
+
+  #chat-error { margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="chat-header">
+    <h1 style="font-size:18px;margin-bottom:2px;">群聊</h1>
+    <p class="muted" style="font-size:13px;margin:0;">同行伙伴 + 客服 · Общий чат группы (попутчики + админ)</p>
+  </div>
+
+  <div id="chat-error" class="notice notice-error" hidden></div>
+
+  <div id="chat-messages" class="chat-messages"></div>
+
+  <form id="chat-form" class="chat-input-row">
+    <textarea id="chat-input" placeholder="输入消息… / Введите сообщение…" maxlength="1000"></textarea>
+    <button type="submit" class="btn btn-primary btn-small">发送</button>
+  </form>
+
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const groupId = params.get('group');
+  const requestId = params.get('request');
+  const token = params.get('token');
+
+  const errorEl = document.getElementById('chat-error');
+  const messagesEl = document.getElementById('chat-messages');
+  const form = document.getElementById('chat-form');
+  const input = document.getElementById('chat-input');
+
+  function showError(text) {
+    errorEl.textContent = text;
+    errorEl.hidden = false;
+  }
+
+  if (!groupId || !requestId || !token) {
+    showError('链接无效,缺少必要参数 / Неверная ссылка — не хватает параметров');
+    form.hidden = true;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  let myName = null;
+  let lastCount = 0;
+
+  function renderMessages(messages) {
+    if (messages.length === lastCount) return; // ничего нового — не дёргаем DOM и скролл без нужды
+    lastCount = messages.length;
+
+    messagesEl.innerHTML = messages
+      .map((m) => {
+        const cls = m.author_role === 'admin' ? 'admin' : m.author_name === myName ? 'mine' : 'other';
+        return `
+          <div class="msg ${cls}">
+            <span class="author">${escapeHtml(m.author_name)}</span>
+            ${escapeHtml(m.body)}
+          </div>
+        `;
+      })
+      .join('');
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  async function loadMessages() {
+    try {
+      const res = await fetch(`/api/groups/${groupId}/messages?request_id=${encodeURIComponent(requestId)}&token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        showError(data.error || '加载失败 / Не удалось загрузить');
+        form.hidden = true;
+        return false;
+      }
+      myName = data.author_name;
+      renderMessages(data.messages);
+      return true;
+    } catch (err) {
+      // Сетевая ошибка — не показываем форму недоступной, просто тихо попробуем на следующем опросе
+      return true;
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    const submitBtn = form.querySelector('button');
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/groups/${groupId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: Number(requestId), token, body: text }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        showError(data.error || '发送失败 / Не удалось отправить');
+        return;
+      }
+      input.value = '';
+      renderMessages(data.messages);
+    } catch (err) {
+      showError('网络错误,请检查网络 / Ошибка сети');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  (async () => {
+    if (!groupId || !requestId || !token) return;
+    const ok = await loadMessages();
+    if (!ok) return;
+    setInterval(loadMessages, 3000); // простой поллинг — достаточно для группы в 2-4 человека
+  })();
+</script>
+</body>
+</html>

@@ -157,7 +157,15 @@ async function loadGroups() {
   renderGroups(data.groups);
 }
 
+// Таймеры опроса открытых чатов групп — renderGroups полностью перестраивает
+// DOM при каждом refreshAll(), поэтому старые интервалы нужно явно гасить,
+// иначе они продолжат дёргать API в фоне на уже выброшенные карточки.
+let activeChatTimers = [];
+
 function renderGroups(groups) {
+  activeChatTimers.forEach(clearInterval);
+  activeChatTimers = [];
+
   const container = document.getElementById('groups-list');
   container.innerHTML = '';
 
@@ -217,6 +225,17 @@ function renderGroups(groups) {
       }
 
       <div class="messages-area"></div>
+
+      <div style="margin-top:12px;">
+        <button type="button" class="btn btn-outline btn-small chat-toggle-btn">💬 Чат группы</button>
+        <div class="group-chat" hidden>
+          <div class="group-chat-messages"></div>
+          <div class="row" style="margin-top:8px;">
+            <input type="text" class="group-chat-input" placeholder="Сообщение участникам…" maxlength="1000" style="flex:1;">
+            <button type="button" class="btn btn-primary btn-small group-chat-send-btn">Отправить</button>
+          </div>
+        </div>
+      </div>
     `;
 
     card.querySelector('.price-save-btn')?.addEventListener('click', async () => {
@@ -237,6 +256,68 @@ function renderGroups(groups) {
         await refreshAll();
       } catch (err) {
         showNotice(err.message, 'error');
+      }
+    });
+
+    // --- Чат группы: открывается по клику, пока открыт — опрашиваем раз в 3с ---
+    const chatPanel = card.querySelector('.group-chat');
+    const chatMessagesEl = card.querySelector('.group-chat-messages');
+    const chatInput = card.querySelector('.group-chat-input');
+    let chatPollTimer = null;
+
+    function renderGroupChat(messages) {
+      chatMessagesEl.innerHTML = messages
+        .map(
+          (m) => `
+        <div class="message-box">
+          <strong>${escapeHtml(m.author_name)}</strong>${m.author_role === 'admin' ? ' (вы)' : ''}:
+          ${escapeHtml(m.body)}
+        </div>
+      `
+        )
+        .join('');
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    async function loadGroupChat() {
+      try {
+        const data = await apiGet(`/api/admin/groups/${g.id}/messages`);
+        renderGroupChat(data.messages);
+      } catch (err) {
+        // тихо — опрос попробует снова через 3с
+      }
+    }
+
+    card.querySelector('.chat-toggle-btn').addEventListener('click', () => {
+      const willShow = chatPanel.hidden;
+      chatPanel.hidden = !willShow;
+      if (willShow) {
+        loadGroupChat();
+        chatPollTimer = setInterval(loadGroupChat, 3000);
+        activeChatTimers.push(chatPollTimer);
+      } else if (chatPollTimer) {
+        clearInterval(chatPollTimer);
+        chatPollTimer = null;
+      }
+    });
+
+    async function sendGroupChatMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      try {
+        const data = await apiSend(`/api/admin/groups/${g.id}/messages`, 'POST', { body: text });
+        chatInput.value = '';
+        renderGroupChat(data.messages);
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    }
+
+    card.querySelector('.group-chat-send-btn').addEventListener('click', sendGroupChatMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendGroupChatMessage();
       }
     });
 

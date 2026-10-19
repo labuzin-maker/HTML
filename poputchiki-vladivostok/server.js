@@ -107,6 +107,14 @@ app.get('/home', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+// GET /chat — общий чат группы для участника (см. public/chat.html и
+// GET/POST /api/groups/:id/messages). Доступ по ссылке с секретом
+// (?group=&request=&token=), которую даёт WeChat-сообщение после
+// подтверждения группы (см. buildWeChatMessage).
+app.get('/chat', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
 // POST /api/requests — сохранить новую заявку и попытаться найти совпадение
 app.post(
   '/api/requests',
@@ -226,6 +234,77 @@ app.get(
        ORDER BY travel_date ASC, created_at DESC`
     );
     res.json({ ok: true, requests: rs.rows });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Общий чат группы (участники + админ) — см. public/chat.html
+// ---------------------------------------------------------------------------
+
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
+
+// Доказывает, что заявка request_id с секретом token действительно состоит
+// в группе group_id (тем же cancel_token, что и для самостоятельной отмены
+// заявки — отдельного логина/аккаунта в сервисе нет). Возвращает саму
+// заявку (для author_name) или null, если проверка не прошла.
+async function verifyGroupMember(groupId, requestId, token) {
+  if (!groupId || !requestId || !token) return null;
+  const rs = await client.execute({
+    sql: `SELECT r.* FROM requests r
+          JOIN group_requests gr ON gr.request_id = r.id
+          WHERE gr.group_id = ? AND r.id = ? AND r.cancel_token = ?`,
+    args: [groupId, requestId, token],
+  });
+  return rs.rows[0] || null;
+}
+
+async function getGroupMessages(groupId) {
+  const rs = await client.execute({
+    sql: 'SELECT id, author_name, author_role, body, created_at FROM group_messages WHERE group_id = ? ORDER BY id ASC',
+    args: [groupId],
+  });
+  return rs.rows;
+}
+
+// GET /api/groups/:id/messages?request_id=&token= — лента сообщений для участника группы
+app.get(
+  '/api/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const requestId = Number(req.query.request_id);
+    const token = String(req.query.token || '');
+
+    const member = await verifyGroupMember(groupId, requestId, token);
+    if (!member) return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId), author_name: member.name });
+  })
+);
+
+// POST /api/groups/:id/messages — отправить сообщение (участник)
+// body: { request_id, token, body }
+app.post(
+  '/api/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const requestId = Number(req.body?.request_id);
+    const token = String(req.body?.token || '');
+    const text = String(req.body?.body || '').trim();
+
+    const member = await verifyGroupMember(groupId, requestId, token);
+    if (!member) return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+
+    if (!text) return res.status(400).json({ ok: false, error: 'Пустое сообщение' });
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
+    }
+
+    await client.execute({
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body) VALUES (?, ?, 'member', ?)",
+      args: [groupId, member.name, text],
+    });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
   })
 );
 
@@ -402,6 +481,37 @@ app.post(
   })
 );
 
+// GET /api/admin/groups/:id/messages — та же лента чата, но для админа
+// (доступ уже проверен HTTP Basic Auth на уровне app.use('/api/admin', ...))
+app.get(
+  '/api/admin/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
+  })
+);
+
+// POST /api/admin/groups/:id/messages — отправить сообщение от имени админа
+app.post(
+  '/api/admin/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const text = String(req.body?.body || '').trim();
+
+    if (!text) return res.status(400).json({ ok: false, error: 'Пустое сообщение' });
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
+    }
+
+    await client.execute({
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body) VALUES (?, 'Админ', 'admin', ?)",
+      args: [groupId, text],
+    });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
+  })
+);
+
 // PUT /api/admin/groups/:id/price — установить цену поездки для группы
 app.put(
   '/api/admin/groups/:id/price',
@@ -434,11 +544,15 @@ function formatRoute(group) {
   return `${group.route_from} → ${group.route_to}`;
 }
 
-function buildWeChatMessage(member, group) {
+function buildWeChatMessage(member, group, baseUrl) {
   const perPerson = group.price ? Math.round((group.price / group.total_people) * 100) / 100 : null;
   const priceLine = group.price
     ? `费用:${group.price} 卢布(人均约 ${perPerson} 卢布)`
     : '费用:待确定';
+
+  // Ссылка на общий чат группы (все участники + админ) — секрет в ссылке
+  // (cancel_token заявки) заменяет логин, отдельного аккаунта в сервисе нет.
+  const chatUrl = `${baseUrl}/chat?group=${group.id}&request=${member.id}&token=${encodeURIComponent(member.cancel_token)}`;
 
   return [
     `您好,${member.name}!`,
@@ -447,6 +561,7 @@ function buildWeChatMessage(member, group) {
     `路线:${formatRoute(group)}`,
     `总人数:${group.total_people} 人`,
     priceLine,
+    `群聊(和同行伙伴/客服沟通):${chatUrl}`,
     '请确认是否参加,谢谢!',
   ].join('\n');
 }
@@ -470,6 +585,7 @@ app.post(
     });
 
     const updatedGroup = await getGroupWithMembers(groupId);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     // Заглушка отправки в WeChat: возвращаем готовые тексты сообщений,
     // чтобы админ мог скопировать их и отправить руками каждому участнику.
@@ -477,7 +593,7 @@ app.post(
       request_id: m.id,
       name: m.name,
       contact: m.contact,
-      message: buildWeChatMessage(m, updatedGroup),
+      message: buildWeChatMessage(m, updatedGroup, baseUrl),
     }));
 
     res.json({ ok: true, group: updatedGroup, messages });
