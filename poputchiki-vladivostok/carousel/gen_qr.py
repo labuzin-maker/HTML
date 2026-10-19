@@ -2,8 +2,8 @@ import qrcode
 from qrcode.constants import ERROR_CORRECT_H
 
 targets = [
-    ("qr-submit.png", "https://html-production-a794.up.railway.app/"),
-    ("qr-list.png", "https://html-production-a794.up.railway.app/requests"),
+    ("qr-submit.png", "https://html-4puz.onrender.com/"),
+    ("qr-list.png", "https://html-4puz.onrender.com/requests"),
 ]
 
 for filename, url in targets:
