@@ -23,6 +23,12 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// GET /health — лёгкий служебный адрес для внешнего "будильника" (например
+// UptimeRobot), который периодически стучится на сайт, чтобы бесплатный
+// Render не "усыплял" сервис из-за простоя. Ничего не трогает в БД —
+// просто подтверждает, что процесс жив.
+app.get('/health', (req, res) => res.sendStatus(200));
+
 // Оборачивает async-роут так, чтобы отклонённый промис дошёл до error-мидлвари
 function asyncHandler(fn) {
   return (req, res, next) => {
