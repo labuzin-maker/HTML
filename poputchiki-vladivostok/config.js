@@ -33,4 +33,8 @@ module.exports = {
   // --- Push-уведомления о новых заявках через ntfy (см. notify.js) ---
   NTFY_SERVER: process.env.NTFY_SERVER || 'https://ntfy.sh',
   NTFY_TOPIC: process.env.NTFY_TOPIC || '',
+
+  // --- Автоперевод чата группы zh↔ru через MyMemory (см. translate.js) ---
+  // Необязательно: без него анонимный лимит ~5000 симв/день, с email — 50000.
+  TRANSLATE_EMAIL: process.env.TRANSLATE_EMAIL || '',
 };

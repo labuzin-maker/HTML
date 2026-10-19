@@ -297,6 +297,7 @@ function renderGroups(groups) {
         <div class="message-box">
           <strong>${escapeHtml(m.author_name)}</strong>${m.author_role === 'admin' ? ' (вы)' : ''}:
           ${escapeHtml(m.body)}
+          ${m.translated_body ? `<div class="muted" style="font-style:italic;margin-top:4px;">${escapeHtml(m.translated_body)}</div>` : ''}
         </div>
       `
         )

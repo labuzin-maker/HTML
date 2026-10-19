@@ -124,6 +124,7 @@ async function initDb() {
       author_name   TEXT NOT NULL,                 -- имя заявителя или "Админ"
       author_role   TEXT NOT NULL,                 -- 'member' | 'admin'
       body          TEXT NOT NULL,
+      translated_body TEXT,                        -- автоперевод body на "другой" язык (см. translate.js), может быть NULL, если перевод не удался
       created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
     );
 
@@ -139,6 +140,7 @@ async function initDb() {
   await ensureColumn('requests', 'route_stops', 'route_stops TEXT');
   await ensureColumn('groups', 'route_stops', 'route_stops TEXT');
   await ensureColumn('requests', 'cancel_token', 'cancel_token TEXT');
+  await ensureColumn('group_messages', 'translated_body', 'translated_body TEXT');
 
   // Бэкфилл старых строк (если переезжаем с версии БД до этой миграции)
   const oldRequests = await client.execute(

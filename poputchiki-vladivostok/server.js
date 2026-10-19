@@ -16,6 +16,7 @@ const config = require('./config');
 const { client, withTransaction, initDb } = require('./db');
 const { findAndCreateMatch, findPartialMatches } = require('./matching');
 const { sendPushNotification, buildNewRequestMessage } = require('./notify');
+const { autoTranslate } = require('./translate');
 
 const app = express();
 
@@ -260,7 +261,7 @@ async function verifyGroupMember(groupId, requestId, token) {
 
 async function getGroupMessages(groupId) {
   const rs = await client.execute({
-    sql: 'SELECT id, author_name, author_role, body, created_at FROM group_messages WHERE group_id = ? ORDER BY id ASC',
+    sql: 'SELECT id, author_name, author_role, body, translated_body, created_at FROM group_messages WHERE group_id = ? ORDER BY id ASC',
     args: [groupId],
   });
   return rs.rows;
@@ -299,9 +300,11 @@ app.post(
       return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
     }
 
+    const translated = await autoTranslate(text);
+
     await client.execute({
-      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body) VALUES (?, ?, 'member', ?)",
-      args: [groupId, member.name, text],
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body, translated_body) VALUES (?, ?, 'member', ?, ?)",
+      args: [groupId, member.name, text, translated],
     });
 
     res.json({ ok: true, messages: await getGroupMessages(groupId) });
@@ -503,9 +506,11 @@ app.post(
       return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
     }
 
+    const translated = await autoTranslate(text);
+
     await client.execute({
-      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body) VALUES (?, 'Админ', 'admin', ?)",
-      args: [groupId, text],
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body, translated_body) VALUES (?, 'Админ', 'admin', ?, ?)",
+      args: [groupId, text, translated],
     });
 
     res.json({ ok: true, messages: await getGroupMessages(groupId) });
