@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>所有拼车申请</title>
+
+<meta name="theme-color" content="#2f6fed">
+<link rel="apple-touch-icon" href="/icons/icon-v2-180.png">
+<link rel="icon" href="/icons/favicon-v2-32.png" sizes="32x32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Попутчик">
+<meta name="description" content="查看所有已提交的拼车申请:日期、路线、人数和状态(出于隐私保护,不显示联系方式)。">
+<link rel="stylesheet" href="/style.css">
+<style>
+  /* Небольшие правки специально для этой страницы (широкая таблица на мобильном) */
+  td, th { white-space: nowrap; }
+
+  /* Тот же переключатель перевода, что на главной форме (см. public/index.html) */
+  .ru{display:none;font-size:12px;line-height:1.45;color:var(--ink-soft);margin-top:3px;}
+  body.show-ru .ru{display:block;}
+  th .ru{margin-top:2px;text-transform:none;letter-spacing:0;font-weight:400;}
+  .lang-toggle{
+    align-self:flex-start;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--ink-soft);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  body.show-ru .lang-toggle{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+</style>
+</head>
+<body>
+<div class="page wide">
+
+  <div class="top-bar">
+    <div>
+      <h1>所有拼车申请</h1>
+      <p class="ru" style="font-size:13px;margin-top:-2px;">Все заявки на попутчиков</p>
+      <p class="lead" style="margin:0;">出于隐私保护,这里不显示联系方式——如果看到合适的申请,请自己也提交一份,系统会自动帮你们匹配。</p>
+      <p class="ru">Из соображений приватности контакты здесь не показаны — если видите подходящую заявку, подайте свою, система сама найдёт совпадение.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="lang-toggle" id="lang-toggle">RU 翻译</button>
+      <a class="btn btn-outline btn-small" href="/" id="add-request-link">+ 提交新申请</a>
+    </div>
+  </div>
+
+  <div id="notice" class="notice notice-error" hidden></div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table id="requests-table">
+        <thead>
+          <tr>
+            <th>日期<br><span class="ru">Дата</span></th>
+            <th>路线<br><span class="ru">Маршрут</span></th>
+            <th>人数<br><span class="ru">Чел.</span></th>
+            <th>状态<br><span class="ru">Статус</span></th>
+            <th>备注<br><span class="ru">Комментарий</span></th>
+            <th>提交时间<br><span class="ru">Подана</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted" id="empty-hint" hidden>
+      暂时还没有任何申请,来提交第一个吧!
+      <span class="ru" style="display:inline;margin-top:0;">Пока нет ни одной заявки — подайте первую!</span>
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // --- Переключатель "показывать русский перевод" (тот же механизм, что на главной форме) ---
+  const LANG_KEY = 'poputchiki_show_ru';
+  const langToggle = document.getElementById('lang-toggle');
+
+  function applyLangState(show) {
+    document.body.classList.toggle('show-ru', show);
+  }
+
+  let showRu = false;
+  try { showRu = localStorage.getItem(LANG_KEY) === '1'; } catch (e) {}
+  applyLangState(showRu);
+
+  langToggle.addEventListener('click', () => {
+    showRu = !showRu;
+    applyLangState(showRu);
+    try { localStorage.setItem(LANG_KEY, showRu ? '1' : '0'); } catch (e) {}
+    renderRequests(lastRequests); // перерисовать статусы в таблице с/без перевода
+  });
+
+  // Внутри обёртки /app эта кнопка не должна грузить "/" прямо в своём
+  // iframe (там нет пути назад) — вместо этого просим родительскую
+  // страницу переключить вкладку снизу на "Форма" (см. public/app.html).
+  if (window.self !== window.top) {
+    document.getElementById('add-request-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.parent.postMessage({ type: 'poputchik-navigate', tab: 'form' }, window.location.origin);
+    });
+  }
+
+  // Готовые точки маршрута (тот же справочник, что в форме public/index.html
+  // и в админке public/admin.js) — переводим на русский, когда включён
+  // переключатель RU, чтобы было понятно, куда именно едет заявитель, не
+  // разбирая китайские иероглифы.
+  const STOP_TRANSLATIONS = {
+    '机场': 'Аэропорт',
+    '市中心': 'Центр',
+    '火车站': 'Вокзал',
+    '俄罗斯岛': 'Остров Русский',
+    '灯塔': 'Токаревский маяк',
+    '鹰巢山观景台': 'Смотровая «Орлиное гнездо»',
+    '海洋水族馆': 'Океанариум',
+  };
+
+  // Публичный статус-лейблы на китайском + русский перевод в скобках (для этой
+  // страницы; в админ-панели те же статусы показаны по-русски — см. public/admin.js).
+  const STATUS_LABELS = {
+    new: { zh: '新申请', ru: 'новая' },
+    matched: { zh: '已匹配', ru: 'есть совпадение' },
+    confirmed: { zh: '已确认', ru: 'подтверждена' },
+    rejected: { zh: '已拒绝', ru: 'отклонена' },
+    cancelled: { zh: '已取消', ru: 'отменена' },
+  };
+  const STATUS_CLASS = {
+    new: 'badge-new',
+    matched: 'badge-matched',
+    confirmed: 'badge-confirmed',
+    rejected: 'badge-rejected',
+    cancelled: 'badge-cancelled',
+  };
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // Точка маршрута на китайском + русский перевод в скобках, только когда
+  // включён RU (см. STOP_TRANSLATIONS выше). Свободный ввод («其他» на форме)
+  // переводить неоткуда — помечаем как "свой вариант", чтобы было видно, что
+  // это не стандартная точка, а не просто непереведённый текст.
+  function formatStop(stop) {
+    const zh = escapeHtml(stop);
+    if (!showRu) return zh;
+    const ru = STOP_TRANSLATIONS[stop];
+    return `${zh} (${ru || 'свой вариант'})`;
+  }
+
+  // Маршрут может состоять из нескольких точек (route_stops, JSON-массив) —
+  // показываем полную цепочку; на старых записях без route_stops откатываемся
+  // к паре route_from/route_to.
+  function formatRoute(r) {
+    try {
+      const stops = JSON.parse(r.route_stops);
+      if (Array.isArray(stops) && stops.length > 0) return stops.map(formatStop).join(' → ');
+    } catch (e) {
+      // route_stops пустой/невалидный — используем запасной вариант ниже
+    }
+    return `${formatStop(r.route_from)} → ${formatStop(r.route_to)}`;
+  }
+
+  let lastRequests = [];
+
+  async function loadRequests() {
+    const notice = document.getElementById('notice');
+    try {
+      const res = await fetch('/api/requests');
+      const data = await res.json();
+      lastRequests = data.requests || [];
+      renderRequests(lastRequests);
+    } catch (err) {
+      notice.textContent = '加载失败,请刷新页面重试';
+      notice.hidden = false;
+    }
+  }
+
+  function renderRequests(requests) {
+    const tbody = document.querySelector('#requests-table tbody');
+    const emptyHint = document.getElementById('empty-hint');
+    tbody.innerHTML = '';
+
+    if (requests.length === 0) {
+      emptyHint.hidden = false;
+      return;
+    }
+    emptyHint.hidden = true;
+
+    for (const r of requests) {
+      const tr = document.createElement('tr');
+      const st = STATUS_LABELS[r.status] || { zh: r.status, ru: '' };
+      const label = showRu && st.ru ? `${st.zh} (${st.ru})` : st.zh;
+      const cls = STATUS_CLASS[r.status] || 'badge-new';
+      tr.innerHTML = `
+        <td>${escapeHtml(r.travel_date)}</td>
+        <td>${formatRoute(r)}</td>
+        <td>${r.people_count}</td>
+        <td><span class="badge ${cls}">${label}</span></td>
+        <td>${escapeHtml(r.comment || '—')}</td>
+        <td class="muted">${escapeHtml(r.created_at)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  loadRequests();
+</script>
+
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6ad5856f18d48b34c5f37048/1k5912f44';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--End of Tawk.to Script-->
+</body>
+</html>

@@ -1,0 +1,646 @@
+// Точка входа приложения: Express-сервер со всеми роутами.
+//
+// Структура простая и линейная (без роутеров/контроллеров в отдельных
+// файлах) — для проекта такого размера это легче читать и расширять.
+// Когда роутов станет много, их можно вынести в папку routes/.
+//
+// Все обращения к БД асинхронные (Turso/libSQL, см. db.js) — поэтому каждый
+// роут теперь async, а Express 4 сам не ловит отклонённые промисы из async
+// хендлеров (в отличие от Express 5), отсюда обёртка asyncHandler ниже.
+
+const path = require('path');
+const crypto = require('crypto');
+const express = require('express');
+
+const config = require('./config');
+const { client, withTransaction, initDb } = require('./db');
+const { findAndCreateMatch, findPartialMatches } = require('./matching');
+const { sendPushNotification, buildNewRequestMessage } = require('./notify');
+const { autoTranslate } = require('./translate');
+
+const app = express();
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Оборачивает async-роут так, чтобы отклонённый промис дошёл до error-мидлвари
+function asyncHandler(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Публичное API: форма подачи заявки
+// ---------------------------------------------------------------------------
+
+function isValidDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+const MAX_ROUTE_STOPS = 6; // разумный потолок на длину маршрута — не ограничение из ТЗ, просто защита от абсурда
+
+// Проверяет и нормализует присланный маршрут: массив точек по порядку
+// (как "сложный маршрут" у авиакомпаний — минимум 2 точки, порядок важен).
+// Список конкретных точек (аэропорт/центр/маяк и т.д.) — это справочник для
+// формы (public/index.html), сервер его не навязывает: свободный ввод через
+// "其他" всегда был возможен, так и остаётся.
+function normalizeRouteStops(value) {
+  if (!Array.isArray(value)) return null;
+  const stops = value.map((s) => String(s || '').trim()).filter(Boolean);
+  if (stops.length < 2 || stops.length > MAX_ROUTE_STOPS) return null;
+  if (stops.some((s) => s.length > 60)) return null;
+  return stops;
+}
+
+// Убрать заявку request_id из всех групп, куда она входила, и пересчитать/
+// удалить эти группы по оставшимся участникам. Используется и при жёстком
+// удалении заявки админом (строка requests уже удалена, ON DELETE CASCADE
+// сам убрал group_requests — тут просто пересчёт), и при самостоятельной
+// отмене туристом (строка requests остаётся, статус меняется на 'cancelled',
+// а связь в group_requests для неё удаляем явно сами).
+async function detachRequestFromGroups(tx, requestId) {
+  const groupIdsRs = await tx.execute({
+    sql: 'SELECT group_id FROM group_requests WHERE request_id = ?',
+    args: [requestId],
+  });
+  const groupIds = groupIdsRs.rows.map((r) => r.group_id);
+
+  await tx.execute({ sql: 'DELETE FROM group_requests WHERE request_id = ?', args: [requestId] });
+
+  for (const groupId of groupIds) {
+    const remainingRs = await tx.execute({
+      sql: `SELECT r.people_count FROM requests r
+            JOIN group_requests gr ON gr.request_id = r.id
+            WHERE gr.group_id = ?`,
+      args: [groupId],
+    });
+    const remaining = remainingRs.rows;
+
+    if (remaining.length === 0) {
+      await tx.execute({ sql: 'DELETE FROM groups WHERE id = ?', args: [groupId] });
+    } else {
+      const totalPeople = remaining.reduce((sum, r) => sum + r.people_count, 0);
+      await tx.execute({ sql: 'UPDATE groups SET total_people = ? WHERE id = ?', args: [totalPeople, groupId] });
+    }
+  }
+}
+
+// GET /requests — публичная страница со списком всех заявок (без контактов)
+app.get('/requests', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'requests.html'));
+});
+
+// GET /app — единая "обёртка" для установки на экран "Домой" на iPhone:
+// одна иконка, внутри вкладки на форму/список/админку через iframe (см.
+// public/app.html). Сами страницы (/, /requests, /admin) продолжают
+// работать и напрямую — /app просто даёт их совместную оболочку.
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+// GET /home — тот же app.html, под другим адресом. iOS Safari умеет
+// "залипать" на старой иконке для уже посещённого URL (даже после смены
+// файла иконки), поэтому для свежей установки на экран "Домой" нужен
+// адрес, который Safari ещё не видел — так Safari гарантированно
+// запрашивает иконку заново, а не берёт её из своего внутреннего кэша.
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+// GET /chat — общий чат группы для участника (см. public/chat.html и
+// GET/POST /api/groups/:id/messages). Доступ по ссылке с секретом
+// (?group=&request=&token=), которую даёт WeChat-сообщение после
+// подтверждения группы (см. buildWeChatMessage).
+app.get('/chat', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+// POST /api/requests — сохранить новую заявку и попытаться найти совпадение
+app.post(
+  '/api/requests',
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+
+    const name = String(body.name || '').trim();
+    const contact = String(body.contact || '').trim();
+    const travelDate = String(body.travel_date || '').trim();
+    const routeStops = normalizeRouteStops(body.route_stops);
+    const peopleCount = parseInt(body.people_count, 10);
+    const comment = body.comment ? String(body.comment).trim() : null;
+    const consent = Boolean(body.consent);
+
+    // Серверная валидация — не доверяем только фронтенду
+    const errors = [];
+    if (!name) errors.push('姓名不能为空');
+    if (!contact) errors.push('请填写联系方式');
+    if (!isValidDate(travelDate)) errors.push('请选择正确的出行日期');
+    if (!routeStops) errors.push('请至少选择两个途经点(出发地和目的地)');
+    if (!Number.isInteger(peopleCount) || peopleCount < 1) errors.push('人数至少为1人');
+    if (peopleCount > config.MAX_GROUP_SIZE) errors.push(`单次申请人数不能超过 ${config.MAX_GROUP_SIZE} 人`);
+    if (!consent) errors.push('请勾选同意授权处理联系方式');
+
+    if (errors.length > 0) {
+      return res.status(400).json({ ok: false, errors });
+    }
+
+    const routeFrom = routeStops[0];
+    const routeTo = routeStops[routeStops.length - 1];
+    const routeStopsJson = JSON.stringify(routeStops);
+
+    // Секрет для самостоятельной отмены заявки туристом (см. POST
+    // /api/requests/:id/cancel ниже) — отдаём его один раз в ответе,
+    // фронтенд сохраняет в localStorage. Без аккаунтов/логина это
+    // единственный способ доказать "это моя заявка", не раскрывая чужие.
+    const cancelToken = crypto.randomUUID();
+
+    const info = await client.execute({
+      sql: `
+        INSERT INTO requests (name, contact, travel_date, route_from, route_to, route_stops, people_count, comment, consent, status, cancel_token)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'new', ?)
+      `,
+      args: [name, contact, travelDate, routeFrom, routeTo, routeStopsJson, peopleCount, comment, cancelToken],
+    });
+    const requestId = Number(info.lastInsertRowid);
+
+    // Push-уведомление администратору о новой заявке (см. notify.js).
+    // Не блокируем ответ пользователю ожиданием отправки — просто запускаем её.
+    sendPushNotification(
+      '🚗 Новая заявка на попутчиков',
+      buildNewRequestMessage({ name, contact, travel_date: travelDate, route_stops: routeStops, people_count: peopleCount, comment })
+    );
+
+    // Пытаемся найти совпадение сразу после сохранения. Отдельного уведомления
+    // именно про совпадение нет — статус виден в публичном списке заявок
+    // (GET /api/requests) и в /admin, администратор увидит его там же.
+    const match = await findAndCreateMatch(requestId);
+
+    res.json({ ok: true, matched: Boolean(match), request_id: requestId, cancel_token: cancelToken });
+  })
+);
+
+// POST /api/requests/:id/cancel — турист сам отменяет свою заявку, по токену
+// из ответа на POST /api/requests (без логина — body: { cancel_token }).
+// Если заявка уже была в группе — убираем её оттуда (пересчёт/удаление
+// группы, см. detachRequestFromGroups), саму заявку не удаляем, а помечаем
+// статусом 'cancelled' — чтобы в /admin была видна полная история
+// (в отличие от 'rejected', которую проставляет админ).
+app.post(
+  '/api/requests/:id/cancel',
+  asyncHandler(async (req, res) => {
+    const requestId = Number(req.params.id);
+    const token = String(req.body?.cancel_token || '');
+
+    const requestRs = await client.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [requestId] });
+    const request = requestRs.rows[0];
+    if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
+
+    if (!request.cancel_token || request.cancel_token !== token) {
+      return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+    }
+
+    if (request.status !== 'new' && request.status !== 'matched') {
+      return res.status(400).json({ ok: false, error: 'Эту заявку уже нельзя отменить' });
+    }
+
+    await withTransaction(async (tx) => {
+      await detachRequestFromGroups(tx, requestId);
+      await tx.execute({ sql: "UPDATE requests SET status = 'cancelled' WHERE id = ?", args: [requestId] });
+    });
+
+    res.json({ ok: true });
+  })
+);
+
+// GET /api/requests — публичный список заявок (для страницы со списком).
+// Контакты (WeChat/телефон) сюда не отдаём — это не приватная информация
+// напоказ всему интернету. Кто хочет откликнуться, увидит маршрут/дату и
+// поймёт, что заявка активна; связаться с автором заявки может администратор
+// через /admin, у него есть полные данные.
+//
+// Из публичного списка убираем то, что больше не актуально (в /admin эти
+// заявки остаются видны — там нужна полная история):
+//  - дата поездки уже прошла;
+//  - группа уже "отработала" — подтверждена (confirmed) или отклонена
+//    (rejected): люди либо уже договорились, либо дело закрыто, тут им
+//    искать пару больше не нужно.
+app.get(
+  '/api/requests',
+  asyncHandler(async (req, res) => {
+    const rs = await client.execute(
+      `SELECT id, travel_date, route_from, route_to, route_stops, people_count, comment, status, created_at
+       FROM requests
+       WHERE date(travel_date) >= date('now')
+         AND status NOT IN ('confirmed', 'rejected', 'cancelled')
+       ORDER BY travel_date ASC, created_at DESC`
+    );
+    res.json({ ok: true, requests: rs.rows });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Общий чат группы (участники + админ) — см. public/chat.html
+// ---------------------------------------------------------------------------
+
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
+
+// Доказывает, что заявка request_id с секретом token действительно состоит
+// в группе group_id (тем же cancel_token, что и для самостоятельной отмены
+// заявки — отдельного логина/аккаунта в сервисе нет). Возвращает саму
+// заявку (для author_name) или null, если проверка не прошла.
+async function verifyGroupMember(groupId, requestId, token) {
+  if (!groupId || !requestId || !token) return null;
+  const rs = await client.execute({
+    sql: `SELECT r.* FROM requests r
+          JOIN group_requests gr ON gr.request_id = r.id
+          WHERE gr.group_id = ? AND r.id = ? AND r.cancel_token = ?`,
+    args: [groupId, requestId, token],
+  });
+  return rs.rows[0] || null;
+}
+
+async function getGroupMessages(groupId) {
+  const rs = await client.execute({
+    sql: 'SELECT id, author_name, author_role, body, translated_body, created_at FROM group_messages WHERE group_id = ? ORDER BY id ASC',
+    args: [groupId],
+  });
+  return rs.rows;
+}
+
+// GET /api/groups/:id/messages?request_id=&token= — лента сообщений для участника группы
+app.get(
+  '/api/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const requestId = Number(req.query.request_id);
+    const token = String(req.query.token || '');
+
+    const member = await verifyGroupMember(groupId, requestId, token);
+    if (!member) return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId), author_name: member.name });
+  })
+);
+
+// POST /api/groups/:id/messages — отправить сообщение (участник)
+// body: { request_id, token, body }
+app.post(
+  '/api/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const requestId = Number(req.body?.request_id);
+    const token = String(req.body?.token || '');
+    const text = String(req.body?.body || '').trim();
+
+    const member = await verifyGroupMember(groupId, requestId, token);
+    if (!member) return res.status(403).json({ ok: false, error: 'Доступ запрещён' });
+
+    if (!text) return res.status(400).json({ ok: false, error: 'Пустое сообщение' });
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
+    }
+
+    const translated = await autoTranslate(text);
+
+    await client.execute({
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body, translated_body) VALUES (?, ?, 'member', ?, ?)",
+      args: [groupId, member.name, text, translated],
+    });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Защита админ-раздела: простой HTTP Basic Auth
+// ---------------------------------------------------------------------------
+
+function requireAdminAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+
+  if (header.startsWith('Basic ')) {
+    const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8');
+    const separatorIndex = decoded.indexOf(':');
+    const user = decoded.slice(0, separatorIndex);
+    const pass = decoded.slice(separatorIndex + 1);
+
+    if (user === config.ADMIN_USER && pass === config.ADMIN_PASSWORD) {
+      return next();
+    }
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="Admin"');
+  return res.status(401).send('Требуется авторизация администратора');
+}
+
+app.use('/admin', requireAdminAuth);
+app.use('/api/admin', requireAdminAuth);
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// ---------------------------------------------------------------------------
+// Админ API: заявки
+// ---------------------------------------------------------------------------
+
+// GET /api/admin/requests?status=new — список заявок, опционально с фильтром по статусу
+app.get(
+  '/api/admin/requests',
+  asyncHandler(async (req, res) => {
+    const { status } = req.query;
+    const rs = status
+      ? await client.execute({ sql: 'SELECT * FROM requests WHERE status = ? ORDER BY created_at DESC', args: [status] })
+      : await client.execute('SELECT * FROM requests ORDER BY created_at DESC');
+    res.json({ ok: true, requests: rs.rows });
+  })
+);
+
+// DELETE /api/admin/requests/:id — удалить заявку.
+// Если заявка состояла в группе, её также нужно аккуратно убрать оттуда:
+// пересчитать total_people по оставшимся участникам, а если участников
+// не осталось вообще — удалить и саму группу (незачем хранить пустую).
+app.delete(
+  '/api/admin/requests/:id',
+  asyncHandler(async (req, res) => {
+    const requestId = Number(req.params.id);
+    const requestRs = await client.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [requestId] });
+    const request = requestRs.rows[0];
+    if (!request) return res.status(404).json({ ok: false, error: 'Заявка не найдена' });
+
+    await withTransaction(async (tx) => {
+      await detachRequestFromGroups(tx, requestId);
+      await tx.execute({ sql: 'DELETE FROM requests WHERE id = ?', args: [requestId] });
+    });
+
+    res.json({ ok: true });
+  })
+);
+
+// GET /api/admin/partial-matches — пары заявок с близкой датой и пересекающимся
+// (но не полностью совпадающим) маршрутом — подсказка админу, что этим людям,
+// возможно, стоит договориться и подкорректировать маршрут, чтобы поехать
+// вместе. Это не авто-группировка — решение и создание группы (через
+// POST /api/admin/groups) остаются за администратором.
+app.get(
+  '/api/admin/partial-matches',
+  asyncHandler(async (req, res) => {
+    res.json({ ok: true, pairs: await findPartialMatches() });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Админ API: группы
+// ---------------------------------------------------------------------------
+
+// Достаём группу вместе со списком участников (заявок)
+async function getGroupWithMembers(groupId) {
+  const groupRs = await client.execute({ sql: 'SELECT * FROM groups WHERE id = ?', args: [groupId] });
+  const group = groupRs.rows[0];
+  if (!group) return null;
+  const membersRs = await client.execute({
+    sql: `SELECT r.* FROM requests r
+          JOIN group_requests gr ON gr.request_id = r.id
+          WHERE gr.group_id = ?
+          ORDER BY r.created_at ASC`,
+    args: [groupId],
+  });
+  return { ...group, members: membersRs.rows };
+}
+
+// GET /api/admin/groups — список всех групп с участниками
+app.get(
+  '/api/admin/groups',
+  asyncHandler(async (req, res) => {
+    const groupsRs = await client.execute('SELECT * FROM groups ORDER BY created_at DESC');
+    const withMembers = await Promise.all(groupsRs.rows.map((g) => getGroupWithMembers(g.id)));
+    res.json({ ok: true, groups: withMembers });
+  })
+);
+
+// POST /api/admin/groups — создать группу вручную из выбранных заявок
+// body: { request_ids: number[] }
+app.post(
+  '/api/admin/groups',
+  asyncHandler(async (req, res) => {
+    const requestIds = Array.isArray(req.body?.request_ids) ? req.body.request_ids.map(Number) : [];
+
+    if (requestIds.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Не выбраны заявки для группы' });
+    }
+
+    const placeholders = requestIds.map(() => '?').join(',');
+    const requestsRs = await client.execute({
+      sql: `SELECT * FROM requests WHERE id IN (${placeholders})`,
+      args: requestIds,
+    });
+    const requests = requestsRs.rows;
+
+    if (requests.length !== requestIds.length) {
+      return res.status(400).json({ ok: false, error: 'Часть заявок не найдена' });
+    }
+
+    const alreadyGrouped = requests.filter((r) => r.status !== 'new');
+    if (alreadyGrouped.length > 0) {
+      return res.status(400).json({
+        ok: false,
+        error: `Заявки уже не в статусе "новая": ${alreadyGrouped.map((r) => r.id).join(', ')}`,
+      });
+    }
+
+    // Для ручного создания группы не требуем совпадения маршрута/даты у всех
+    // заявок — админ мог осознанно объединить похожие, но не идентичные заявки.
+    // За дату/маршрут группы берём значения первой заявки.
+    const first = requests[0];
+    const totalPeople = requests.reduce((sum, r) => sum + r.people_count, 0);
+
+    // Лимит на размер группы (вместимость машины) действует и здесь — раньше
+    // проверялся только в авто-мэтчинге (matching.js), ручное создание могло
+    // случайно собрать группу больше MAX_GROUP_SIZE.
+    if (totalPeople > config.MAX_GROUP_SIZE) {
+      return res.status(400).json({
+        ok: false,
+        error: `В группе получится ${totalPeople} человек — это больше лимита в ${config.MAX_GROUP_SIZE}. Выберите заявки с меньшим суммарным числом человек.`,
+      });
+    }
+
+    const groupId = await withTransaction(async (tx) => {
+      const info = await tx.execute({
+        sql: `INSERT INTO groups (travel_date, route_from, route_to, route_stops, total_people, status)
+              VALUES (?, ?, ?, ?, ?, 'matched')`,
+        args: [first.travel_date, first.route_from, first.route_to, first.route_stops, totalPeople],
+      });
+      const newGroupId = Number(info.lastInsertRowid);
+
+      for (const r of requests) {
+        await tx.execute({ sql: 'INSERT INTO group_requests (group_id, request_id) VALUES (?, ?)', args: [newGroupId, r.id] });
+        await tx.execute({ sql: "UPDATE requests SET status = 'matched' WHERE id = ?", args: [r.id] });
+      }
+
+      return newGroupId;
+    });
+
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
+
+// GET /api/admin/groups/:id/messages — та же лента чата, но для админа
+// (доступ уже проверен HTTP Basic Auth на уровне app.use('/api/admin', ...))
+app.get(
+  '/api/admin/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
+  })
+);
+
+// POST /api/admin/groups/:id/messages — отправить сообщение от имени админа
+app.post(
+  '/api/admin/groups/:id/messages',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const text = String(req.body?.body || '').trim();
+
+    if (!text) return res.status(400).json({ ok: false, error: 'Пустое сообщение' });
+    if (text.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ ok: false, error: 'Сообщение слишком длинное' });
+    }
+
+    const translated = await autoTranslate(text);
+
+    await client.execute({
+      sql: "INSERT INTO group_messages (group_id, author_name, author_role, body, translated_body) VALUES (?, 'Админ', 'admin', ?, ?)",
+      args: [groupId, text, translated],
+    });
+
+    res.json({ ok: true, messages: await getGroupMessages(groupId) });
+  })
+);
+
+// PUT /api/admin/groups/:id/price — установить цену поездки для группы
+app.put(
+  '/api/admin/groups/:id/price',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const price = Number(req.body?.price);
+
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ ok: false, error: 'Некорректная цена' });
+    }
+
+    const groupRs = await client.execute({ sql: 'SELECT * FROM groups WHERE id = ?', args: [groupId] });
+    if (!groupRs.rows[0]) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+
+    await client.execute({ sql: 'UPDATE groups SET price = ? WHERE id = ?', args: [price, groupId] });
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
+
+// Шаблон сообщения для ручной отправки участнику в WeChat.
+// Это заглушка первого этапа: реальную интеграцию с WeChat можно добавить позже,
+// подставив сюда вызов соответствующего API вместо возврата текста в админку.
+function formatRoute(group) {
+  try {
+    const stops = JSON.parse(group.route_stops);
+    if (Array.isArray(stops) && stops.length > 0) return stops.join(' → ');
+  } catch (e) {
+    // route_stops повреждён/отсутствует — просто откатываемся к route_from/route_to ниже
+  }
+  return `${group.route_from} → ${group.route_to}`;
+}
+
+function buildWeChatMessage(member, group, baseUrl) {
+  const perPerson = group.price ? Math.round((group.price / group.total_people) * 100) / 100 : null;
+  const priceLine = group.price
+    ? `费用:${group.price} 卢布(人均约 ${perPerson} 卢布)`
+    : '费用:待确定';
+
+  // Ссылка на общий чат группы (все участники + админ) — секрет в ссылке
+  // (cancel_token заявки) заменяет логин, отдельного аккаунта в сервисе нет.
+  const chatUrl = `${baseUrl}/chat?group=${group.id}&request=${member.id}&token=${encodeURIComponent(member.cancel_token)}`;
+
+  return [
+    `您好,${member.name}!`,
+    '已为您匹配到同行的拼车伙伴 🚗',
+    `日期:${group.travel_date}`,
+    `路线:${formatRoute(group)}`,
+    `总人数:${group.total_people} 人`,
+    priceLine,
+    `群聊(和同行伙伴/客服沟通):${chatUrl}`,
+    '请确认是否参加,谢谢!',
+  ].join('\n');
+}
+
+// POST /api/admin/groups/:id/confirm — подтвердить группу
+app.post(
+  '/api/admin/groups/:id/confirm',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const group = await getGroupWithMembers(groupId);
+    if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+
+    await withTransaction(async (tx) => {
+      await tx.execute({
+        sql: "UPDATE groups SET status = 'confirmed', confirmed_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?",
+        args: [groupId],
+      });
+      for (const m of group.members) {
+        await tx.execute({ sql: "UPDATE requests SET status = 'confirmed' WHERE id = ?", args: [m.id] });
+      }
+    });
+
+    const updatedGroup = await getGroupWithMembers(groupId);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // Заглушка отправки в WeChat: возвращаем готовые тексты сообщений,
+    // чтобы админ мог скопировать их и отправить руками каждому участнику.
+    const messages = updatedGroup.members.map((m) => ({
+      request_id: m.id,
+      name: m.name,
+      contact: m.contact,
+      message: buildWeChatMessage(m, updatedGroup, baseUrl),
+    }));
+
+    res.json({ ok: true, group: updatedGroup, messages });
+  })
+);
+
+// POST /api/admin/groups/:id/reject — отклонить группу
+app.post(
+  '/api/admin/groups/:id/reject',
+  asyncHandler(async (req, res) => {
+    const groupId = Number(req.params.id);
+    const group = await getGroupWithMembers(groupId);
+    if (!group) return res.status(404).json({ ok: false, error: 'Группа не найдена' });
+
+    await withTransaction(async (tx) => {
+      await tx.execute({ sql: "UPDATE groups SET status = 'rejected' WHERE id = ?", args: [groupId] });
+      for (const m of group.members) {
+        await tx.execute({ sql: "UPDATE requests SET status = 'rejected' WHERE id = ?", args: [m.id] });
+      }
+    });
+
+    res.json({ ok: true, group: await getGroupWithMembers(groupId) });
+  })
+);
+
+// Единая error-мидлварь: сюда попадают все ошибки, переданные через next(err)
+// (в т.ч. отклонённые промисы из asyncHandler).
+app.use((err, req, res, next) => {
+  console.error('Ошибка запроса:', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ ok: false, error: 'Внутренняя ошибка сервера' });
+});
+
+async function start() {
+  await initDb();
+  app.listen(config.PORT, () => {
+    console.log(`Сервер "Попутчики во Владивосток" запущен: http://localhost:${config.PORT}`);
+    console.log(`Админ-панель: http://localhost:${config.PORT}/admin (логин/пароль см. .env)`);
+  });
+}
+
+start().catch((err) => {
+  console.error('Не удалось запустить сервер:', err);
+  process.exit(1);
+});

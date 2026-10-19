@@ -1,0 +1,448 @@
+// Клиентская логика админ-панели. Обычный fetch к /api/admin/* — авторизация
+// (HTTP Basic Auth) браузер запрашивает один раз при заходе на /admin и потом
+// сам подставляет её в остальные запросы того же источника.
+
+const STATUS_LABELS = {
+  new: 'новая',
+  matched: 'есть совпадение',
+  confirmed: 'подтверждена',
+  rejected: 'отклонена',
+  cancelled: 'отменена туристом',
+};
+
+// Готовые точки маршрута (см. выпадающий список в public/index.html) —
+// переводим на русский для админки, чтобы не гадать по китайским иероглифам,
+// кто куда хочет. Свободный текст (вариант «其他» на форме) перевести
+// неоткуда — показываем как есть.
+const STOP_TRANSLATIONS = {
+  '机场': 'Аэропорт',
+  '市中心': 'Центр',
+  '火车站': 'Вокзал',
+  '俄罗斯岛': 'Остров Русский',
+  '灯塔': 'Токаревский маяк',
+  '鹰巢山观景台': 'Смотровая «Орлиное гнездо»',
+  '海洋水族馆': 'Океанариум',
+};
+
+function translateStop(stop) {
+  const translated = STOP_TRANSLATIONS[stop];
+  // Точки не из готового списка (свободный ввод через «其他» на форме)
+  // помечаем отдельно — переводить их некому, но должно быть видно, что
+  // это не стандартная точка, а то, что турист вписал сам.
+  return translated || `${stop} (свой вариант)`;
+}
+
+const noticeEl = document.getElementById('notice');
+
+function showNotice(text, type) {
+  noticeEl.textContent = text;
+  noticeEl.className = 'notice notice-' + (type || 'success');
+  noticeEl.hidden = false;
+  setTimeout(() => { noticeEl.hidden = true; }, 6000);
+}
+
+function statusBadge(status) {
+  const label = STATUS_LABELS[status] || status;
+  return `<span class="badge badge-${status}">${label}</span>`;
+}
+
+// Маршрут может состоять из нескольких точек (route_stops, JSON-массив) —
+// показываем полную цепочку; на старых записях без route_stops (до миграции)
+// откатываемся к паре route_from/route_to.
+function formatRoute(obj) {
+  try {
+    const stops = JSON.parse(obj.route_stops);
+    if (Array.isArray(stops) && stops.length > 0) return stops.map(translateStop).map(escapeHtml).join(' → ');
+  } catch (e) {
+    // route_stops пустой/невалидный — используем запасной вариант ниже
+  }
+  return `${escapeHtml(translateStop(obj.route_from))} → ${escapeHtml(translateStop(obj.route_to))}`;
+}
+
+async function apiGet(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Ошибка запроса: ' + res.status);
+  return res.json();
+}
+
+async function apiSend(url, method, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || 'Ошибка запроса: ' + res.status);
+  }
+  return data;
+}
+
+// --- Заявки -----------------------------------------------------------
+
+async function loadRequests() {
+  const status = document.getElementById('status-filter').value;
+  const url = status ? `/api/admin/requests?status=${encodeURIComponent(status)}` : '/api/admin/requests';
+  const data = await apiGet(url);
+  renderRequests(data.requests);
+}
+
+function renderRequests(requests) {
+  const tbody = document.querySelector('#requests-table tbody');
+  tbody.innerHTML = '';
+
+  for (const r of requests) {
+    const tr = document.createElement('tr');
+    const canSelect = r.status === 'new';
+
+    tr.innerHTML = `
+      <td>${canSelect ? `<input type="checkbox" class="req-checkbox" value="${r.id}">` : ''}</td>
+      <td>${r.id}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.contact)}</td>
+      <td>${escapeHtml(r.travel_date)}</td>
+      <td>${formatRoute(r)}</td>
+      <td>${r.people_count}</td>
+      <td>${escapeHtml(r.comment || '—')}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td class="muted">${escapeHtml(r.created_at)}</td>
+      <td><button type="button" class="btn btn-danger btn-small delete-req-btn" data-id="${r.id}">Удалить</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// Делегируем клик на всю таблицу — строки перерисовываются целиком при
+// каждом обновлении, поэтому проще один раз слушать контейнер, чем
+// навешивать обработчик на каждую новую кнопку.
+document.querySelector('#requests-table tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.delete-req-btn');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  if (!confirm(`Удалить заявку #${id}? Если она была в группе — группа пересчитается или удалится, если участников не останется.`)) {
+    return;
+  }
+
+  try {
+    await apiSend(`/api/admin/requests/${id}`, 'DELETE');
+    showNotice('Заявка удалена', 'success');
+    await refreshAll();
+  } catch (err) {
+    showNotice(err.message, 'error');
+  }
+});
+
+document.getElementById('create-group-btn').addEventListener('click', async () => {
+  const ids = Array.from(document.querySelectorAll('.req-checkbox:checked')).map((el) => Number(el.value));
+  if (ids.length === 0) {
+    showNotice('Отметьте хотя бы одну заявку', 'error');
+    return;
+  }
+  try {
+    await apiSend('/api/admin/groups', 'POST', { request_ids: ids });
+    showNotice('Группа создана вручную', 'success');
+    await refreshAll();
+  } catch (err) {
+    showNotice(err.message, 'error');
+  }
+});
+
+document.getElementById('status-filter').addEventListener('change', loadRequests);
+
+// --- Группы -------------------------------------------------------------
+
+async function loadGroups() {
+  const data = await apiGet('/api/admin/groups');
+  renderGroups(data.groups);
+}
+
+// Таймеры опроса открытых чатов групп — renderGroups полностью перестраивает
+// DOM при каждом refreshAll(), поэтому старые интервалы нужно явно гасить,
+// иначе они продолжат дёргать API в фоне на уже выброшенные карточки.
+let activeChatTimers = [];
+
+function renderGroups(groups) {
+  activeChatTimers.forEach(clearInterval);
+  activeChatTimers = [];
+
+  const container = document.getElementById('groups-list');
+  container.innerHTML = '';
+
+  if (groups.length === 0) {
+    container.innerHTML = '<p class="muted">Пока нет ни одной группы.</p>';
+    return;
+  }
+
+  for (const g of groups) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = '#fafbfc';
+
+    // Ссылка на общий чат группы для конкретного участника (см. public/chat.html) —
+    // тот же секрет (cancel_token), что и для самостоятельной отмены заявки.
+    // Обычно её видно один раз в тексте для WeChat сразу после подтверждения
+    // группы — кнопка здесь нужна, чтобы достать её повторно в любой момент
+    // (например, для собственной проверки или если текст для WeChat потерялся).
+    function chatLinkFor(member) {
+      return `${location.origin}/chat?group=${g.id}&request=${member.id}&token=${encodeURIComponent(member.cancel_token)}`;
+    }
+
+    const membersRows = g.members
+      .map(
+        (m) => `<tr>
+          <td>${escapeHtml(m.name)}</td>
+          <td>${escapeHtml(m.contact)}</td>
+          <td>${m.people_count}</td>
+          <td>${escapeHtml(m.comment || '—')}</td>
+          <td><button type="button" class="btn btn-outline btn-small copy-chat-link-btn" data-id="${m.id}">Ссылка на чат</button></td>
+        </tr>`
+      )
+      .join('');
+
+    const isDecided = g.status !== 'matched';
+
+    card.innerHTML = `
+      <div class="top-bar">
+        <div>
+          <strong>Группа #${g.id}</strong> ${statusBadge(g.status)}
+          <div class="muted">${escapeHtml(g.travel_date)} · ${formatRoute(g)} · ${g.total_people} чел.</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Имя</th><th>Контакт</th><th>Чел.</th><th>Комментарий</th><th></th></tr></thead>
+          <tbody>${membersRows}</tbody>
+        </table>
+      </div>
+
+      <div class="field" style="margin-top:14px;max-width:260px;">
+        <label>Цена поездки (общая, ₽)</label>
+        <div class="row">
+          <input type="number" min="0" step="1" class="price-input" value="${g.price ?? ''}" ${isDecided ? 'disabled' : ''}>
+          <button class="btn btn-outline btn-small price-save-btn" ${isDecided ? 'disabled' : ''}>Сохранить</button>
+        </div>
+      </div>
+
+      ${
+        !isDecided
+          ? `<div class="row" style="margin-top:12px;">
+              <button class="btn btn-success btn-small confirm-btn">Подтвердить группу</button>
+              <button class="btn btn-danger btn-small reject-btn">Отклонить</button>
+            </div>`
+          : ''
+      }
+
+      <div class="messages-area"></div>
+
+      <div style="margin-top:12px;">
+        <button type="button" class="btn btn-outline btn-small chat-toggle-btn">💬 Чат группы</button>
+        <div class="group-chat" hidden>
+          <div class="group-chat-messages"></div>
+          <div class="row" style="margin-top:8px;">
+            <input type="text" class="group-chat-input" placeholder="Сообщение участникам…" maxlength="1000" style="flex:1;">
+            <button type="button" class="btn btn-primary btn-small group-chat-send-btn">Отправить</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    card.querySelectorAll('.copy-chat-link-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const member = g.members.find((m) => m.id === Number(btn.dataset.id));
+        if (!member) return;
+        const link = chatLinkFor(member);
+        try {
+          await navigator.clipboard.writeText(link);
+          showNotice('Ссылка скопирована: ' + link, 'success');
+        } catch (err) {
+          // Clipboard API недоступен (например, не-HTTPS или старый браузер) — просто показываем ссылку
+          showNotice(link, 'success');
+        }
+      });
+    });
+
+    card.querySelector('.price-save-btn')?.addEventListener('click', async () => {
+      const price = Number(card.querySelector('.price-input').value);
+      try {
+        await apiSend(`/api/admin/groups/${g.id}/price`, 'PUT', { price });
+        showNotice('Цена сохранена', 'success');
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    });
+
+    card.querySelector('.confirm-btn')?.addEventListener('click', async () => {
+      try {
+        const data = await apiSend(`/api/admin/groups/${g.id}/confirm`, 'POST');
+        showNotice('Группа подтверждена', 'success');
+        renderWeChatMessages(card, data.messages);
+        await refreshAll();
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    });
+
+    // --- Чат группы: открывается по клику, пока открыт — опрашиваем раз в 3с ---
+    const chatPanel = card.querySelector('.group-chat');
+    const chatMessagesEl = card.querySelector('.group-chat-messages');
+    const chatInput = card.querySelector('.group-chat-input');
+    let chatPollTimer = null;
+
+    function renderGroupChat(messages) {
+      chatMessagesEl.innerHTML = messages
+        .map(
+          (m) => `
+        <div class="message-box">
+          <strong>${escapeHtml(m.author_name)}</strong>${m.author_role === 'admin' ? ' (вы)' : ''}:
+          ${escapeHtml(m.body)}
+          ${m.translated_body ? `<div class="muted" style="font-style:italic;margin-top:4px;">${escapeHtml(m.translated_body)}</div>` : ''}
+        </div>
+      `
+        )
+        .join('');
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+
+    async function loadGroupChat() {
+      try {
+        const data = await apiGet(`/api/admin/groups/${g.id}/messages`);
+        renderGroupChat(data.messages);
+      } catch (err) {
+        // тихо — опрос попробует снова через 3с
+      }
+    }
+
+    card.querySelector('.chat-toggle-btn').addEventListener('click', () => {
+      const willShow = chatPanel.hidden;
+      chatPanel.hidden = !willShow;
+      if (willShow) {
+        loadGroupChat();
+        chatPollTimer = setInterval(loadGroupChat, 3000);
+        activeChatTimers.push(chatPollTimer);
+      } else if (chatPollTimer) {
+        clearInterval(chatPollTimer);
+        chatPollTimer = null;
+      }
+    });
+
+    async function sendGroupChatMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      try {
+        const data = await apiSend(`/api/admin/groups/${g.id}/messages`, 'POST', { body: text });
+        chatInput.value = '';
+        renderGroupChat(data.messages);
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    }
+
+    card.querySelector('.group-chat-send-btn').addEventListener('click', sendGroupChatMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendGroupChatMessage();
+      }
+    });
+
+    card.querySelector('.reject-btn')?.addEventListener('click', async () => {
+      if (!confirm('Отклонить эту группу? Все заявки в ней получат статус "отклонена".')) return;
+      try {
+        await apiSend(`/api/admin/groups/${g.id}/reject`, 'POST');
+        showNotice('Группа отклонена', 'success');
+        await refreshAll();
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    });
+
+    container.appendChild(card);
+  }
+}
+
+// Показывает готовые тексты для ручной отправки в WeChat (заглушка первого этапа).
+function renderWeChatMessages(card, messages) {
+  const area = card.querySelector('.messages-area');
+  if (!messages || messages.length === 0) return;
+
+  area.innerHTML =
+    '<p class="hint" style="margin-top:14px;"><strong>Сообщения для ручной отправки в WeChat:</strong></p>' +
+    messages
+      .map(
+        (m) => `<div class="message-box"><strong>${escapeHtml(m.name)}</strong> (${escapeHtml(m.contact)}):\n${escapeHtml(m.message)}</div>`
+      )
+      .join('');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// --- Частичные совпадения ------------------------------------------------
+
+async function loadPartialMatches() {
+  const data = await apiGet('/api/admin/partial-matches');
+  renderPartialMatches(data.pairs);
+}
+
+function renderPartialMatches(pairs) {
+  const container = document.getElementById('partial-matches-list');
+  container.innerHTML = '';
+
+  if (!pairs || pairs.length === 0) {
+    container.innerHTML = '<p class="muted">Сейчас таких пар нет.</p>';
+    return;
+  }
+
+  pairs.forEach((pair) => {
+    const { requestA: a, requestB: b, sharedStops } = pair;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.background = '#fafbfc';
+
+    const renderSide = (r) => `
+      <div>
+        <strong>${escapeHtml(r.name)}</strong> (${escapeHtml(r.contact)})
+        <div class="muted">${escapeHtml(r.travel_date)} · ${formatRoute(r)} · ${r.people_count} чел.</div>
+        ${r.comment ? `<div class="muted">Комментарий: ${escapeHtml(r.comment)}</div>` : ''}
+      </div>
+    `;
+
+    card.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:flex-start;">
+        ${renderSide(a)}
+        <span class="muted" style="padding:0 8px;">↔</span>
+        ${renderSide(b)}
+      </div>
+      <p class="hint" style="margin-top:12px;">Общая точка маршрута: <strong>${sharedStops.map(escapeHtml).join(', ')}</strong></p>
+      <div class="row" style="margin-top:8px;">
+        <button type="button" class="btn btn-outline btn-small merge-partial-btn">Создать группу из этих двух</button>
+      </div>
+    `;
+
+    card.querySelector('.merge-partial-btn').addEventListener('click', async () => {
+      try {
+        await apiSend('/api/admin/groups', 'POST', { request_ids: [a.id, b.id] });
+        showNotice('Группа создана вручную', 'success');
+        await refreshAll();
+      } catch (err) {
+        showNotice(err.message, 'error');
+      }
+    });
+
+    container.appendChild(card);
+  });
+}
+
+async function refreshAll() {
+  await Promise.all([loadRequests(), loadGroups(), loadPartialMatches()]);
+}
+
+document.getElementById('refresh-btn').addEventListener('click', refreshAll);
+
+refreshAll();
