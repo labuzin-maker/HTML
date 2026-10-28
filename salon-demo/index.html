@@ -87,6 +87,7 @@ details>summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
 @keyframes spUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease 1.2s forwards!important}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:#1d1a17;color:#fff;padding:10px 16px;border-radius:12px;z-index:300;font-size:14px;box-shadow:0 4px 16px #0006;max-width:90%;text-align:center}
 a.btn{text-decoration:none;display:inline-block;text-align:center}
 .blkd{position:absolute;left:3px;right:3px;border-radius:9px;padding:4px 7px;overflow:hidden;font-size:12px;background:repeating-linear-gradient(45deg,#8883 0 6px,#8881 6px 12px);border:1px dashed var(--muted);color:var(--muted);cursor:pointer;z-index:1}
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.kpi div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}.kpi b{display:block;font-size:17px}.kpi small{color:var(--muted);font-size:11px}
@@ -118,10 +119,10 @@ let seq=1000;const nid=()=>++seq;
 let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)%n};
 
 /* ===== справочники ===== */
-let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS,BLOCKS,WAIT;
+let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS,BLOCKS,WAIT,NOTIF;
 function seed(){
   seq=1000;rs=20261028;
-  CFG={payDay:5,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
+  CFG={ntf:{confirm:1,remind:1,hours:2,from:"09:00"},payDay:5,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
   USERS={admin:{login:"admin",pass:"admin123",name:"Администратор"},owner:{login:"owner",pass:"owner123",name:"Владелец"}};
   MASTERS=[
     {id:1,name:"Анна",role:"Стилист-колорист",percent:40,login:"anna",pass:"anna123",color:"#b8432f",rating:4.9,active:1},
@@ -144,7 +145,7 @@ function seed(){
   CLIENTS=[["Мария Иванова","79141000001","любит каре, аллергия на аммиак"],["Сергей Петров","79141000002",""],["Алексей Громов","79141000003","борода 3 мм"],["Ольга Смирнова","79141000004","окрашивание блонд, формула 7/1 + 6%"],["Дмитрий Орлов","79141000005",""],["Екатерина Волкова","79141000006","стрижка боб"],["Иван Козлов","79141000007","сын 7 лет — детская"],["Наталья Белова","79141000008","тонирование раз в 6 недель"],["Андрей Нестеров","79141000009",""],["Виктория Лис","79141000010",""],["Павел Морозов","79141000011","борода"]].map((c,i)=>({id:i+1,name:c[0],phone:c[1],note:c[2],bonus:0}));
   {const fn=["Анна","Елена","Ирина","Светлана","Татьяна","Юлия","Алексей","Андрей","Максим","Роман","Денис","Артём","Кирилл","Мария","Оксана","Игорь"],ln=["Кузнецов","Соколов","Попов","Лебедев","Новиков","Морозов","Волков","Зайцев","Павлов","Семёнов","Фёдоров","Михайлов","Беляев","Тарасов","Белоусов","Комаров"];
    for(let i=0;i<40;i++){const f=fn[(i*7)%fn.length],l=ln[(i*5+3)%ln.length],fem=/[ая]$/.test(f);CLIENTS.push({id:12+i,name:f+" "+l+(fem&&!/[ая]$/.test(l)?"а":""),phone:"791420"+String(10000+i*37).slice(-5),note:"",bonus:0})}}
-  B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];
+  B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];
   const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
     const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
   const settle=(b,withUse=true)=>{const m=MASTERS.find(x=>x.id===b.master),total=b.price+b.extras.reduce((a,x)=>a+x.a,0);
@@ -169,6 +170,8 @@ function seed(){
   B.find(b=>b.date===TODAY&&b.service===6).note="окрашивание, как в прошлый раз, 7/1";
   BLOCKS.push({id:nid(),master:2,date:TODAY,from:"14:00",to:"15:00",title:"Обед"},{id:nid(),master:3,date:addDays(TODAY,1),from:"10:00",to:"20:00",title:"Выходной"});
   WAIT.push({id:nid(),client:6,service:2,master:0,date:addDays(TODAY,1)});
+  CLIENTS.forEach(c=>{c.chan=c.id%5===1?"telegram":c.id%7===3?"sms":"whatsapp"});
+  B.filter(b=>b.date>=TODAY&&["new","confirmed"].includes(b.status)).forEach(b=>{b.created=addDays(TODAY,b.date>TODAY?-1:-2);scheduleNotifs(b,"seed")});
   /* расходы (не материалы) */
   const m0=TODAY.slice(0,8)+"01",pm=addDays(m0,-1).slice(0,8)+"01";
   [[m0,25000,"rent","Аренда"],[pm,25000,"rent","Аренда"],[addDays(m0,3),3000,"ads","Листовки"],[addDays(pm,4),3000,"ads","Реклама"],[addDays(m0,2),4200,"utilities","Коммуналка"],[addDays(pm,3),4200,"utilities","Коммуналка"]]
@@ -194,6 +197,20 @@ function freeTimes(date,master,dur,ign,anyTime){const ms=(master?[master]:MASTER
     const free=ms.filter(mid=>!conflict(date,mid,t,dur,ign));if(free.length)out.push({t:hm(t),free})}return out}
 function packsText(m,st){const full=Math.floor(st/m.pack),rest=Math.round((st-full*m.pack)*10)/10;
   return (full?full+" "+m.packName+(full>1&&full<5?"а":full>=5?"ов":"")+(rest?" + ":""):"")+(rest||!full?rest+" "+m.unit+(full?" вскрытого":""):"")}
+/* ===== автоуведомления клиентам ===== */
+const chanName={whatsapp:"WhatsApp",telegram:"Telegram",sms:"SMS"};
+function nowStr(){const n=new Date();return ymd(n)+" "+hm(n.getHours()*60+n.getMinutes())}
+/* когда слать напоминание: в день записи за N часов; не раньше «from» (ночью не пишем); запись «день в день» — без напоминания */
+function remindAt(b){const n=CFG.ntf;if(!n.remind)return null;const cr=b.created||TODAY;if(b.date<=cr)return null;
+  const st=tm(b.start),win=tm(n.from);let at=st-n.hours*60,date=b.date;if(at<win)at=win;if(at>st-30){date=addDays(b.date,-1);at=20*60}
+  return date+" "+hm(at)}
+function scheduleNotifs(b,mode){NOTIF=NOTIF.filter(x=>!(x.b===b.id&&x.kind==="remind"&&!x.sent));const c=CLIENTS.find(z=>z.id===b.client),ch=c.chan||"whatsapp",n=CFG.ntf;
+  if(mode==="seed")NOTIF.push({id:nid(),b:b.id,kind:"confirm",at:b.created+" 12:00",sent:true,chan:ch});
+  else if(mode==="new"&&n.confirm)NOTIF.push({id:nid(),b:b.id,kind:"confirm",at:nowStr(),sent:true,chan:ch});
+  else if(mode==="move")NOTIF.push({id:nid(),b:b.id,kind:"move",at:nowStr(),sent:true,chan:ch});
+  const at=remindAt(b);if(at&&(mode==="seed"||at>nowStr()))NOTIF.push({id:nid(),b:b.id,kind:"remind",at,sent:at<=nowStr(),chan:ch})}
+function cancelNotifs(b,notice){NOTIF=NOTIF.filter(x=>!(x.b===b.id&&x.kind==="remind"&&!x.sent));if(notice)NOTIF.push({id:nid(),b:b.id,kind:"cancel",at:nowStr(),sent:true,chan:CLIENTS.find(z=>z.id===b.client).chan||"whatsapp"})}
+function processDue(){const t=nowStr();let ch=false;NOTIF.forEach(x=>{if(!x.sent&&x.at<=t){x.sent=true;ch=true}});return ch}
 /* ===== расчёт периода ===== */
 function period(p){const m0=TODAY.slice(0,8)+"01";if(p==="prev"){const e=addDays(m0,-1);return{from:e.slice(0,8)+"01",to:e,label:MONN[+e.slice(5,7)-1]+" "+e.slice(0,4)}}return{from:m0,to:TODAY,label:MONN[+TODAY.slice(5,7)-1]+" "+TODAY.slice(0,4)}}
 function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
@@ -213,7 +230,7 @@ function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
 
 /* ===== состояние ===== */
 const S={hist:0,mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:1};
-const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
+const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"],["msg","✉ Сообщения"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["msg","✉ Сообщения"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
 const isOwner=()=>S.role==="owner";
 function modal(html){const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);return m}
 function ask(text,yes){const m=modal(`<h2 style="margin-top:0">${esc(text)}</h2><div class="row"><button class="btn alt" data-act="close">Нет</button><button class="btn" id="yes">Да</button></div>`);m.querySelector("#yes").onclick=()=>{m.remove();yes()}}
@@ -241,7 +258,7 @@ function vLogin(role){
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
   const r=S.role,t=S.tab[r];let body;
-  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings}[t]();
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings,msg:vOutbox}[t]();
   const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
   return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
   ${r==="master"?"":`<div class="tabs">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div>`}${body}`}
@@ -326,11 +343,11 @@ function bookModal(o){
   if(!edit)q("#bp").oninput=()=>{const d=digits(q("#bp").value),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone)===d.slice(-10));q("#found").textContent=c?`Клиент найден: ${c.name}, визитов ${B.filter(b=>b.client===c.id&&b.status==="done").length}`:"";if(c)q("#bn").value=c.name};
   q("#bok").onclick=()=>{const err=t=>q("#berr").textContent=t;if(!st.time)return err("Выберите время");
     const date=q("#bd").value,pr=q("#bpr").value;
-    if(edit){const mid=+q("#bm").value;edit.master=mid;edit.date=date;edit.start=st.time;if(pr!=="")edit.price=Math.round(+pr);edit.note=q("#bnote").value;m.remove();render();openSheet(edit.id);return}
+    if(edit){const mid=+q("#bm").value;const mv=edit.date!==date||edit.start!==st.time;edit.master=mid;edit.date=date;edit.start=st.time;if(mv){edit.created=TODAY;scheduleNotifs(edit,"move");toast("✉ Клиенту ушло уведомление о переносе")}if(pr!=="")edit.price=Math.round(+pr);edit.note=q("#bnote").value;m.remove();render();openSheet(edit.id);return}
     const ph=digits(q("#bp").value),nm=q("#bn").value.trim();let c=ph.length>=10&&CLIENTS.find(x=>digits(x.phone)===ph.slice(-10));
     if(!c){if(ph.length<10||nm.length<2)return err("Нужны имя и телефон");c={id:nid(),name:nm,phone:"7"+ph.slice(-10),note:"",bonus:0};CLIENTS.push(c)}
     const sv=svById(+q("#bs").value),list=freeTimes(date,+q("#bm").value,sv.dur,0,true),slot=list.find(x=>x.t===st.time),mid=+q("#bm").value||slot.free[0];
-    B.push({id:nid(),date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:"phone"});
+    const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:"phone"};B.push(nb);scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
     if(o.waitId)WAIT=WAIT.filter(w=>w.id!==o.waitId);S.date=date;m.remove();render()};
   if(o.client&&!edit){const c=cById(o.client);q("#bp").value="+"+c.phone;q("#bp").oninput()}
   times();
@@ -451,6 +468,7 @@ function vSettings(){const cats=[...new Set(SERVICES.map(s=>s.cat))];
   return `<h2 style="margin-top:0">Прайс-лист</h2><div class="muted sm" style="margin-bottom:6px">Новая цена действует на новые записи. Старые записи и чеки не меняются.</div>
   ${cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+SERVICES.filter(x=>x.cat===c).map(x=>`<div class="card row"><div><b>${esc(x.name)}</b> ${x.off?`<span class="tag">скрыта</span>`:""}<div class="muted">${x.dur} мин</div></div><div class="row gap"><b>${rub(x.price)}</b><button class="btn alt s" data-act="svc" data-id="${x.id}">Изменить</button></div></div>`).join("")).join("")}
   <button class="btn" data-act="svc" data-id="0">＋ Добавить услугу</button>
+  ${ntfCard()}
   <h2>Расходные материалы</h2><div class="muted sm" style="margin-bottom:6px">Цена упаковки задаёт цену грамма. Новая цена считается для будущих списаний.</div>
   ${MATS.map(m=>`<div class="card row"><div><b>${esc(m.name)}</b><div class="muted">${m.packName} ${m.pack} ${m.unit} · ${rub(m.packPrice)} · ${m.cost.toFixed(2)} ₽/${m.unit} · минимум ${m.min} ${m.unit}</div></div><button class="btn alt s" data-act="matE" data-id="${m.id}">Изменить</button></div>`).join("")}
   <button class="btn" data-act="matE" data-id="0">＋ Добавить материал</button> <span class="muted sm">Поставку на склад вносите во вкладке «Склад» → «Приход».</span>
@@ -484,7 +502,7 @@ function vClient(){const t=S.tab.client;
   return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">${esc(CFG.addr)}</div></div></div>
   <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
 function vWiz(){const w=W();
-  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div><div class="muted">За 2 часа придёт напоминание. Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
+  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
   const sv=w.service&&svById(w.service),mm=w.master!=null&&(w.master?mById(w.master):{name:"Любой мастер"});
   const head=`<div class="row"><button class="btn alt s" data-act="wback" ${w.step===1?"disabled":""}>← Назад</button><span class="muted">Шаг ${w.step} из 5</span></div><div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=w.step?"on":""}"></i>`).join("")}</div>`;
   let body="";
@@ -493,7 +511,7 @@ function vWiz(){const w=W();
   if(w.step===3){const list=freeTimes(w.date,w.master,sv.dur),groups=[["Утро",0,12*60],["День",12*60,17*60],["Вечер",17*60,24*60]];
     body=`<h2 style="margin-top:0">Дата и время</h2><div class="days">${Array.from({length:14},(_,i)=>{const d=addDays(TODAY,i),dt=new Date(d+"T12:00:00"),n=freeTimes(d,w.master,sv.dur).length;return `<div class="day ${d===w.date?"on":""} ${n?"":"off"}" data-act="wd" data-d="${d}"><small>${DOW[dt.getDay()]}</small><b>${dt.getDate()}</b><small>${MONG[dt.getMonth()].slice(0,3)}</small></div>`}).join("")}</div>
     ${groups.map(([n,a,b])=>{const l=list.filter(x=>tm(x.t)>=a&&tm(x.t)<b);return l.length?`<h3 class="muted">${n}</h3><div class="chips">${l.map(x=>`<div class="chip ${w.time===x.t?"on":""}" data-act="wt" data-t="${x.t}">${x.t}</div>`).join("")}</div>`:""}).join("")||"<div class='card muted'>На этот день окон нет, выберите другую дату</div>"}`}
-  if(w.step===4)body=`<h2 style="margin-top:0">Ваши контакты</h2><label class="l">Имя</label><input data-in="wname" value="${esc(w.name||"")}" placeholder="Как к вам обращаться"><label class="l">Телефон</label><input data-in="wphone" type="tel" value="${esc(w.phone||"")}" placeholder="+7 914 …"><label class="l">Комментарий мастеру</label><input data-in="wnote" value="${esc(w.note||"")}" placeholder="Пожелания (необязательно)"><div class="muted sm">Нажимая «Далее», вы соглашаетесь на обработку персональных данных.</div>`;
+  if(w.step===4)body=`<h2 style="margin-top:0">Ваши контакты</h2><label class="l">Имя</label><input data-in="wname" value="${esc(w.name||"")}" placeholder="Как к вам обращаться"><label class="l">Телефон</label><input data-in="wphone" type="tel" value="${esc(w.phone||"")}" placeholder="+7 914 …"><label class="l">Комментарий мастеру</label><input data-in="wnote" value="${esc(w.note||"")}" placeholder="Пожелания (необязательно)"><label class="l">Куда прислать подтверждение и напоминание</label><div class="chips">${["whatsapp","telegram","sms"].map(k=>`<div class="chip ${(w.chan||"whatsapp")===k?"on":""}" data-act="wchan" data-k="${k}">${chanName[k]}</div>`).join("")}</div><div class="muted sm">Нажимая «Далее», вы соглашаетесь на обработку персональных данных.</div>`;
   if(w.step===5){const known=CLIENTS.find(c=>digits(c.phone)===digits(w.phone).slice(-10)&&digits(w.phone).length>=10),disc=known?0:15,pr=Math.round(sv.price*(1-disc/100));
     body=`<h2 style="margin-top:0">Проверьте запись</h2><div class="card">${kv("Услуга",esc(sv.name))}${kv("Мастер",esc(mm.name))}${kv("Когда",dLong(w.date)+", "+w.time)}${kv("Клиент",esc(w.name)+" · "+esc(w.phone))}${disc?kv("Скидка первого визита",disc+"%"):""}<hr style="border:0;border-top:1px solid var(--line)">${kv("К оплате в салоне",rub(pr))}</div>`}
   const can=(w.step===1&&w.service)||(w.step===2&&w.master!=null)||(w.step===3&&w.time)||(w.step===4&&w.name&&digits(w.phone).length>=10)||w.step===5;
@@ -519,7 +537,7 @@ const A={
   new(){bookModal({date:S.date})},newfor(el){bookModal({date:TODAY,client:+el.dataset.id})},
   close(){closeModal()},payb(el){payModal(+el.dataset.id)},extra(el){extraModal(+el.dataset.id)},editb(el){closeModal();bookModal({id:+el.dataset.id})},mats(el){matsModal(+el.dataset.id)},
   xdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id);b.extras.splice(+el.dataset.i,1);render();openSheet(b.id)},
-  bst(el){const b=B.find(x=>x.id===+el.dataset.id),s=el.dataset.s;closeModal();ask(s==="noshow"?"Отметить неявку?":"Отменить запись?",()=>{b.status=s;render();freedModal(b)})},
+  bst(el){const b=B.find(x=>x.id===+el.dataset.id),s=el.dataset.s;closeModal();ask(s==="noshow"?"Отметить неявку?":"Отменить запись?",()=>{b.status=s;cancelNotifs(b,s==="cancelled");render();freedModal(b)})},
   clo(el){S.open=S.open===+el.dataset.id?0:+el.dataset.id;S.hist=0;$("#cl").innerHTML=clList()},
   in(){stockModal("in")},out(){stockModal("out")},inv(){stockModal("inv")},buy(){stockModal("buy")},norms(){stockModal("norms")},
   per(el){S.period=el.dataset.p;render()},
@@ -539,9 +557,9 @@ const A={
   wnext(){const w=W();if(w.step<5){w.step++;render();return}
     const sv=svById(w.service),ph=digits(w.phone).slice(-10);let c=CLIENTS.find(x=>digits(x.phone)===ph);const disc=c?0:15;if(!c){c={id:nid(),name:w.name,phone:"7"+ph,note:"",bonus:0};CLIENTS.push(c)}
     const slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);if(!slot){w.step=3;render();modal(`<h2 style="margin-top:0">Это время только что заняли</h2><div class="muted">Выберите другое.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
-    const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app"};B.push(b);S.me=c.id;w.done=b.id;render()},
+    const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app",created:TODAY};c.chan=w.chan||c.chan||"whatsapp";B.push(b);scheduleNotifs(b,"new");S.me=c.id;w.done=b.id;render()},
   wnew(){S.w={step:1};render()},
-  ccancel(el){const b=B.find(x=>x.id===+el.dataset.id);b.status="cancelled";render()},
+  ccancel(el){const b=B.find(x=>x.id===+el.dataset.id);b.status="cancelled";cancelNotifs(b,true);render()},
 };
 A.reset=function(el){if(el.dataset.k||el.dataset.id){const np="pw"+(1000+Math.floor(Math.random()*9000)),t=el.dataset.k?USERS[el.dataset.k]:mById(+el.dataset.id);t.pass=np;modal(`<h2 style="margin-top:0">Новый пароль</h2><div class="card" style="font-size:22px;text-align:center"><b>${np}</b></div><div class="muted">Передайте сотруднику. Старый пароль больше не работает.</div><button class="btn full" data-act="close" style="margin-top:8px">Готово</button>`);return}
   seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;closeModal();render()};
@@ -625,6 +643,39 @@ Object.assign(A,{
   rebook(el){const b=B.find(x=>x.id===+el.dataset.id);closeModal();rebookModal(b)},
   rebw(el){const b=B.find(x=>x.id===+el.dataset.id),base=b.date>TODAY?b.date:TODAY;closeModal();bookModal({date:addDays(base,7*+el.dataset.w),master:b.master,service:b.service,client:b.client})},
 });
+
+/* ===== сообщения клиентам (автоматические) ===== */
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
+const nWhen=at=>{const d=at.slice(0,10);return (d===TODAY?"сегодня":d===addDays(TODAY,1)?"завтра":d===addDays(TODAY,-1)?"вчера":dLong(d))+" в "+at.slice(11)};
+function nText(x){const b=B.find(z=>z.id===x.b),c=cById(b.client),sv=svById(b.service),m=mById(b.master);
+  if(x.kind==="confirm")return `Здравствуйте, ${first(c)}! Вы записаны в «${CFG.name}»: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Адрес: ${CFG.addr}. Если планы изменятся, пожалуйста, предупредите заранее.`;
+  if(x.kind==="move")return `${first(c)}, ваша запись перенесена: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Ждём вас!`;
+  if(x.kind==="cancel")return `${first(c)}, ваша запись на ${dLong(b.date)}, ${b.start} отменена. Будем рады видеть вас в другой день — записаться можно по ссылке или по телефону.`;
+  return `${first(c)}, напоминаем: сегодня в ${b.start} вас ждёт ${m.name} — ${sv.name}. Адрес: ${CFG.addr}. Если не получится прийти, ответьте на это сообщение.`}
+const KIND={confirm:"Подтверждение",remind:"Напоминание",move:"Перенос",cancel:"Отмена"};
+function notifBlock(b){const c=cById(b.client),r=NOTIF.find(x=>x.b===b.id&&x.kind==="remind"),n=CFG.ntf;
+  return `<div class="card" style="text-align:left;margin:10px 0 0"><div>✅ Подтверждение отправлено в <b>${chanName[c.chan||"whatsapp"]}</b> (+${c.phone})</div>${r?`<div style="margin-top:4px">🔔 Напомним <b>${nWhen(r.at)}</b></div>`:`<div class="muted" style="margin-top:4px">${b.date===TODAY?"Запись на сегодня — отдельное напоминание не нужно.":"Напоминание отключено."}</div>`}</div>`}
+function vOutbox(){const n=CFG.ntf,pend=NOTIF.filter(x=>!x.sent).sort((a,b)=>a.at<b.at?-1:1),sent=NOTIF.filter(x=>x.sent).sort((a,b)=>a.at<b.at?1:-1).slice(0,25);
+  const row=x=>{const b=B.find(z=>z.id===x.b),c=cById(b.client);return `<div class="card"><div class="row"><div><b>${esc(c.name)}</b> <span class="tag ${x.kind==="cancel"?"noshow":x.kind==="remind"?"new":"confirmed"}">${KIND[x.kind]}</span></div><span class="muted sm">${chanName[x.chan]}</span></div>
+  <div class="muted sm" style="margin:2px 0 6px">${x.sent?"Отправлено":"Уйдёт"} ${nWhen(x.at)} · запись ${dLong(b.date)}, ${b.start}</div><div class="sm" style="background:var(--bg);border-radius:10px;padding:8px">${esc(nText(x))}</div>
+  ${x.sent?"":`<div class="row gap" style="margin-top:6px;justify-content:flex-start"><button class="btn s" data-act="nsend" data-id="${x.id}">Отправить сейчас</button><button class="btn alt s" data-act="nskip" data-id="${x.id}">Не отправлять</button></div>`}</div>`};
+  return `<div class="note" style="margin-top:0"><b>Как это работает.</b> Клиент получает подтверждение сразу после записи. Если запись не на сегодня, ещё и напоминание в день визита за ${n.hours} ч до начала, но не раньше ${n.from} (рано утром не пишем). Запись «день в день» — только подтверждение. Сообщения уходят сами: на сервере их отправляет бот WhatsApp/Telegram или SMS-сервис. Здесь — очередь для наглядности. Настройки — у владельца.</div>
+  <h2>Запланировано (${pend.length})</h2>${pend.slice(0,12).map(row).join("")||"<div class='card muted'>Пока ничего не запланировано</div>"}${pend.length>12?`<div class="muted sm" style="text-align:center">…и ещё ${pend.length-12}</div>`:""}
+  <h2>Отправлено</h2>${sent.map(row).join("")||"<div class='card muted'>Пока пусто</div>"}`}
+function ntfCard(){const n=CFG.ntf;return `<h2>Уведомления клиентам</h2><div class="card">
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="nc" ${n.confirm?"checked":""} style="width:auto;margin:0"> <span>Подтверждение сразу после записи</span></label>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="nr" ${n.remind?"checked":""} style="width:auto;margin:0"> <span>Напоминание в день записи</span></label>
+  <label class="l">За сколько часов напомнить</label><select id="nh">${[1,2,3,4].map(h=>`<option value="${h}" ${h===n.hours?"selected":""}>за ${h} ч</option>`).join("")}</select>
+  <label class="l">Не писать клиентам раньше</label><select id="nf">${["08:00","09:00","10:00"].map(t=>`<option ${t===n.from?"selected":""}>${t}</option>`).join("")}</select>
+  <div class="muted sm" style="margin-bottom:8px">Если «за 2 часа» выпадает на раннее утро (например, запись на 10:00), напоминание придёт в указанное время, а не ночью. Запись на сегодняшний день напоминания не получает.</div><button class="btn" data-act="ntfsave">Сохранить</button></div>`}
+Object.assign(A,{
+  wchan(el){S.w.chan=el.dataset.k;render()},
+  nsend(el){const x=NOTIF.find(z=>z.id===+el.dataset.id);x.sent=true;x.at=nowStr();toast("✉ Отправлено");render()},
+  nskip(el){NOTIF=NOTIF.filter(z=>z.id!==+el.dataset.id);render()},
+  ntfsave(){CFG.ntf={confirm:$("#nc").checked?1:0,remind:$("#nr").checked?1:0,hours:+$("#nh").value,from:$("#nf").value};
+    B.filter(b=>b.date>=TODAY&&["new","confirmed"].includes(b.status)).forEach(b=>scheduleNotifs(b,null));toast("Настройки уведомлений сохранены");render()},
+});
+setInterval(()=>{if(processDue()&&S.role!=="client"&&S.tab[S.role]==="msg")render()},30000);
 /* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
   const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
