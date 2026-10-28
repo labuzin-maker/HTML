@@ -142,6 +142,8 @@ function seed(){
   MATS.forEach(m=>m.cost=m.packPrice/m.pack);
   NORMS={6:[[1,60],[3,90],[6,2]],7:[[2,30],[3,45],[6,2]],5:[[4,20],[5,10]],1:[[5,10]],4:[[5,10]]};
   CLIENTS=[["Мария Иванова","79141000001","любит каре, аллергия на аммиак"],["Сергей Петров","79141000002",""],["Алексей Громов","79141000003","борода 3 мм"],["Ольга Смирнова","79141000004","окрашивание блонд, формула 7/1 + 6%"],["Дмитрий Орлов","79141000005",""],["Екатерина Волкова","79141000006","стрижка боб"],["Иван Козлов","79141000007","сын 7 лет — детская"],["Наталья Белова","79141000008","тонирование раз в 6 недель"],["Андрей Нестеров","79141000009",""],["Виктория Лис","79141000010",""],["Павел Морозов","79141000011","борода"]].map((c,i)=>({id:i+1,name:c[0],phone:c[1],note:c[2],bonus:0}));
+  {const fn=["Анна","Елена","Ирина","Светлана","Татьяна","Юлия","Алексей","Андрей","Максим","Роман","Денис","Артём","Кирилл","Мария","Оксана","Игорь"],ln=["Кузнецов","Соколов","Попов","Лебедев","Новиков","Морозов","Волков","Зайцев","Павлов","Семёнов","Фёдоров","Михайлов","Беляев","Тарасов","Белоусов","Комаров"];
+   for(let i=0;i<40;i++){const f=fn[(i*7)%fn.length],l=ln[(i*5+3)%ln.length],fem=/[ая]$/.test(f);CLIENTS.push({id:12+i,name:f+" "+l+(fem&&!/[ая]$/.test(l)?"а":""),phone:"791420"+String(10000+i*37).slice(-5),note:"",bonus:0})}}
   B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];
   const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
     const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
@@ -151,7 +153,7 @@ function seed(){
     b.paid={amount:total,method,fiscal:"№"+(1000+b.id)};
     CLIENTS.find(c=>c.id===b.client).bonus+=Math.round(total*0.05);
     if(withUse)(NORMS[b.service]||[]).forEach(([mid,q])=>{const k=0.85+rnd(40)/100;MOV.push({id:nid(),date:b.date,mat:mid,qty:-Math.round(q*k*(MATS.find(x=>x.id===mid).unit==="шт"?0+1/k:1)),type:"out",cost:MATS.find(x=>x.id===mid).cost,booking:b.id,master:b.master,note:""})})};
-  const wsv=[1,1,2,2,2,3,4,4,5,6,7,8];
+  const wsv=[1,1,2,2,2,3,4,4,5,6,7,8],POOL=[1,2,3,4,5,6,7,8].concat(CLIENTS.filter(c=>c.id>=12).map(c=>c.id));
   for(let d=-45;d<=5;d++){const date=addDays(TODAY,d);
     if(d===0)continue;
     for(const m of MASTERS){if(m.id===3&&!(d%3===0))continue;
@@ -159,7 +161,7 @@ function seed(){
       for(let i=0;i<n;i++){const sid=m.id===1&&rnd(3)===0?[6,7][rnd(2)]:wsv[rnd(wsv.length)],sv=SERVICES.find(s=>s.id===sid);
         if(t+sv.dur>1200)break;
         const st=d<0?(rnd(20)===0?"noshow":rnd(20)===0?"cancelled":"done"):(rnd(2)?"confirmed":"new");
-        const b=addB(date,m.id,hm(t),sid,st,1+rnd(8));if(st==="done")settle(b,true);t+=sv.dur+rnd(3)*30}}}
+        const b=addB(date,m.id,hm(t),sid,st,POOL[rnd(POOL.length)]);if(st==="done")settle(b,true);t+=sv.dur+rnd(3)*30}}}
   [[9,-52,1],[10,-40,2],[11,-71,4]].forEach(([cid,dd,sid])=>{const b=addB(addDays(TODAY,dd),1+rnd(2),hm(600+60*rnd(5)),sid,"done",cid);settle(b,false)});
   /* сегодня — вручную, чтобы журнал выглядел живым */
   [[1,"10:00",1,"done",1],[1,"11:30",6,"confirmed",4],[1,"15:00",7,"new",8],[2,"10:30",2,"done",2],[2,"12:00",2,"new",5],[2,"13:00",4,"confirmed",6],[2,"16:00",8,"new",3],[2,"17:00",2,"new",7]]
@@ -210,7 +212,7 @@ function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
   return{from,to,pay,rev,mats,bought,other,pm,accrued,profit:rev-mats-other-accrued,byDay,bySvc,visits:new Set(pay.filter(x=>x.kind==="service").map(x=>x.booking)).size}}
 
 /* ===== состояние ===== */
-const S={mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:1};
+const S={hist:0,mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:1};
 const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
 const isOwner=()=>S.role==="owner";
 function modal(html){const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);return m}
@@ -390,7 +392,7 @@ function clList(){const q=S.q.toLowerCase().trim(),pd=digits(S.q);
   return list.map(({c,bs})=>{const done=bs.filter(b=>b.status==="done"),op=S.open===c.id;
     return `<div class="card"><div class="row" data-act="clo" data-id="${c.id}" style="cursor:pointer"><div><b>${esc(c.name)}</b><div class="muted">+${c.phone} · визитов ${done.length} · бонусов ${c.bonus}${noshows(c.id)?` · <span style="color:var(--bad)">⚠ неявок ${noshows(c.id)}</span>`:""}${S.cf==="lapsed"?` · <b>не был(а) ${daysAgo(lastDone(c.id))} дн.</b>`:""}</div></div><span>${op?"▲":"▼"}</span></div>
     ${S.cf==="lapsed"?`<button class="btn ok s" style="margin-top:8px" data-act="comeback" data-id="${c.id}">Написать</button>`:""}
-    ${op?`<div style="margin-top:8px">${c.note?`<div class="note" style="margin:0 0 8px">📝 ${esc(c.note)}</div>`:""}${bs.slice(0,12).map(b=>`<div class="row sm" style="padding:3px 0;border-top:1px solid var(--line)"><span>${b.date.split("-").reverse().slice(0,2).join(".")} ${b.start} · ${esc(svById(b.service).name)} · ${esc(mById(b.master).name)}</span><span>${tag(b.status)} ${rub(total(b))}</span></div>`).join("")}<div class="row wrap gap" style="margin-top:8px;justify-content:flex-start"><button class="btn s" data-act="newfor" data-id="${c.id}">＋ Записать</button><button class="btn alt s" data-act="waitfor" data-id="${c.id}">⏳ В лист ожидания</button><button class="btn alt s" data-act="comeback" data-id="${c.id}">✉ Написать</button></div></div>`:""}</div>`}).join("")||"<div class='card muted'>Никого не найдено</div>"}
+    ${op?`<div style="margin-top:8px">${c.note?`<div class="note" style="margin:0 0 8px">📝 ${esc(c.note)}</div>`:""}<div class="row wrap gap" style="margin:0 0 8px;justify-content:flex-start"><button class="btn s" data-act="newfor" data-id="${c.id}">＋ Записать</button><button class="btn alt s" data-act="waitfor" data-id="${c.id}">⏳ В лист ожидания</button><button class="btn alt s" data-act="comeback" data-id="${c.id}">✉ Написать</button></div><div class="row" data-act="hist" data-id="${c.id}" style="cursor:pointer;padding:8px 0;border-top:1px solid var(--line)"><b>История визитов (${bs.length})</b><span>${S.hist===c.id?"▲":"▼"}</span></div>${S.hist===c.id?bs.slice(0,15).map(b=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);align-items:flex-start"><div><div class="sm"><b>${b.date.split("-").reverse().slice(0,2).join(".")} ${b.start}</b> · ${esc(svById(b.service).name)}</div><div class="muted sm">${esc(mById(b.master).name)} · ${rub(total(b))}</div></div>${tag(b.status)}</div>`).join(""):""}</div>`:""}</div>`}).join("")||"<div class='card muted'>Никого не найдено</div>"}
 /* ===== касса ===== */
 function vCash(){const pay=PAY.filter(x=>x.date===S.date),by={};pay.forEach(x=>by[x.method]=(by[x.method]||0)+x.amount);
   return `${dateBar()}<div class="grid"><div class="card"><div class="muted">Принято за день</div><div class="k">${rub(pay.reduce((a,x)=>a+x.amount,0))}</div></div>${["cash","card","sbp"].map(k=>`<div class="card"><div class="muted">${{cash:"Наличные",card:"Карта",sbp:"СБП"}[k]}</div><div class="k">${rub(by[k]||0)}</div></div>`).join("")}</div>
@@ -518,7 +520,7 @@ const A={
   close(){closeModal()},payb(el){payModal(+el.dataset.id)},extra(el){extraModal(+el.dataset.id)},editb(el){closeModal();bookModal({id:+el.dataset.id})},mats(el){matsModal(+el.dataset.id)},
   xdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id);b.extras.splice(+el.dataset.i,1);render();openSheet(b.id)},
   bst(el){const b=B.find(x=>x.id===+el.dataset.id),s=el.dataset.s;closeModal();ask(s==="noshow"?"Отметить неявку?":"Отменить запись?",()=>{b.status=s;render();freedModal(b)})},
-  clo(el){S.open=S.open===+el.dataset.id?0:+el.dataset.id;$("#cl").innerHTML=clList()},
+  clo(el){S.open=S.open===+el.dataset.id?0:+el.dataset.id;S.hist=0;$("#cl").innerHTML=clList()},
   in(){stockModal("in")},out(){stockModal("out")},inv(){stockModal("inv")},buy(){stockModal("buy")},norms(){stockModal("norms")},
   per(el){S.period=el.dataset.p;render()},
   paym(el){const mm=mById(+el.dataset.id),m=modal(`<h2 style="margin-top:0">Выплата: ${esc(mm.name)}</h2><label class="l">Сумма, ₽</label><input id="ma" type="number" value="${el.dataset.b}"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="mok">Выплатить</button></div>`);
@@ -610,7 +612,7 @@ function rebookModal(b){const base=b.date>TODAY?b.date:TODAY;modal(`<h2 style="m
 Object.assign(A,{
   repeat(el){const b=B.find(x=>x.id===+el.dataset.id),sv=svById(b.service),c=cById(S.me),m=mById(b.master);const mid=m.active?b.master:0;
     const w={step:3,service:b.service,master:mid,time:null,name:c.name,phone:"+"+c.phone};w.date=Array.from({length:14},(_,i)=>addDays(TODAY,i)).find(d=>freeTimes(d,mid,sv.dur).length)||TODAY;S.w=w;S.tab.client="book";render();window.scrollTo(0,0)},
-  cf(el){S.cf=el.dataset.f;render()},
+  cf(el){S.cf=el.dataset.f;render()},hist(el){S.hist=S.hist===+el.dataset.id?0:+el.dataset.id;$("#cl").innerHTML=clList()},
   remind(el){const b=B.find(x=>x.id===+el.dataset.id);closeModal();msgModal(cById(b.client),remText(b),"🔔 Напомнить о записи",()=>{if(!b.rem){b.rem=true;render()}})},
   remall(){remAllModal()},
   blknew(){blockModal({date:S.date})},blkdel(el){BLOCKS=BLOCKS.filter(x=>x.id!==+el.dataset.id);closeModal();render()},
