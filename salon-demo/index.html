@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Парикмахерская — демо интерфейсов</title>
+<title>Парикмахерская #8</title>
 <style>
 :root{--bg:#f5f2ee;--ink:#1d1a17;--muted:#6c655e;--card:#fff;--line:#e6dfd5;--accent:#b8432f;--ok:#1f8a5b;--blue:#2f66b3;--warn:#c98a12;--bad:#c0392b;--row:44px}
 @media (prefers-color-scheme:dark){:root{--bg:#141110;--ink:#f4ede6;--muted:#a79d93;--card:#211c19;--line:#352d28}}
@@ -69,22 +69,21 @@ table.t{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap}
 .ok-ring{width:64px;height:64px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:34px;margin:10px auto}
 .note{background:#c98a1214;border:1px solid #c98a1255;border-radius:12px;padding:10px;font-size:14px;margin:8px 0}
 details>summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
-/* заставка */
-#splash{position:fixed;inset:0;z-index:200;background:#17130f;color:#f6efe6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;cursor:pointer;animation:spOut .5s ease 2.35s forwards}
-#splash svg{width:132px;height:132px;overflow:visible}
-#splash .bl{transform-origin:60px 56px;animation:snip 1.5s cubic-bezier(.5,0,.2,1) .25s both}
-#splash .bl.r{animation-name:snipR}
-#splash .tip{fill:#d9573f}#splash svg *{stroke:#f6efe6}#splash .tip,#splash .fl{stroke:none}#splash .fl{fill:#f6efe6}
-#splash .ring{fill:none;stroke-width:5}#splash .blade{fill:#f6efe6;stroke:none}
-#splash .nm{font-size:30px;font-weight:800;letter-spacing:.02em;line-height:1.1;animation:spUp .7s ease .9s both}
-#splash .nm b{color:#d9573f}
-#splash .sub{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#b5aa9d;animation:spUp .7s ease 1.2s both}
-#splash .ln{width:0;height:2px;background:#d9573f;animation:spLn .8s ease 1.1s forwards}
-#splash .hint{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));font-size:12px;color:#7d7368;animation:spUp .5s ease 1.6s both}
-@keyframes snip{0%{transform:rotate(-26deg)}45%{transform:rotate(7deg)}65%{transform:rotate(-14deg)}100%{transform:rotate(0)}}
-@keyframes snipR{0%{transform:rotate(26deg)}45%{transform:rotate(-7deg)}65%{transform:rotate(14deg)}100%{transform:rotate(0)}}
+/* заставка клиента: птичка на ножницах */
+#splash{position:fixed;inset:0;z-index:300;background:#17130f;color:#f6efe6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px;cursor:pointer;animation:spOut .5s ease 2.7s forwards}
+#splash .badge{width:190px;height:190px;border-radius:50%;background:#5a1f26;display:grid;place-items:center;box-shadow:0 0 0 5px #17130f,0 0 0 7px #c9a15a;animation:spPop .8s cubic-bezier(.2,.9,.3,1.15) both}
+#splash .badge svg{width:150px;height:150px;overflow:visible}
+#splash .sc{fill:none;stroke:#f3dccf;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:spDraw .9s ease .3s forwards}
+#splash .bird{fill:#f3dccf;animation:spFade .7s ease .85s both}
+#splash .eye{fill:#5a1f26;animation:spFade .3s ease 1.3s both}
+#splash .nm{font-size:30px;font-weight:800;letter-spacing:.02em;line-height:1.1;animation:spUp .7s ease 1.1s both}
+#splash .nm b{color:#e0a96a}
+#splash .sub{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#b5aa9d;animation:spUp .7s ease 1.4s both}
+#splash .hint{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));font-size:12px;color:#7d7368;animation:spUp .5s ease 1.7s both}
+@keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes spDraw{to{stroke-dashoffset:0}}@keyframes spFade{from{opacity:0}to{opacity:1}}
 @keyframes spUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@keyframes spLn{to{width:64px}}@keyframes spOut{to{opacity:0;visibility:hidden}}
+@keyframes spOut{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease 1.2s forwards!important}}
 .dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin:0 1px}
 </style>
@@ -528,12 +527,15 @@ document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if
 document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.in;if(!k)return;if(k==="cq"){S.q=e.target.value;$("#cl").innerHTML=clList()}else{const w=W();if(k==="wname")w.name=e.target.value;if(k==="wphone")w.phone=e.target.value;if(k==="wnote")w.note=e.target.value;const nb=document.querySelector("[data-act=wnext]");if(nb&&S.w.step===4)nb.disabled=!(w.name&&digits(w.phone).length>=10)}});
 render();
 
-/* ===== заставка клиента ===== */
+/* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
-  const nm=esc(CFG.name).replace("#8","<b>#8</b>");
-  el.innerHTML=`<svg viewBox="0 0 120 120" aria-hidden="true"><g class="bl"><polygon class="blade" points="60,56 100,10 104,14 70,62"/><polygon class="tip" points="100,10 104,14 106,8"/><line x1="62" y1="60" x2="44" y2="84" stroke-width="5" stroke-linecap="round"/><circle class="ring" cx="38" cy="96" r="13"/></g><g transform="translate(120 0) scale(-1 1)"><g class="bl r"><polygon class="blade" points="60,56 100,10 104,14 70,62"/><polygon class="tip" points="100,10 104,14 106,8"/><line x1="62" y1="60" x2="44" y2="84" stroke-width="5" stroke-linecap="round"/><circle class="ring" cx="38" cy="96" r="13"/></g></g><circle class="fl" cx="60" cy="58" r="4.5"/></svg>
-  <div class="nm">${nm}</div><div class="ln"></div><div class="sub">Запись онлайн</div><div class="hint">нажмите, чтобы пропустить</div>`;
-  const done=()=>{el.remove()};el.onclick=done;document.body.appendChild(el);setTimeout(done,2900)}
+  const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
+  el.innerHTML=`<div class="badge"><svg viewBox="0 0 120 120" aria-hidden="true">
+  <circle class="sc" cx="31" cy="60" r="8.5" pathLength="1"/><circle class="sc" cx="18" cy="77" r="8.5" pathLength="1"/>
+  <path class="sc" d="M37 66 L88 107" pathLength="1"/><path class="sc" d="M24 83 L70 78 L92 100" pathLength="1"/><path class="sc" d="M38 72 L60 80" pathLength="1"/>
+  <path class="bird" d="M52 80 C55 62 61 46 72 36 C78 31 89 32 92 40 L101 44 L92 48 C91 56 84 62 77 68 C71 75 62 82 52 80 Z"/><circle class="eye" cx="87" cy="41.5" r="1.9"/></svg></div>
+  <div class="nm">${nm}</div><div class="sub">Запись онлайн</div><div class="hint">нажмите, чтобы пропустить</div>`;
+  const done=()=>{el.remove()};el.onclick=done;document.body.appendChild(el);setTimeout(done,3100)}
 splash();
 
 </script>
