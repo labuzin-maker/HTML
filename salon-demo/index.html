@@ -99,7 +99,7 @@ let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)
 let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS;
 function seed(){
   seq=1000;rs=20261028;
-  CFG={payDay:5};
+  CFG={payDay:5,name:"НАЗВАНИЕ",addr:"г. Владивосток, ул. Примерная, 1"};
   USERS={admin:{login:"admin",pass:"admin123",name:"Администратор"},owner:{login:"owner",pass:"owner123",name:"Владелец"}};
   MASTERS=[
     {id:1,name:"Анна",role:"Стилист-колорист",percent:40,login:"anna",pass:"anna123",color:"#b8432f",rating:4.9,active:1},
@@ -186,9 +186,10 @@ function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
 
 /* ===== состояние ===== */
 const S={mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:1};
-const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["acc","🔑 Доступы"]]};
+const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
 const isOwner=()=>S.role==="owner";
 function modal(html){const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);return m}
+function ask(text,yes){const m=modal(`<h2 style="margin-top:0">${esc(text)}</h2><div class="row"><button class="btn alt" data-act="close">Нет</button><button class="btn" id="yes">Да</button></div>`);m.querySelector("#yes").onclick=()=>{m.remove();yes()}}
 const closeModal=()=>document.querySelectorAll(".ov").forEach(x=>x.remove());
 const digits=s=>String(s||"").replace(/\D/g,"").replace(/^[78]/,"");
 const tag=(st)=>`<span class="tag ${st}">${ST[st]}</span>`;
@@ -213,7 +214,7 @@ function vLogin(role){
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
   const r=S.role,t=S.tab[r];let body;
-  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,st:vStock,sum:vSummary,pay:vPay,acc:vAccess}[t]();
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings}[t]();
   const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
   return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
   ${r==="master"?"":`<div class="tabs">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div>`}${body}`}
@@ -269,7 +270,7 @@ function payModal(id){
 }
 function receiptModal(b,items,amount,method){
   modal(`<div class="ok-ring">✓</div><h2 style="text-align:center;margin:0">Чек пробит (демо)</h2><div class="muted" style="text-align:center;margin-bottom:10px">Так программа передаст данные кассе</div>
-  <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#fffdf6;color:#222"><div style="text-align:center"><b>КАССОВЫЙ ЧЕК · ПРИХОД</b><br>НАЗВАНИЕ · ИП …<br>${b.date.split("-").reverse().join(".")} ${hm(NOWMIN)}</div><hr style="border:0;border-top:1px dashed #999">
+  <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#fffdf6;color:#222"><div style="text-align:center"><b>КАССОВЫЙ ЧЕК · ПРИХОД</b><br>${esc(CFG.name)} · ИП …<br>${b.date.split("-").reverse().join(".")} ${hm(NOWMIN)}</div><hr style="border:0;border-top:1px dashed #999">
   ${items.map(i=>`<div class="row"><span>${esc(i.n)}</span><span>${i.p.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">1 × ${i.p.toFixed(2)} · услуга · без НДС</div>`).join("")}
   <hr style="border:0;border-top:1px dashed #999"><div class="row"><b>ИТОГО</b><b>${amount.toFixed(2)}</b></div><div class="row"><span>${{card:"Безналичными",cash:"Наличными",sbp:"СБП"}[method]}</span><span>${amount.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">ФД №${b.paid.fiscal.slice(1)} · ФП (демо) · чек отправлен клиенту</div></div>
   <button class="btn full" data-act="close">Готово</button>`)}
@@ -286,7 +287,7 @@ function bookModal(o){
   ${edit?`<div class="muted" style="margin-bottom:6px">${esc(cById(edit.client).name)} · ${esc(svById(edit.service).name)}</div>`:`
   <label class="l">Телефон</label><input id="bp" type="tel" placeholder="+7 914 …"><div id="found" class="muted sm" style="margin:-4px 0 6px"></div>
   <label class="l">Имя</label><input id="bn" placeholder="Имя клиента">
-  <label class="l">Услуга</label><select id="bs">${SERVICES.map(s=>`<option value="${s.id}">${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
+  <label class="l">Услуга</label><select id="bs">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}">${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
   <label class="l">Мастер</label><select id="bm">${edit?"":'<option value="0">Любой свободный</option>'}${MASTERS.filter(x=>x.active).map(x=>`<option value="${x.id}" ${(edit?edit.master:o.master)===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
   <label class="l">Дата</label><input id="bd" type="date" value="${edit?edit.date:o.date||S.date}"><label class="l">Время</label><div class="chips" id="bt"></div>
   <label class="l">Цена, ₽ ${edit?"":"(если не по прайсу)"}</label><input id="bpr" type="number" value="${edit?edit.price:""}" placeholder="по прайсу"><label class="l">Заметка</label><input id="bnote" value="${edit?esc(edit.note):""}">
@@ -408,18 +409,48 @@ function vAccess(){const rows=[...MASTERS.map(m=>({n:m.name,r:"Мастер",l:m
   return `<div class="note" style="margin-top:0">Каждый сотрудник входит под своим логином и видит только своё: мастер — свои записи, администратор — всех мастеров и клиентов, владелец — всё.</div>
   <div class="tw"><table class="t"><thead><tr><th>Сотрудник</th><th>Роль</th><th>Логин</th><th>Пароль</th><th>Доступ</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.r}</td><td>${esc(x.l)}</td><td>••••••</td><td>${x.m?(x.a?`<span class="tag ok">включён</span>`:`<span class="tag bad">закрыт</span>`):`<span class="tag ok">включён</span>`}</td><td><button class="btn alt s" data-act="reset" data-id="${x.id||""}" data-k="${x.k||""}">Новый пароль</button> ${x.m?`<button class="btn alt s" data-act="toggle" data-id="${x.id}">${x.a?"Отключить":"Включить"}</button>`:""}</td></tr>`).join("")}</tbody></table></div>
   <button class="btn" data-act="addstaff">＋ Добавить сотрудника</button>`}
+/* ===== настройки владельца ===== */
+function vSettings(){const cats=[...new Set(SERVICES.map(s=>s.cat))];
+  return `<h2 style="margin-top:0">Прайс-лист</h2><div class="muted sm" style="margin-bottom:6px">Новая цена действует на новые записи. Старые записи и чеки не меняются.</div>
+  ${cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+SERVICES.filter(x=>x.cat===c).map(x=>`<div class="card row"><div><b>${esc(x.name)}</b> ${x.off?`<span class="tag">скрыта</span>`:""}<div class="muted">${x.dur} мин</div></div><div class="row gap"><b>${rub(x.price)}</b><button class="btn alt s" data-act="svc" data-id="${x.id}">Изменить</button></div></div>`).join("")).join("")}
+  <button class="btn" data-act="svc" data-id="0">＋ Добавить услугу</button>
+  <h2>Расходные материалы</h2><div class="muted sm" style="margin-bottom:6px">Цена упаковки задаёт цену грамма. Новая цена считается для будущих списаний.</div>
+  ${MATS.map(m=>`<div class="card row"><div><b>${esc(m.name)}</b><div class="muted">${m.packName} ${m.pack} ${m.unit} · ${rub(m.packPrice)} · ${m.cost.toFixed(2)} ₽/${m.unit} · минимум ${m.min} ${m.unit}</div></div><button class="btn alt s" data-act="matE" data-id="${m.id}">Изменить</button></div>`).join("")}
+  <button class="btn" data-act="matE" data-id="0">＋ Добавить материал</button> <span class="muted sm">Поставку на склад вносите во вкладке «Склад» → «Приход».</span>
+  <h2>Нормы расхода на услугу</h2><div class="muted sm" style="margin-bottom:6px">Сколько материалов обычно уходит. Подставляется при оплате и в списании, факт можно править.</div>
+  ${SERVICES.map(x=>`<div class="card row"><div><b>${esc(x.name)}</b><div class="muted">${(NORMS[x.id]||[]).map(([i,q])=>esc(matById(i).name.split(" (")[0])+" "+q+" "+matById(i).unit).join(", ")||"нормы нет"}</div></div><button class="btn alt s" data-act="normE" data-id="${x.id}">Изменить</button></div>`).join("")}
+  <h2>Проценты мастеров</h2><div class="card">${MASTERS.map(m=>`<div class="row" style="margin-bottom:6px"><span>${esc(m.name)}</span><span class="row gap"><input type="number" min="0" max="100" data-pc="${m.id}" value="${m.percent}" style="margin:0;width:80px"> %</span></div>`).join("")}<div class="muted sm">Действует на будущие оплаты. Прошлые месяцы не пересчитываются.</div><button class="btn s" data-act="pcs" style="margin-top:6px">Сохранить проценты</button></div>
+  <h2>Салон</h2><div class="card"><label class="l">Название</label><input id="cn" value="${esc(CFG.name)}"><label class="l">Адрес</label><input id="ca" value="${esc(CFG.addr)}"><label class="l">День выплаты ЗП (число месяца)</label><input id="cp" type="number" min="1" max="28" value="${CFG.payDay}"><button class="btn s" data-act="salon">Сохранить</button><div class="muted sm" style="margin-top:6px">Часы работы и телефон в настоящем приложении задаются при установке.</div></div>`}
+function svcModal(id){const x=id?svById(id):{name:"",cat:"",price:"",dur:60};const cats=[...new Set(SERVICES.map(s=>s.cat))];
+  const m=modal(`<h2 style="margin-top:0">${id?"Изменить услугу":"Новая услуга"}</h2><label class="l">Название (так оно попадёт в чек)</label><input id="sn" value="${esc(x.name)}"><label class="l">Раздел</label><input id="sc" list="scl" value="${esc(x.cat)}" placeholder="Например: Стрижки"><datalist id="scl">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
+  <label class="l">Цена, ₽</label><input id="sp" type="number" value="${x.price}"><label class="l">Длительность</label><select id="sd">${[30,60,90,120,150,180,210,240].map(v=>`<option value="${v}" ${v===x.dur?"selected":""}>${v} мин</option>`).join("")}</select>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="so" ${x.off?"":"checked"} style="width:auto;margin:0"> <span>Показывать клиентам в онлайн-записи</span></label><div id="se" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sok">Сохранить</button></div>`);
+  m.querySelector("#sok").onclick=()=>{const n=m.querySelector("#sn").value.trim(),c=m.querySelector("#sc").value.trim()||"Прочее",p=Math.round(+m.querySelector("#sp").value);if(!n||!(p>0)){m.querySelector("#se").textContent="Нужны название и цена";return}
+    const v={name:n,cat:c,price:p,dur:+m.querySelector("#sd").value,off:m.querySelector("#so").checked?0:1};if(id)Object.assign(svById(id),v);else SERVICES.push({id:nid(),...v});m.remove();render()}}
+function matModal(id){const x=id?matById(id):{name:"",unit:"г",pack:100,packName:"упаковка",packPrice:"",min:0};
+  const m=modal(`<h2 style="margin-top:0">${id?"Изменить материал":"Новый материал"}</h2><label class="l">Название</label><input id="mn" value="${esc(x.name)}"><label class="l">Единица учёта</label><select id="mu">${["г","мл","шт"].map(u=>`<option ${u===x.unit?"selected":""}>${u}</option>`).join("")}</select>
+  <label class="l">В одной упаковке (в этих единицах)</label><input id="mk" type="number" value="${x.pack}"><label class="l">Как называется упаковка</label><input id="mpn" value="${esc(x.packName)}" placeholder="тюбик, флакон, банка"><label class="l">Цена упаковки, ₽</label><input id="mpp" type="number" value="${x.packPrice}"><label class="l">Минимальный остаток (ниже — «мало»)</label><input id="mm" type="number" value="${x.min}"><div id="me" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="mok">Сохранить</button></div>`);
+  m.querySelector("#mok").onclick=()=>{const q=s=>m.querySelector(s),n=q("#mn").value.trim(),pk=+q("#mk").value,pp=+q("#mpp").value;if(!n||!(pk>0)||!(pp>=0)||q("#mpp").value===""){q("#me").textContent="Заполните название, размер и цену упаковки";return}
+    const v={name:n,unit:q("#mu").value,pack:pk,packName:q("#mpn").value||"упаковка",packPrice:pp,min:+q("#mm").value||0};v.cost=pp/pk;if(id)Object.assign(matById(id),v);else MATS.push({id:nid(),...v});m.remove();render()}}
+function normModal(sid){let rows=(NORMS[sid]||[]).map(([mat,qty])=>({mat,qty}));
+  const m=modal(`<h2 style="margin-top:0">Норма: ${esc(svById(sid).name)}</h2><div id="nr"></div><button class="btn alt s" id="na">＋ Материал</button><div class="row" style="margin-top:10px"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="nok">Сохранить</button></div>`);
+  const draw=()=>{m.querySelector("#nr").innerHTML=rows.map((r,i)=>`<div class="row gap" style="margin-bottom:6px"><select data-i="${i}" data-f="mat" style="margin:0">${MATS.map(x=>`<option value="${x.id}" ${x.id===r.mat?"selected":""}>${esc(x.name)}</option>`).join("")}</select><input type="number" data-i="${i}" data-f="qty" value="${r.qty}" style="margin:0;width:80px"><button class="btn alt s" data-i="${i}" data-x="1">✕</button></div>`).join("")||"<div class='muted'>Нормы нет</div>";
+    m.querySelectorAll("[data-f]").forEach(e=>e.onchange=()=>{const r=rows[+e.dataset.i];if(e.dataset.f==="mat")r.mat=+e.value;else r.qty=Math.max(0,+e.value||0)});m.querySelectorAll("[data-x]").forEach(e=>e.onclick=()=>{rows.splice(+e.dataset.i,1);draw()})};
+  m.querySelector("#na").onclick=()=>{rows.push({mat:MATS[0].id,qty:10});draw()};m.querySelector("#nok").onclick=()=>{const r=rows.filter(x=>x.qty>0).map(x=>[x.mat,x.qty]);if(r.length)NORMS[sid]=r;else delete NORMS[sid];m.remove();render()};draw()}
 /* ===== клиентское приложение (запись по шагам) ===== */
 const W=()=>S.w;
 function nearest(mid,sv){for(let i=0;i<14;i++){const d=addDays(TODAY,i),l=freeTimes(d,mid,sv.dur);if(l.length)return (i===0?"сегодня ":i===1?"завтра ":dLong(d)+" ")+l[0].t}return "нет окон"}
 function vClient(){const t=S.tab.client;
-  return `<div class="row"><div><h1 style="margin:0">НАЗВАНИЕ</h1><div class="muted">Парикмахерская · г. Владивосток, ул. Примерная, 1</div></div></div>
+  return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">Парикмахерская · ${esc(CFG.addr)}</div></div></div>
   <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
 function vWiz(){const w=W();
   if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div><div class="muted">За 2 часа придёт напоминание. Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
   const sv=w.service&&svById(w.service),mm=w.master!=null&&(w.master?mById(w.master):{name:"Любой мастер"});
   const head=`<div class="row"><button class="btn alt s" data-act="wback" ${w.step===1?"disabled":""}>← Назад</button><span class="muted">Шаг ${w.step} из 5</span></div><div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=w.step?"on":""}"></i>`).join("")}</div>`;
   let body="";
-  if(w.step===1){const cats=[...new Set(SERVICES.map(s=>s.cat))];body=`<h2 style="margin-top:0">Выберите услугу</h2>`+cats.map(c=>`<h3 class="muted">${c}</h3>`+SERVICES.filter(s=>s.cat===c).map(s=>`<div class="opt ${w.service===s.id?"on":""}" data-act="wsv" data-id="${s.id}"><div><b>${esc(s.name)}</b><div class="muted">${s.dur} мин</div></div><b>${rub(s.price)}</b></div>`).join("")).join("")}
+  if(w.step===1){const AS=SERVICES.filter(s=>!s.off),cats=[...new Set(AS.map(s=>s.cat))];body=`<h2 style="margin-top:0">Выберите услугу</h2>`+cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+AS.filter(s=>s.cat===c).map(s=>`<div class="opt ${w.service===s.id?"on":""}" data-act="wsv" data-id="${s.id}"><div><b>${esc(s.name)}</b><div class="muted">${s.dur} мин</div></div><b>${rub(s.price)}</b></div>`).join("")).join("")}
   if(w.step===2)body=`<h2 style="margin-top:0">Выберите мастера</h2><div class="opt ${w.master===0?"on":""}" data-act="wm" data-id="0"><div class="row gap"><span class="av2" style="background:#6c655e">★</span><div><b>Любой мастер</b><div class="muted">Ближайшее время: ${nearest(0,sv)}</div></div></div></div>`+MASTERS.filter(m=>m.active).map(m=>`<div class="opt ${w.master===m.id?"on":""}" data-act="wm" data-id="${m.id}"><div class="row gap"><span class="av2" style="background:${m.color}">${m.name[0]}</span><div><b>${esc(m.name)}</b> <span class="muted">★ ${m.rating}</span><div class="muted">${esc(m.role)} · ближайшее: ${nearest(m.id,sv)}</div></div></div></div>`).join("");
   if(w.step===3){const list=freeTimes(w.date,w.master,sv.dur),groups=[["Утро",0,12*60],["День",12*60,17*60],["Вечер",17*60,24*60]];
     body=`<h2 style="margin-top:0">Дата и время</h2><div class="days">${Array.from({length:14},(_,i)=>{const d=addDays(TODAY,i),dt=new Date(d+"T12:00:00"),n=freeTimes(d,w.master,sv.dur).length;return `<div class="day ${d===w.date?"on":""} ${n?"":"off"}" data-act="wd" data-d="${d}"><small>${DOW[dt.getDay()]}</small><b>${dt.getDate()}</b><small>${MONG[dt.getMonth()].slice(0,3)}</small></div>`}).join("")}</div>
@@ -450,7 +481,7 @@ const A={
   new(){bookModal({date:S.date})},newfor(el){bookModal({date:TODAY});const c=cById(+el.dataset.id);setTimeout(()=>{const p=$("#bp");if(p){p.value="+"+c.phone;p.oninput()}},0)},
   close(){closeModal()},payb(el){payModal(+el.dataset.id)},extra(el){extraModal(+el.dataset.id)},editb(el){closeModal();bookModal({id:+el.dataset.id})},mats(el){matsModal(+el.dataset.id)},
   xdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id);b.extras.splice(+el.dataset.i,1);render();openSheet(b.id)},
-  bst(el){const b=B.find(x=>x.id===+el.dataset.id);if(!confirm(el.dataset.s==="noshow"?"Отметить неявку?":"Отменить запись?"))return;b.status=el.dataset.s;closeModal();render()},
+  bst(el){const b=B.find(x=>x.id===+el.dataset.id),s=el.dataset.s;closeModal();ask(s==="noshow"?"Отметить неявку?":"Отменить запись?",()=>{b.status=s;render()})},
   clo(el){S.open=S.open===+el.dataset.id?0:+el.dataset.id;$("#cl").innerHTML=clList()},
   in(){stockModal("in")},out(){stockModal("out")},inv(){stockModal("inv")},buy(){stockModal("buy")},norms(){stockModal("norms")},
   per(el){S.period=el.dataset.p;render()},
@@ -461,12 +492,15 @@ const A={
   addstaff(){const m=modal(`<h2 style="margin-top:0">Новый сотрудник</h2><label class="l">Имя</label><input id="sn"><label class="l">Должность</label><input id="sr" value="Парикмахер"><label class="l">Процент от услуг</label><input id="sp" type="number" value="40"><label class="l">Логин</label><input id="sl"><label class="l">Пароль</label><input id="sw"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sok">Добавить</button></div>`);
     m.querySelector("#sok").onclick=()=>{const n=m.querySelector("#sn").value.trim(),l=m.querySelector("#sl").value.trim(),p=m.querySelector("#sw").value;if(!n||!l||p.length<4)return;MASTERS.push({id:nid(),name:n,role:m.querySelector("#sr").value,percent:Math.min(100,Math.max(0,+m.querySelector("#sp").value||40)),login:l,pass:p,color:"#2d8a8a",rating:5,active:1});m.remove();render()}},
   /* клиентский мастер записи */
+  svc(el){svcModal(+el.dataset.id)},matE(el){matModal(+el.dataset.id)},normE(el){normModal(+el.dataset.id)},
+  pcs(){document.querySelectorAll("[data-pc]").forEach(i=>{mById(+i.dataset.pc).percent=Math.min(100,Math.max(0,Math.round(+i.value||0)))});render()},
+  salon(){CFG.name=$("#cn").value.trim()||CFG.name;CFG.addr=$("#ca").value.trim()||CFG.addr;CFG.payDay=Math.min(28,Math.max(1,Math.round(+$("#cp").value||5)));render()},
   wsv(el){S.w.service=+el.dataset.id;S.w.step=2;render()},
   wm(el){const w=W();w.master=+el.dataset.id;w.step=3;const sv=svById(w.service);w.time=null;w.date=Array.from({length:14},(_,i)=>addDays(TODAY,i)).find(d=>freeTimes(d,w.master,sv.dur).length)||TODAY;render()},
   wd(el){S.w.date=el.dataset.d;S.w.time=null;render()},wt(el){S.w.time=el.dataset.t;S.w.step=4;render()},wback(){S.w.step=Math.max(1,S.w.step-1);render()},
   wnext(){const w=W();if(w.step<5){w.step++;render();return}
     const sv=svById(w.service),ph=digits(w.phone).slice(-10);let c=CLIENTS.find(x=>digits(x.phone)===ph);const disc=c?0:15;if(!c){c={id:nid(),name:w.name,phone:"7"+ph,note:"",bonus:0};CLIENTS.push(c)}
-    const slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);if(!slot){alert("Это время только что заняли");w.step=3;render();return}
+    const slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);if(!slot){w.step=3;render();modal(`<h2 style="margin-top:0">Это время только что заняли</h2><div class="muted">Выберите другое.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
     const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app"};B.push(b);S.me=c.id;w.done=b.id;render()},
   wnew(){S.w={step:1};render()},
   ccancel(el){const b=B.find(x=>x.id===+el.dataset.id);b.status="cancelled";render()},
