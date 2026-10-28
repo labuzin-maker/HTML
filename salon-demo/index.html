@@ -69,6 +69,23 @@ table.t{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap}
 .ok-ring{width:64px;height:64px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:34px;margin:10px auto}
 .note{background:#c98a1214;border:1px solid #c98a1255;border-radius:12px;padding:10px;font-size:14px;margin:8px 0}
 details>summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+/* заставка */
+#splash{position:fixed;inset:0;z-index:200;background:#17130f;color:#f6efe6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;cursor:pointer;animation:spOut .5s ease 2.35s forwards}
+#splash svg{width:132px;height:132px;overflow:visible}
+#splash .bl{transform-origin:60px 56px;animation:snip 1.5s cubic-bezier(.5,0,.2,1) .25s both}
+#splash .bl.r{animation-name:snipR}
+#splash .tip{fill:#d9573f}#splash svg *{stroke:#f6efe6}#splash .tip,#splash .fl{stroke:none}#splash .fl{fill:#f6efe6}
+#splash .ring{fill:none;stroke-width:5}#splash .blade{fill:#f6efe6;stroke:none}
+#splash .nm{font-size:30px;font-weight:800;letter-spacing:.02em;line-height:1.1;animation:spUp .7s ease .9s both}
+#splash .nm b{color:#d9573f}
+#splash .sub{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#b5aa9d;animation:spUp .7s ease 1.2s both}
+#splash .ln{width:0;height:2px;background:#d9573f;animation:spLn .8s ease 1.1s forwards}
+#splash .hint{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));font-size:12px;color:#7d7368;animation:spUp .5s ease 1.6s both}
+@keyframes snip{0%{transform:rotate(-26deg)}45%{transform:rotate(7deg)}65%{transform:rotate(-14deg)}100%{transform:rotate(0)}}
+@keyframes snipR{0%{transform:rotate(26deg)}45%{transform:rotate(-7deg)}65%{transform:rotate(14deg)}100%{transform:rotate(0)}}
+@keyframes spUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes spLn{to{width:64px}}@keyframes spOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease 1.2s forwards!important}}
 .dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin:0 1px}
 </style>
 </head>
@@ -99,7 +116,7 @@ let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)
 let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS;
 function seed(){
   seq=1000;rs=20261028;
-  CFG={payDay:5,name:"НАЗВАНИЕ",addr:"г. Владивосток, ул. Примерная, 1"};
+  CFG={payDay:5,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
   USERS={admin:{login:"admin",pass:"admin123",name:"Администратор"},owner:{login:"owner",pass:"owner123",name:"Владелец"}};
   MASTERS=[
     {id:1,name:"Анна",role:"Стилист-колорист",percent:40,login:"anna",pass:"anna123",color:"#b8432f",rating:4.9,active:1},
@@ -443,7 +460,7 @@ function normModal(sid){let rows=(NORMS[sid]||[]).map(([mat,qty])=>({mat,qty}));
 const W=()=>S.w;
 function nearest(mid,sv){for(let i=0;i<14;i++){const d=addDays(TODAY,i),l=freeTimes(d,mid,sv.dur);if(l.length)return (i===0?"сегодня ":i===1?"завтра ":dLong(d)+" ")+l[0].t}return "нет окон"}
 function vClient(){const t=S.tab.client;
-  return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">Парикмахерская · ${esc(CFG.addr)}</div></div></div>
+  return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">${esc(CFG.addr)}</div></div></div>
   <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
 function vWiz(){const w=W();
   if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div><div class="muted">За 2 часа придёт напоминание. Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
@@ -510,6 +527,14 @@ A.reset=function(el){if(el.dataset.k||el.dataset.id){const np="pw"+(1000+Math.fl
 document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el)return;const f=A[el.dataset.act];if(f){if(el.tagName==="A")e.preventDefault();f(el,e)}});
 document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.in;if(!k)return;if(k==="cq"){S.q=e.target.value;$("#cl").innerHTML=clList()}else{const w=W();if(k==="wname")w.name=e.target.value;if(k==="wphone")w.phone=e.target.value;if(k==="wnote")w.note=e.target.value;const nb=document.querySelector("[data-act=wnext]");if(nb&&S.w.step===4)nb.disabled=!(w.name&&digits(w.phone).length>=10)}});
 render();
+
+/* ===== заставка клиента ===== */
+function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
+  const nm=esc(CFG.name).replace("#8","<b>#8</b>");
+  el.innerHTML=`<svg viewBox="0 0 120 120" aria-hidden="true"><g class="bl"><polygon class="blade" points="60,56 100,10 104,14 70,62"/><polygon class="tip" points="100,10 104,14 106,8"/><line x1="62" y1="60" x2="44" y2="84" stroke-width="5" stroke-linecap="round"/><circle class="ring" cx="38" cy="96" r="13"/></g><g transform="translate(120 0) scale(-1 1)"><g class="bl r"><polygon class="blade" points="60,56 100,10 104,14 70,62"/><polygon class="tip" points="100,10 104,14 106,8"/><line x1="62" y1="60" x2="44" y2="84" stroke-width="5" stroke-linecap="round"/><circle class="ring" cx="38" cy="96" r="13"/></g></g><circle class="fl" cx="60" cy="58" r="4.5"/></svg>
+  <div class="nm">${nm}</div><div class="ln"></div><div class="sub">Запись онлайн</div><div class="hint">нажмите, чтобы пропустить</div>`;
+  const done=()=>{el.remove()};el.onclick=done;document.body.appendChild(el);setTimeout(done,2900)}
+splash();
 
 </script>
 </body>
