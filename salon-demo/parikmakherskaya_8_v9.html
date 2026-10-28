@@ -264,7 +264,7 @@ function vLogin(role){
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
   const r=S.role,t=S.tab[r];let body;
-  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings,msg:vOutbox}[t]();
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,cal:vCashCal,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings,msg:vOutbox}[t]();
   const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
   return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
   ${r==="master"?"":`<div class="tabs">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div>`}${body}`}
@@ -698,6 +698,39 @@ Object.assign(A,{
     B.filter(b=>b.date>=TODAY&&["new","confirmed"].includes(b.status)).forEach(b=>scheduleNotifs(b,null));toast("Настройки уведомлений сохранены");render()},
 });
 setInterval(()=>{if(processDue()&&S.role!=="client"&&S.tab[S.role]==="msg")render()},30000);
+
+/* ===== владелец: касса по дням в виде календаря ===== */
+TABS.owner.splice(1,0,["cal","🗓 Касса"]);
+const MLAB={cash:"Наличные",card:"Карта",sbp:"СБП"};
+const nb=n=>Math.round(n).toLocaleString("ru-RU").replace(/\s/g," ");
+function vCashCal(){
+  const ym=S.cym||TODAY.slice(0,7),[Y,M]=ym.split("-").map(Number),first=(new Date(Y,M-1,1).getDay()+6)%7,n=new Date(Y,M,0).getDate();
+  const inM=PAY.filter(x=>x.date.slice(0,7)===ym),byDay={},cnt={};
+  inM.forEach(x=>{byDay[x.date]=(byDay[x.date]||0)+x.amount;if(x.kind==="service")cnt[x.date]=(cnt[x.date]||0)+1});
+  const tot=inM.reduce((a,x)=>a+x.amount,0),tips=inM.filter(x=>x.kind==="tip").reduce((a,x)=>a+x.amount,0),visits=inM.filter(x=>x.kind==="service").length;
+  const days=Object.keys(byDay).filter(d=>byDay[d]>0),best=days.sort((a,b)=>byDay[b]-byDay[a])[0],mx=Math.max(1,...Object.values(byDay));
+  const byM={};inM.forEach(x=>byM[x.method]=(byM[x.method]||0)+x.amount);
+  if(!S.cday||S.cday.slice(0,7)!==ym)S.cday=ym===TODAY.slice(0,7)?TODAY:ym+"-01";
+  let cells=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(x=>`<i style="text-align:center;font-style:normal;font-size:12px;color:var(--muted)">${x}</i>`).join("")+"<span></span>".repeat(first);
+  for(let d=1;d<=n;d++){const ds=`${ym}-${pad(d)}`,v=byDay[ds]||0,sel=ds===S.cday,fut=ds>TODAY;
+    cells+=`<div data-act="cday" data-d="${ds}" style="text-align:center;padding:6px 0 5px;border-radius:10px;cursor:pointer;min-width:0;border:1px solid ${sel?"var(--accent)":ds===TODAY?"var(--blue)":"transparent"};background:${sel?"var(--accent)":v?`rgba(31,138,91,${(.12+.4*v/mx).toFixed(2)})`:"none"};color:${sel?"#fff":fut?"var(--muted)":"inherit"};font-weight:${v?700:400}">${d}<div style="font-size:10px;line-height:1.1;min-height:11px;font-weight:600">${v?nb(v):""}</div></div>`}
+  const dp=PAY.filter(x=>x.date===S.cday),dby={};dp.forEach(x=>dby[x.method]=(dby[x.method]||0)+x.amount);
+  const dm={};dp.forEach(x=>dm[x.master]=(dm[x.master]||0)+x.amount);
+  return `<div class="card"><div class="row" style="margin-bottom:8px"><button class="btn alt s" data-act="cmon" data-n="-1">←</button><b>${MONN[M-1]} ${Y}</b><div class="row gap"><button class="btn alt s" data-act="cnow">Сегодня</button><button class="btn alt s" data-act="cmon" data-n="1">→</button></div></div>
+  <label class="l">Перейти к месяцу</label><input type="month" lang="ru" data-in="cym" value="${ym}" style="margin-bottom:10px">
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${cells}</div><div class="muted sm" style="margin-top:6px">Цифра под числом — выручка за день. Чем зеленее, тем больше. Нажмите на день, чтобы увидеть оплаты.</div></div>
+  <h2>За месяц</h2><div class="grid"><div class="card"><div class="muted">Выручка</div><div class="k">${rub(tot)}</div></div><div class="card"><div class="muted">Визитов оплачено</div><div class="k">${visits}</div></div><div class="card"><div class="muted">Средний чек</div><div class="k">${rub(visits?(tot-tips)/visits:0)}</div></div><div class="card"><div class="muted">Лучший день</div><div class="k" style="font-size:18px">${best?best.slice(8)+" · "+rub(byDay[best]):"—"}</div></div></div>
+  <div class="card sm">${["cash","card","sbp"].map(k=>kv(MLAB[k],rub(byM[k]||0))).join("")}${kv("в т.ч. чаевые",rub(tips))}</div>
+  <h2>${dLong(S.cday)}${S.cday===TODAY?" · сегодня":""}</h2>
+  <div class="grid"><div class="card"><div class="muted">Принято за день</div><div class="k">${rub(dp.reduce((a,x)=>a+x.amount,0))}</div></div>${["cash","card","sbp"].map(k=>`<div class="card"><div class="muted">${MLAB[k]}</div><div class="k">${rub(dby[k]||0)}</div></div>`).join("")}</div>
+  ${Object.keys(dm).length?`<div class="card sm">${Object.entries(dm).map(([id,v])=>kv("Мастер "+esc(mById(+id).name),rub(v))).join("")}</div>`:""}
+  ${dp.map(x=>{const b=B.find(z=>z.id===x.booking);return `<div class="card row"><div><b>${b?esc(cById(b.client).name):"—"}</b><div class="muted">${b?esc(svById(b.service).name):""} · ${esc(mById(x.master).name)} · ${MLAB[x.method]}${x.kind==="tip"?" · чаевые":""}</div></div><b style="white-space:nowrap">${rub(x.amount)}</b></div>`}).join("")||"<div class='card muted'>Оплат за этот день нет</div>"}`}
+Object.assign(A,{
+  cmon(el){const [y,m]=(S.cym||TODAY.slice(0,7)).split("-").map(Number),d=new Date(y,m-1+ +el.dataset.n,1);S.cym=d.getFullYear()+"-"+pad(d.getMonth()+1);render()},
+  cday(el){S.cday=el.dataset.d;render()},
+  cnow(){S.cym=TODAY.slice(0,7);S.cday=TODAY;render()},
+});
+document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.in==="cym"&&/^\d{4}-\d{2}$/.test(e.target.value)){S.cym=e.target.value;render()}});
 /* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
   const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
