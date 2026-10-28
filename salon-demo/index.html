@@ -197,6 +197,10 @@ function freeTimes(date,master,dur,ign,anyTime){const ms=(master?[master]:MASTER
     const free=ms.filter(mid=>!conflict(date,mid,t,dur,ign));if(free.length)out.push({t:hm(t),free})}return out}
 function packsText(m,st){const full=Math.floor(st/m.pack),rest=Math.round((st-full*m.pack)*10)/10;
   return (full?full+" "+m.packName+(full>1&&full<5?"а":full>=5?"ов":"")+(rest?" + ":""):"")+(rest||!full?rest+" "+m.unit+(full?" вскрытого":""):"")}
+/* уникальный номер клиента: 6 цифр, однозначно по id; по нему клиент входит в личный кабинет */
+const clientNo=id=>String(100000+((id*7919+13)%900000));
+const fmtNo=id=>{const n=clientNo(id);return n.slice(0,3)+" "+n.slice(3)};
+const findByNo=s=>{const d=String(s||"").replace(/\D/g,"");return d.length===6?CLIENTS.find(c=>clientNo(c.id)===d):null};
 /* ===== автоуведомления клиентам ===== */
 const chanName={whatsapp:"WhatsApp",telegram:"Telegram",sms:"SMS"};
 function nowStr(){const n=new Date();return ymd(n)+" "+hm(n.getHours()*60+n.getMinutes())}
@@ -229,7 +233,9 @@ function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
   return{from,to,pay,rev,mats,bought,other,pm,accrued,profit:rev-mats-other-accrued,byDay,bySvc,visits:new Set(pay.filter(x=>x.kind==="service").map(x=>x.booking)).size}}
 
 /* ===== состояние ===== */
-const S={hist:0,mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:1};
+const S={hist:0,mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:0};
+const MEKEY="salon8_me";const remember=c=>{try{localStorage.setItem(MEKEY,clientNo(c.id))}catch(e){}};const forget=()=>{try{localStorage.removeItem(MEKEY)}catch(e){}};
+try{const k=localStorage.getItem(MEKEY);if(k)S.me=(CLIENTS.find(c=>clientNo(c.id)===k)||{}).id||0}catch(e){}
 const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"],["msg","✉ Сообщения"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["msg","✉ Сообщения"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
 const isOwner=()=>S.role==="owner";
 function modal(html){const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);return m}
@@ -285,7 +291,7 @@ function openSheet(id){
   const us=usageOf(b.id),uc=usageCost(b.id),norm=NORMS[b.service]||[];
   const sal=b.paid?Math.round(b.price*m.percent/100):0;
   modal(`<div class="row"><h2 style="margin:0">${b.start}–${hm(tm(b.start)+b.dur)} · ${dLong(b.date)}</h2>${tag(b.status)}</div>
-  <div class="card" style="margin-top:10px"><b>${esc(c.name)}</b>${staff?` · <a href="tel:+${c.phone}">+${c.phone}</a>`:""}<div class="muted">${esc(sv.name)} · мастер ${esc(m.name)}</div>${c.note?`<div class="muted">📝 ${esc(c.note)}</div>`:""}${b.note?`<div class="muted">💬 ${esc(b.note)}</div>`:""}${staff&&noshows(c.id)?`<div class="sm" style="color:var(--bad);margin-top:4px">⚠ Не приходил(а) ${noshows(c.id)} раз(а)</div>`:""}</div>
+  <div class="card" style="margin-top:10px"><b>${esc(c.name)}</b>${staff?` · <a href="tel:+${c.phone}">+${c.phone}</a> · № ${fmtNo(c.id)}`:""}<div class="muted">${esc(sv.name)} · мастер ${esc(m.name)}</div>${c.note?`<div class="muted">📝 ${esc(c.note)}</div>`:""}${b.note?`<div class="muted">💬 ${esc(b.note)}</div>`:""}${staff&&noshows(c.id)?`<div class="sm" style="color:var(--bad);margin-top:4px">⚠ Не приходил(а) ${noshows(c.id)} раз(а)</div>`:""}</div>
   ${staff?`<div class="card">${kv("По прайсу",rub(b.price))}${b.extras.map((x,i)=>`<div class="row sm"><span>${x.a>0?"＋":"−"} ${esc(x.t)}</span><span>${rub(Math.abs(x.a))} ${open?`<a href="#" data-act="xdel" data-id="${b.id}" data-i="${i}">✕</a>`:""}</span></div>`).join("")}${kv("Итого",rub(total(b)))}</div>`:""}
   <div class="card"><div class="row"><b>🧴 Расходные материалы</b><button class="btn alt s" data-act="mats" data-id="${b.id}">${us.length?"Изменить":"＋ Списать"}</button></div>
   ${us.length?us.map(x=>{const mt=matById(x.mat);return `<div class="row sm"><span>${esc(mt.name)}</span><span>${-x.qty} ${mt.unit}${ow?" · "+rub(-x.qty*x.cost):""}</span></div>`}).join(""):`<div class="muted">Ещё не списано.${norm.length?` Норма: ${norm.map(([i,q])=>matById(i).name.split(" (")[0]+" "+q+" "+matById(i).unit).join(", ")}.`:""}</div>`}
@@ -405,9 +411,9 @@ function vClients(){const lp=lapsedList().length;return `<div class="chips"><div
 function clList(){const q=S.q.toLowerCase().trim(),pd=digits(S.q);
   let list=CLIENTS.map(c=>{const bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date<b.date?1:-1);return{c,bs}});
   if(S.cf==="lapsed"){const ids=new Set(lapsedList().map(c=>c.id));list=list.filter(x=>ids.has(x.c.id)).sort((a,b)=>lastDone(a.c.id)<lastDone(b.c.id)?-1:1)}
-  if(q)list=list.filter(({c,bs})=>q.split(/\s+/).every(t=>(c.name+" "+c.note+" "+bs.map(b=>svById(b.service).name+" "+b.note).join(" ")).toLowerCase().includes(t)||(pd.length>=3&&digits(c.phone).includes(pd))));
+  if(q)list=list.filter(({c,bs})=>q.split(/\s+/).every(t=>(c.name+" "+c.note+" "+bs.map(b=>svById(b.service).name+" "+b.note).join(" ")).toLowerCase().includes(t)||(pd.length>=3&&(digits(c.phone).includes(pd)||clientNo(c.id).includes(S.q.replace(/\D/g,""))))));
   return list.map(({c,bs})=>{const done=bs.filter(b=>b.status==="done"),op=S.open===c.id;
-    return `<div class="card"><div class="row" data-act="clo" data-id="${c.id}" style="cursor:pointer"><div><b>${esc(c.name)}</b><div class="muted">+${c.phone} · визитов ${done.length} · бонусов ${c.bonus}${noshows(c.id)?` · <span style="color:var(--bad)">⚠ неявок ${noshows(c.id)}</span>`:""}${S.cf==="lapsed"?` · <b>не был(а) ${daysAgo(lastDone(c.id))} дн.</b>`:""}</div></div><span>${op?"▲":"▼"}</span></div>
+    return `<div class="card"><div class="row" data-act="clo" data-id="${c.id}" style="cursor:pointer"><div><b>${esc(c.name)}</b><div class="muted">№ ${fmtNo(c.id)} · +${c.phone} · визитов ${done.length} · бонусов ${c.bonus}${noshows(c.id)?` · <span style="color:var(--bad)">⚠ неявок ${noshows(c.id)}</span>`:""}${S.cf==="lapsed"?` · <b>не был(а) ${daysAgo(lastDone(c.id))} дн.</b>`:""}</div></div><span>${op?"▲":"▼"}</span></div>
     ${S.cf==="lapsed"?`<button class="btn ok s" style="margin-top:8px" data-act="comeback" data-id="${c.id}">Написать</button>`:""}
     ${op?`<div style="margin-top:8px">${c.note?`<div class="note" style="margin:0 0 8px">📝 ${esc(c.note)}</div>`:""}<div class="row wrap gap" style="margin:0 0 8px;justify-content:flex-start"><button class="btn s" data-act="newfor" data-id="${c.id}">＋ Записать</button><button class="btn alt s" data-act="waitfor" data-id="${c.id}">⏳ В лист ожидания</button><button class="btn alt s" data-act="comeback" data-id="${c.id}">✉ Написать</button></div><div class="row" data-act="hist" data-id="${c.id}" style="cursor:pointer;padding:8px 0;border-top:1px solid var(--line)"><b>История визитов (${bs.length})</b><span>${S.hist===c.id?"▲":"▼"}</span></div>${S.hist===c.id?bs.slice(0,15).map(b=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);align-items:flex-start"><div><div class="sm"><b>${b.date.split("-").reverse().slice(0,2).join(".")} ${b.start}</b> · ${esc(svById(b.service).name)}</div><div class="muted sm">${esc(mById(b.master).name)} · ${rub(total(b))}</div></div>${tag(b.status)}</div>`).join(""):""}</div>`:""}</div>`}).join("")||"<div class='card muted'>Никого не найдено</div>"}
 /* ===== касса ===== */
@@ -502,7 +508,7 @@ function vClient(){const t=S.tab.client;
   return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">${esc(CFG.addr)}</div></div></div>
   <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
 function vWiz(){const w=W();
-  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
+  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}${w.isNew?`<div class="note" style="text-align:left"><b>Ваш номер клиента: ${fmtNo(w.cid)}</b><br><span class="sm">Сохраните его: по нему вы заходите в личный кабинет с историей визитов и бонусами. Этот телефон мы запомнили, на другом введите номер.</span></div>`:`<div class="muted sm" style="margin-top:6px">Вы уже наш клиент: в личный кабинет входите по номеру клиента (он указан в сообщении о записи).</div>`}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
   const sv=w.service&&svById(w.service),mm=w.master!=null&&(w.master?mById(w.master):{name:"Любой мастер"});
   const head=`<div class="row"><button class="btn alt s" data-act="wback" ${w.step===1?"disabled":""}>← Назад</button><span class="muted">Шаг ${w.step} из 5</span></div><div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=w.step?"on":""}"></i>`).join("")}</div>`;
   let body="";
@@ -517,15 +523,22 @@ function vWiz(){const w=W();
   const can=(w.step===1&&w.service)||(w.step===2&&w.master!=null)||(w.step===3&&w.time)||(w.step===4&&w.name&&digits(w.phone).length>=10)||w.step===5;
   const bar=w.step>=2?`<div class="sticky"><div class="row gap"><div class="sm"><b>${esc(sv.name)}</b><div class="muted">${mm?esc(mm.name):""}${w.time?" · "+dLong(w.date)+" "+w.time:""} · ${rub(sv.price)}</div></div>${w.step>=3||w.step===2?`<button class="btn ${w.step===5?"ok":""}" data-act="wnext" ${can?"":"disabled"}>${w.step===5?"Записаться":"Далее"}</button>`:""}</div></div>`:"";
   return head+body+bar}
-function vMy(){const c=cById(S.me),bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date+a.start<b.date+b.start?1:-1),next=bs.filter(b=>b.date+" "+b.start>TODAY+" "+hm(NOWMIN)&&["new","confirmed"].includes(b.status)).sort((a,b)=>a.date+a.start>b.date+b.start?1:-1)[0];
-  return `<div class="card"><div class="muted">Здравствуйте,</div><h2 style="margin:0">${esc(c.name)}</h2><div class="row" style="margin-top:8px"><span>Бонусные баллы</span><b class="k" style="font-size:22px">${c.bonus}</b></div><div class="muted sm">1 балл = 1 ₽, можно оплатить до 50% чека. Начисляем 5% с каждого визита.</div></div>
+function vCabLogin(){const demo=[1,4,8].map(i=>cById(i));
+  return `<div class="card"><h2 style="margin:0 0 4px">Личный кабинет</h2><div class="muted" style="margin-bottom:10px">История визитов и бонусы. Введите ваш номер клиента — он есть в сообщении о записи и на карте клиента.</div>
+  <label class="l">Номер клиента</label><input id="cno" inputmode="numeric" maxlength="7" placeholder="123 456" autocomplete="off"><div id="cerr" class="neg"></div>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 10px"><input type="checkbox" id="crem" checked style="width:auto;margin:0"> <span>Запомнить на этом телефоне</span></label>
+  <button class="btn full" data-act="cablogin">Войти</button></div>
+  <div class="card"><b>Забыли номер?</b><div class="muted sm" style="margin-bottom:6px">Введите телефон, на который вы записывались. Мы пришлём номер в сообщении.</div><input id="cph" type="tel" placeholder="+7 914 …"><button class="btn alt full" data-act="cabforgot">Прислать номер</button></div>
+  <div class="note"><b>Демо:</b> ${demo.map(c=>`${esc(c.name)} — <a href="#" data-act="cabfill" data-id="${c.id}"><b>${fmtNo(c.id)}</b></a>`).join("; ")}. В настоящем приложении вход можно дополнительно защитить кодом из SMS или Telegram, а запомненный вход держится на телефоне, пока клиент сам не выйдет.</div>`}
+function vMy(){if(!S.me)return vCabLogin();const c=cById(S.me),bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date+a.start<b.date+b.start?1:-1),next=bs.filter(b=>b.date+" "+b.start>TODAY+" "+hm(NOWMIN)&&["new","confirmed"].includes(b.status)).sort((a,b)=>a.date+a.start>b.date+b.start?1:-1)[0];
+  return `<div class="card"><div class="row"><div class="muted">Здравствуйте,</div><button class="btn alt s" data-act="cablogout">Выйти</button></div><h2 style="margin:0">${esc(c.name)}</h2><div class="muted sm">Ваш номер клиента: <b class="k" style="font-size:15px">${fmtNo(c.id)}</b></div><div class="row" style="margin-top:8px"><span>Бонусные баллы</span><b class="k" style="font-size:22px">${c.bonus}</b></div><div class="muted sm">1 балл = 1 ₽, можно оплатить до 50% чека. Начисляем 5% с каждого визита.</div></div>
   ${next?`<div class="card"><b>Ближайшая запись</b><div>${dLong(next.date)}, ${next.start} · ${esc(svById(next.service).name)}</div><div class="muted">мастер ${esc(mById(next.master).name)}</div><button class="btn alt s" style="margin-top:6px" data-act="ccancel" data-id="${next.id}">Отменить запись</button></div>`:""}
   <h2>История визитов</h2>${bs.slice(0,15).map(b=>`<div class="card row"><div><b>${esc(svById(b.service).name)}</b><div class="muted">${dLong(b.date)}, ${b.start} · ${esc(mById(b.master).name)}</div></div><div style="text-align:right">${rub(total(b))}<br>${b.paid?`<span class="muted sm">+${Math.round(total(b)*.05)} баллов · чек ${b.paid.fiscal}</span><br><button class="btn alt s" style="margin-top:4px" data-act="repeat" data-id="${b.id}">↻ Повторить</button>`:tag(b.status)}</div></div>`).join("")}
   <div class="note">В настоящем приложении вход запоминается в браузере, а с другого телефона — по номеру и коду.</div>`}
 
 /* ===== действия ===== */
 const A={
-  role(el){S.role=el.dataset.v;closeModal();render()},reset(){seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;closeModal();render()},
+  role(el){S.role=el.dataset.v;closeModal();render()},reset(){seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;S.me=0;forget();closeModal();render()},
   fill(el){$("#lg").value=el.dataset.l;$("#pw").value=el.dataset.p},
   login(){const l=$("#lg").value.trim(),p=$("#pw").value;let ok=false;
     if(S.role==="master"){const m=MASTERS.find(x=>x.login===l&&x.pass===p);if(m){if(!m.active){$("#lerr").textContent="Доступ закрыт владельцем";return}S.sess.master=m.id;S.date=TODAY;ok=true}}
@@ -555,14 +568,14 @@ const A={
   wm(el){const w=W();w.master=+el.dataset.id;w.step=3;const sv=svById(w.service);w.time=null;w.date=Array.from({length:14},(_,i)=>addDays(TODAY,i)).find(d=>freeTimes(d,w.master,sv.dur).length)||TODAY;render()},
   wd(el){S.w.date=el.dataset.d;S.w.time=null;render()},wt(el){S.w.time=el.dataset.t;S.w.step=4;render()},wback(){S.w.step=Math.max(1,S.w.step-1);render()},
   wnext(){const w=W();if(w.step<5){w.step++;render();return}
-    const sv=svById(w.service),ph=digits(w.phone).slice(-10);let c=CLIENTS.find(x=>digits(x.phone)===ph);const disc=c?0:15;if(!c){c={id:nid(),name:w.name,phone:"7"+ph,note:"",bonus:0};CLIENTS.push(c)}
+    const sv=svById(w.service),ph=digits(w.phone).slice(-10);let c=CLIENTS.find(x=>digits(x.phone)===ph);const isNew=!c,disc=c?0:15;if(!c){c={id:nid(),name:w.name,phone:"7"+ph,note:"",bonus:0};CLIENTS.push(c)}
     const slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);if(!slot){w.step=3;render();modal(`<h2 style="margin-top:0">Это время только что заняли</h2><div class="muted">Выберите другое.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
-    const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app",created:TODAY};c.chan=w.chan||c.chan||"whatsapp";B.push(b);scheduleNotifs(b,"new");S.me=c.id;w.done=b.id;render()},
+    const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app",created:TODAY};c.chan=w.chan||c.chan||"whatsapp";B.push(b);scheduleNotifs(b,"new");w.isNew=isNew;w.cid=c.id;if(isNew){S.me=c.id;remember(c)}w.done=b.id;render()},
   wnew(){S.w={step:1};render()},
   ccancel(el){const b=B.find(x=>x.id===+el.dataset.id);b.status="cancelled";cancelNotifs(b,true);render()},
 };
 A.reset=function(el){if(el.dataset.k||el.dataset.id){const np="pw"+(1000+Math.floor(Math.random()*9000)),t=el.dataset.k?USERS[el.dataset.k]:mById(+el.dataset.id);t.pass=np;modal(`<h2 style="margin-top:0">Новый пароль</h2><div class="card" style="font-size:22px;text-align:center"><b>${np}</b></div><div class="muted">Передайте сотруднику. Старый пароль больше не работает.</div><button class="btn full" data-act="close" style="margin-top:8px">Готово</button>`);return}
-  seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;closeModal();render()};
+  seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;S.me=0;forget();closeModal();render()};
 document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el)return;const f=A[el.dataset.act];if(f){if(el.tagName==="A")e.preventDefault();f(el,e)}});
 document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.in;if(!k)return;if(k==="cq"){S.q=e.target.value;$("#cl").innerHTML=clList()}else{const w=W();if(k==="wname")w.name=e.target.value;if(k==="wphone")w.phone=e.target.value;if(k==="wnote")w.note=e.target.value;const nb=document.querySelector("[data-act=wnext]");if(nb&&S.w.step===4)nb.disabled=!(w.name&&digits(w.phone).length>=10)}});
 render();
@@ -648,7 +661,7 @@ Object.assign(A,{
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
 const nWhen=at=>{const d=at.slice(0,10);return (d===TODAY?"сегодня":d===addDays(TODAY,1)?"завтра":d===addDays(TODAY,-1)?"вчера":dLong(d))+" в "+at.slice(11)};
 function nText(x){const b=B.find(z=>z.id===x.b),c=cById(b.client),sv=svById(b.service),m=mById(b.master);
-  if(x.kind==="confirm")return `Здравствуйте, ${first(c)}! Вы записаны в «${CFG.name}»: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Адрес: ${CFG.addr}. Если планы изменятся, пожалуйста, предупредите заранее.`;
+  if(x.kind==="confirm")return `Здравствуйте, ${first(c)}! Вы записаны в «${CFG.name}»: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Адрес: ${CFG.addr}. Ваш номер клиента: ${fmtNo(c.id)} — по нему можно войти в личный кабинет (история визитов и бонусы). Если планы изменятся, пожалуйста, предупредите заранее.`;
   if(x.kind==="move")return `${first(c)}, ваша запись перенесена: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Ждём вас!`;
   if(x.kind==="cancel")return `${first(c)}, ваша запись на ${dLong(b.date)}, ${b.start} отменена. Будем рады видеть вас в другой день — записаться можно по ссылке или по телефону.`;
   return `${first(c)}, напоминаем: сегодня в ${b.start} вас ждёт ${m.name} — ${sv.name}. Адрес: ${CFG.addr}. Если не получится прийти, ответьте на это сообщение.`}
@@ -669,6 +682,10 @@ function ntfCard(){const n=CFG.ntf;return `<h2>Уведомления клиен
   <label class="l">Не писать клиентам раньше</label><select id="nf">${["08:00","09:00","10:00"].map(t=>`<option ${t===n.from?"selected":""}>${t}</option>`).join("")}</select>
   <div class="muted sm" style="margin-bottom:8px">Если «за 2 часа» выпадает на раннее утро (например, запись на 10:00), напоминание придёт в указанное время, а не ночью. Запись на сегодняшний день напоминания не получает.</div><button class="btn" data-act="ntfsave">Сохранить</button></div>`}
 Object.assign(A,{
+  cablogin(){const c=findByNo($("#cno").value);if(!c){$("#cerr").textContent="Номер не найден. Проверьте цифры или нажмите «Забыли номер?»";return}S.me=c.id;if($("#crem").checked)remember(c);render()},
+  cabfill(el){const c=cById(+el.dataset.id);$("#cno").value=fmtNo(c.id)},
+  cablogout(){S.me=0;forget();render()},
+  cabforgot(){const d=digits($("#cph").value).slice(-10),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone).slice(-10)===d);toast(c?"✉ Номер отправлен в "+chanName[c.chan||"whatsapp"]+" на +"+c.phone:"Если такой номер есть в базе, мы отправим сообщение")},
   wchan(el){S.w.chan=el.dataset.k;render()},
   nsend(el){const x=NOTIF.find(z=>z.id===+el.dataset.id);x.sent=true;x.at=nowStr();toast("✉ Отправлено");render()},
   nskip(el){NOTIF=NOTIF.filter(z=>z.id!==+el.dataset.id);render()},
