@@ -116,6 +116,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .stars{display:flex;gap:6px;justify-content:center;margin:8px 0}.stars button{border:0;background:none;font-size:34px;line-height:1;color:#c9bfb2;padding:2px;transition:transform .1s}.stars button.on{color:#e0a100}.stars button:active{transform:scale(1.2)}
 .rv{border-left:4px solid var(--ok)}.rv.low{border-left-color:var(--bad)}
 .ear{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.ear div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.bk{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.bk.dragging{opacity:.3}
+.dg-ghost{position:fixed!important;right:auto!important;z-index:400;pointer-events:none;opacity:.96;box-shadow:0 14px 30px rgba(0,0,0,.38)!important;transform:scale(1.03) rotate(-1deg);margin:0}
+.dropm{position:absolute;left:3px;right:3px;border-radius:9px;border:2px dashed var(--ok);background:rgba(31,138,91,.18);z-index:3;pointer-events:none;font-size:12px;font-weight:800;color:var(--ok);padding:2px 6px;display:flex;align-items:flex-start}
+.dropm.bad{border-color:var(--bad);background:rgba(192,57,43,.16);color:var(--bad)}
+.toast .ub{margin-left:12px;border:0;border-radius:8px;padding:5px 10px;background:#fff;color:#1d1a17;font-weight:700;font-size:14px}
+.toast.ut{pointer-events:auto}
 </style>
 <div class="demo" id="demo"><b>ДЕМО ВХОДА КАК:</b>
 <button data-act="role" data-v="client">📱 Клиент</button><button data-act="role" data-v="master">💇 Мастер</button><button data-act="role" data-v="admin">🖥 Администратор</button><button data-act="role" data-v="owner">👑 Владелец</button>
@@ -305,7 +312,7 @@ function vJournal(){
   const times=Array.from({length:CLOSE-OPEN},(_,i)=>`<span style="top:${i*2*ROW}px">${pad(OPEN+i)}:00</span>`).join("");
   const nowTop=(NOWMIN-OPEN*60)/30*ROW,showNow=S.date===TODAY&&NOWMIN>=OPEN*60&&NOWMIN<=CLOSE*60;
   return `${todayCard()}${dateBar(`<div class="row gap"><button class="btn alt" data-act="walkin" title="Клиент пришёл без записи">⚡</button><button class="btn alt" data-act="blknew" title="Закрыть время">🔒</button><button class="btn alt" data-act="wait">⏳ ${WAIT.length}</button><button class="btn" data-act="new">＋ Запись</button></div>`)}
-  <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span><span><i style="background:#fff;box-shadow:0 0 0 2px var(--ok)"></i>✔ клиент пришёл</span></div>
+  <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span><span>⇅ перетащите запись, чтобы перенести (на телефоне — подержите палец)</span><span><i style="background:#fff;box-shadow:0 0 0 2px var(--ok)"></i>✔ клиент пришёл</span></div>
   <div class="jwrap"><div class="jr" style="--n:${ms.length};--rows:${rows};--row:${ROW}px">
   <div class="jh jcorner"></div>${ms.map(m=>{const mb=bs.filter(b=>b.master===m.id),busy=mb.reduce((a,b)=>a+b.dur,0);return `<div class="jh"><span class="av" style="background:${m.color}">${m.name[0]}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small><small>${mb.length} зап. · занято ${Math.round(busy/((CLOSE-OPEN)*60)*100)}%</small></div>`}).join("")}
   <div class="jt">${times}</div>${ms.map(m=>`<div class="jc" data-act="slot" data-m="${m.id}">${BLOCKS.filter(x=>x.master===m.id&&x.date===S.date).map(blkd).join("")}${bs.filter(b=>b.master===m.id).map(blk).join("")}${showNow?`<div class="now" style="top:${nowTop}px"></div>`:""}</div>`).join("")}
@@ -803,6 +810,47 @@ Object.assign(A,{
     m.querySelectorAll("[data-r]").forEach(x=>x.onclick=()=>{r=+x.dataset.r;paint()});paint();
     m.querySelector("#rok").onclick=()=>{b.review={r,t:m.querySelector("#rt").value.trim(),date:TODAY};if(r>=4)CLIENTS.find(c=>c.id===b.client).bonus+=b.review.t?20:0;m.remove();toast("Спасибо за отзыв!");render()}},
 });
+
+/* ===== журнал: перетаскивание записей (мышь — сразу, телефон — удержание) ===== */
+let DR=null,SUPP=false,UNDO=null;
+function dropInfo(x,y){const g=DR.ghost,col=document.elementFromPoint(x,y),jc=col&&col.closest&&col.closest(".jc");if(!jc)return null;
+  const r=jc.getBoundingClientRect(),gt=y-DR.offY,dur=DR.b.dur;let t=OPEN*60+Math.round((gt-r.top)/ROW)*30;t=Math.max(OPEN*60,Math.min(CLOSE*60-dur,t));
+  const mid=+jc.dataset.m;return{jc,mid,t,ok:!conflict(S.date,mid,t,dur,DR.b.id)}}
+function dragStart(x,y){const el=DR.el,r=el.getBoundingClientRect();DR.active=true;DR.offX=x-r.left;DR.offY=y-r.top;
+  const g=el.cloneNode(true);g.classList.add("dg-ghost");g.style.width=r.width+"px";g.style.height=r.height+"px";g.style.left=r.left+"px";g.style.top=r.top+"px";document.body.appendChild(g);DR.ghost=g;el.classList.add("dragging");
+  if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}
+  DR.scr=setInterval(()=>{const j=$(".jwrap");if(!j||DR.ly==null)return;const jr=j.getBoundingClientRect(),m=48;
+    if(DR.ly<jr.top+m)j.scrollTop-=14;else if(DR.ly>jr.bottom-m)j.scrollTop+=14;if(DR.lx<jr.left+m+40)j.scrollLeft-=14;else if(DR.lx>jr.right-m)j.scrollLeft+=14;dragMove(DR.lx,DR.ly)},30)}
+function dragMove(x,y){DR.lx=x;DR.ly=y;const g=DR.ghost;g.style.left=(x-DR.offX)+"px";g.style.top=(y-DR.offY)+"px";
+  document.querySelectorAll(".dropm").forEach(d=>d.remove());const di=dropInfo(x,y);DR.drop=di;if(!di)return;
+  const m=document.createElement("div");m.className="dropm"+(di.ok?"":" bad");m.style.top=((di.t-OPEN*60)/30*ROW)+"px";m.style.height=Math.max(DR.b.dur/30*ROW-2,22)+"px";
+  m.textContent=(di.ok?"":"занято · ")+hm(di.t)+"–"+hm(di.t+DR.b.dur)+" · "+mById(di.mid).name;di.jc.appendChild(m)}
+function dragEnd(commit){if(!DR)return;clearTimeout(DR.timer);clearInterval(DR.scr);const d=DR;DR=null;
+  if(d.active){SUPP=true;setTimeout(()=>SUPP=false,60);d.ghost&&d.ghost.remove();d.el.classList.remove("dragging");document.querySelectorAll(".dropm").forEach(x=>x.remove());
+    const di=d.drop;if(commit&&di){if(!di.ok){toast("⛔ Это время занято");return}
+      const b=d.b,newT=hm(di.t);if(b.master===di.mid&&b.start===newT)return;
+      flushUndo();const old={id:b.id,master:b.master,start:b.start,created:b.created,arrived:b.arrived};
+      b.master=di.mid;b.start=newT;if(old.start!==newT){b.arrived=false}
+      const j=$(".jwrap"),st=j.scrollTop,sl=j.scrollLeft;render();const j2=$(".jwrap");if(j2){j2.scrollTop=st;j2.scrollLeft=sl}
+      const timer=setTimeout(()=>{flushUndo()},6000);UNDO={old,timer};
+      undoToast("Перенесено: "+hm(di.t)+" · "+mById(di.mid).name)}}}
+function flushUndo(){if(!UNDO)return;clearTimeout(UNDO.timer);const b=B.find(x=>x.id===UNDO.old.id);UNDO=null;document.querySelectorAll(".toast.ut").forEach(x=>x.remove());
+  if(b&&["new","confirmed"].includes(b.status)){b.created=TODAY;scheduleNotifs(b,"move")}}
+function undoToast(t){document.querySelectorAll(".toast").forEach(x=>x.remove());const e=document.createElement("div");e.className="toast ut";e.textContent=t;
+  const bt=document.createElement("button");bt.className="ub";bt.textContent="↩ Отменить";bt.onclick=()=>{if(!UNDO)return;clearTimeout(UNDO.timer);const o=UNDO.old,b=B.find(x=>x.id===o.id);UNDO=null;b.master=o.master;b.start=o.start;b.arrived=o.arrived;e.remove();render();toast("Перенос отменён")};
+  e.appendChild(bt);document.body.appendChild(e);setTimeout(()=>e.remove(),6200)}
+document.addEventListener("pointerdown",e=>{if(e.button>0||DR)return;const el=e.target.closest&&e.target.closest(".jwrap .bk");if(!el)return;const b=B.find(x=>x.id===+el.dataset.id);if(!b||!["new","confirmed"].includes(b.status))return;
+  const touch=e.pointerType!=="mouse";DR={b,el,x0:e.clientX,y0:e.clientY,lx:e.clientX,ly:e.clientY,touch,active:false};
+  if(touch)DR.timer=setTimeout(()=>{if(DR&&!DR.active)dragStart(DR.lx,DR.ly)},380)});
+document.addEventListener("pointermove",e=>{if(!DR)return;DR.lx=e.clientX;DR.ly=e.clientY;
+  if(!DR.active){const mv=Math.hypot(e.clientX-DR.x0,e.clientY-DR.y0);if(DR.touch){if(mv>9){clearTimeout(DR.timer);DR=null}}else if(mv>6)dragStart(e.clientX,e.clientY);return}
+  dragMove(e.clientX,e.clientY)});
+document.addEventListener("pointerup",()=>dragEnd(true));
+document.addEventListener("pointercancel",()=>dragEnd(false));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")dragEnd(false)});
+document.addEventListener("touchmove",e=>{if(DR&&DR.active)e.preventDefault()},{passive:false});
+document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest(".jwrap .bk"))e.preventDefault()});
+document.addEventListener("click",e=>{if(SUPP){e.stopPropagation();e.preventDefault()}},true);
 /* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
   const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
