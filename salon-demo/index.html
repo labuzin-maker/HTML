@@ -465,7 +465,7 @@ const noshows=cid=>B.filter(b=>b.client===cid&&b.status==="noshow").length;
 const daysAgo=d=>Math.round((new Date(TODAY+"T12:00:00")-new Date(d+"T12:00:00"))/864e5);
 const upcoming=cid=>B.some(b=>b.client===cid&&b.date>=TODAY&&["new","confirmed"].includes(b.status));
 const lapsedList=()=>CLIENTS.filter(c=>{const l=lastDone(c.id);return l&&daysAgo(l)>=30&&!upcoming(c.id)}).sort((a,b)=>lastDone(a.id)<lastDone(b.id)?-1:1);
-function vClients(){const lp=lapsedList().length;return `<div class="chips"><div class="chip ${S.cf!=="lapsed"?"on":""}" data-act="cf" data-f="all">Все (${CLIENTS.length})</div><div class="chip ${S.cf==="lapsed"?"on":""}" data-act="cf" data-f="lapsed">Давно не были (${lp})</div></div>${S.cf==="lapsed"?`<div class="note" style="margin-top:0">Клиенты, у которых последний визит был 30+ дней назад и нет будущей записи. Нажмите «Написать» — текст уже готов.</div>`:""}<input id="cq" data-in="cq" placeholder="Поиск: телефон, имя, «блонд», «борода»…" value="${esc(S.q)}"><div id="cl">${clList()}</div>`}
+function vClients(){const lp=lapsedList().length;return `<div class="chips"><div class="chip ${S.cf!=="lapsed"?"on":""}" data-act="cf" data-f="all">Все (${CLIENTS.length})</div><div class="chip ${S.cf==="lapsed"?"on":""}" data-act="cf" data-f="lapsed">Давно не были (${lp})</div><div class="chip" data-act="impc">⬆ Импорт клиентов</div></div>${S.cf==="lapsed"?`<div class="note" style="margin-top:0">Клиенты, у которых последний визит был 30+ дней назад и нет будущей записи. Нажмите «Написать» — текст уже готов.</div>`:""}<input id="cq" data-in="cq" placeholder="Поиск: телефон, имя, «блонд», «борода»…" value="${esc(S.q)}"><div id="cl">${clList()}</div>`}
 function clList(){const q=S.q.toLowerCase().trim(),pd=digits(S.q);
   let list=CLIENTS.map(c=>{const bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date<b.date?1:-1);return{c,bs}});
   if(S.cf==="lapsed"){const ids=new Set(lapsedList().map(c=>c.id));list=list.filter(x=>ids.has(x.c.id)).sort((a,b)=>lastDone(a.c.id)<lastDone(b.c.id)?-1:1)}
@@ -985,6 +985,77 @@ Object.assign(A,{
   xlsx(){const {from,to}=repRange(),R=finReport(from,to),bl=buildXlsx(R),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=`finotchet_${from}_${to}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800);toast("⬇ Excel-файл скачан")},
 });
 document.addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.in;if((k==="rfr"||k==="rto")&&/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){repRange();if(k==="rfr")S.fr=e.target.value;else S.fto=e.target.value;render()}});
+
+/* ===== администратор: импорт клиентов из Excel / CSV / вставки ===== */
+function parseDelim(text){text=text.replace(/^\uFEFF/,"");const first=text.split(/\r?\n/).find(l=>l.trim())||"";
+  const cnt=c=>(first.match(new RegExp(c==="\t"?"\t":"\\"+c,"g"))||[]).length,d=[";","\t",","].sort((a,b)=>cnt(b)-cnt(a))[0];
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===d){row.push(cur);cur=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(cur);cur="";if(row.some(x=>x.trim()))rows.push(row);row=[]}
+    else cur+=ch}
+  row.push(cur);if(row.some(x=>x.trim()))rows.push(row);return rows}
+function decodeText(buf){let t=new TextDecoder("utf-8").decode(buf);if(t.includes("\uFFFD")){try{t=new TextDecoder("windows-1251").decode(buf)}catch(e){}}return t}
+async function readXlsx(buf){const u=new Uint8Array(buf),dv=new DataView(buf);let e=u.length-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error("zip");
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const ents={};
+  for(let i=0;i<n;i++){const nl=dv.getUint16(p+28,true),ex=dv.getUint16(p+30,true),cm=dv.getUint16(p+32,true);ents[new TextDecoder().decode(u.slice(p+46,p+46+nl))]={method:dv.getUint16(p+10,true),csz:dv.getUint32(p+20,true),off:dv.getUint32(p+42,true)};p+=46+nl+ex+cm}
+  const get=async nm=>{const en=ents[nm];if(!en)return null;const l=en.off,nl=dv.getUint16(l+26,true),ex=dv.getUint16(l+28,true),st=l+30+nl+ex,data=u.slice(st,st+en.csz);if(en.method===0)return new TextDecoder().decode(data);
+    const ds=new DecompressionStream("deflate-raw"),w=ds.writable.getWriter();w.write(data);w.close();return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer())};
+  const dp=new DOMParser(),X=s=>dp.parseFromString(s,"application/xml"),ss=[],sx=await get("xl/sharedStrings.xml");
+  if(sx)X(sx).querySelectorAll("si").forEach(si=>ss.push([...si.querySelectorAll("t")].map(t=>t.textContent).join("")));
+  const sn=Object.keys(ents).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort((a,b)=>parseInt(a.match(/\d+/g).pop())-parseInt(b.match(/\d+/g).pop()))[0],sh=await get(sn);if(!sh)throw new Error("sheet");
+  const rows=[];X(sh).querySelectorAll("row").forEach(r=>{const arr=[];r.querySelectorAll("c").forEach(c=>{const ref=c.getAttribute("r")||"",m=ref.match(/^([A-Z]+)/);let ci=0;if(m)for(const ch of m[1])ci=ci*26+ch.charCodeAt(0)-64;ci--;const t=c.getAttribute("t"),v=c.querySelector("v");let val="";
+      if(t==="s"&&v)val=ss[+v.textContent]||"";else if(t==="inlineStr")val=[...c.querySelectorAll("t")].map(x=>x.textContent).join("");else if(v)val=v.textContent;arr[ci<0?arr.length:ci]=val});
+    const a=[...arr].map(x=>x==null?"":String(x));if(a.some(x=>x.trim()))rows.push(a)});return rows}
+const IMPF=[["skip","— не использовать —"],["name","Имя / ФИО"],["last","Фамилия"],["phone","Телефон"],["note","Заметка / комментарий"],["bonus","Бонусные баллы"]];
+function impGuess(h,i,rows){const t=String(h||"").toLowerCase().trim();
+  if(/номер клиент|карт|id|email|почт|дата|рожд|скидк|город|адрес/.test(t))return"skip";if(/фамил/.test(t))return"last";if(/^(имя|name)$|фио|ф\.и\.о|клиент|контакт|полное имя/.test(t))return"name";
+  if(/тел|phone|моб|whatsapp|номер/.test(t))return"phone";if(/коммент|заметк|примеч|note|описан/.test(t))return"note";if(/бонус|балл|накоп/.test(t))return"bonus";return"skip"}
+function impAuto(rows,hdr){const nc=Math.max(...rows.map(r=>r.length)),map=Array(nc).fill("skip"),used=new Set();
+  if(hdr){(rows[0]||[]).forEach((h,i)=>{const g=impGuess(h,i,rows);if(g!=="skip"&&(g==="note"||!used.has(g))){map[i]=g;used.add(g)}})}
+  const body=rows.slice(hdr?1:0,(hdr?1:0)+30);
+  if(!used.has("phone")){let best=-1,bs=0;for(let i=0;i<nc;i++){const s=body.filter(r=>String(r[i]||"").replace(/\D/g,"").length>=10).length;if(s>bs&&map[i]==="skip"){bs=s;best=i}}if(best>=0&&bs>=Math.max(1,body.length*.5)){map[best]="phone";used.add("phone")}}
+  if(!used.has("name")){let best=-1;for(let i=0;i<nc;i++){if(map[i]!=="skip")continue;if(body.filter(r=>/[A-Za-zА-Яа-яЁё]{2,}/.test(String(r[i]||""))).length>=Math.max(1,body.length*.5)){best=i;break}}if(best>=0)map[best]="name"}
+  if(!hdr&&!map.includes("note")){for(let i=0;i<nc;i++){if(map[i]==="skip"&&body.some(r=>String(r[i]||"").trim()&&!/^[\d\s+()\-.,]+$/.test(String(r[i])))){map[i]="note";break}}}
+  return map}
+const looksHdr=r=>(r||[]).some(c=>/имя|фио|телефон|phone|name|клиент|фамил|коммент|бонус/i.test(String(c)));
+const impPhone=s=>{const d=String(s||"").replace(/\D/g,"");return d.length>=10?d.slice(-10):""};
+const impName=s=>{let n=String(s||"").replace(/\s+/g," ").trim();if(n&&(n===n.toUpperCase()||n===n.toLowerCase()))n=n.toLowerCase().replace(/(^|[\s-])([a-zа-яё])/g,(m,a,b)=>a+b.toUpperCase());return n};
+function impPlan(){const {rows,hdr,map,dup}=IMP,body=rows.slice(hdr?1:0),add=[],dups=[],bad=[],seen=new Set(),ix=k=>map.indexOf(k);
+  const cell=(r,k)=>{const i=ix(k);return i<0?"":String(r[i]==null?"":r[i]).trim()};
+  body.forEach((r,n)=>{const line=n+(hdr?2:1),ph=impPhone(cell(r,"phone")),nm=impName([cell(r,"last"),cell(r,"name")].filter(Boolean).join(" ")),note=cell(r,"note"),b=parseFloat(cell(r,"bonus").replace(",","."));
+    if(!ph){bad.push({line,why:"нет телефона (нужно 10+ цифр)",nm});return}if(!nm){bad.push({line,why:"нет имени",nm:"+7"+ph});return}
+    if(seen.has(ph)){bad.push({line,why:"повтор телефона в файле",nm});return}seen.add(ph);
+    const ex=CLIENTS.find(c=>impPhone(c.phone)===ph);const o={ph,nm,note,bonus:isFinite(b)&&b>0?Math.round(b):0};
+    if(ex)dups.push({...o,ex});else add.push(o)});
+  return{add,dups,bad,total:body.length}}
+function impModal(){IMP=null;const m=modal(`<h2 style="margin-top:0">⬆ Импорт клиентов</h2><div class="muted">Загрузите файл из YCLIENTS или другой программы: Excel (.xlsx), CSV — или вставьте таблицу из Excel. Ничего не сохранится, пока вы не нажмёте «Импортировать».</div>
+  <label class="l" style="margin-top:10px">Файл</label><input type="file" id="ifile" accept=".xlsx,.csv,.tsv,.txt"><label class="l">или вставьте строки (скопировать из Excel → вставить сюда)</label><textarea id="ipaste" rows="4" placeholder="Иванова Мария	+7 914 100-00-01	любит каре"></textarea><div id="ierr" class="neg"></div>
+  <div class="row gap wrap" style="justify-content:flex-start;margin-bottom:8px"><button class="btn alt s" id="itpl">⬇ Скачать образец файла</button></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn" id="inext">Далее</button></div>`);
+  const err=t=>m.querySelector("#ierr").textContent=t;
+  const go=rows=>{if(!rows||rows.length<1)return err("В файле нет данных");const hdr=looksHdr(rows[0]);IMP={rows,hdr,map:impAuto(rows,hdr),dup:"skip"};impDraw(m)};
+  m.querySelector("#itpl").onclick=()=>{const t="\uFEFFИмя;Фамилия;Телефон;Заметка;Бонусы\r\nМария;Иванова;+7 914 100-00-01;любит каре;120\r\nСергей;Петров;8 (914) 100-00-02;;0\r\n",a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/csv"}));a.download="obrazec_klienty.csv";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
+  m.querySelector("#ifile").onchange=async e=>{const f=e.target.files[0];if(!f)return;err("");try{const buf=await f.arrayBuffer();let rows;if(/\.xlsx$/i.test(f.name)||new Uint8Array(buf.slice(0,2)).join()==="80,75"){if(typeof DecompressionStream==="undefined")return err("Этот браузер не умеет читать .xlsx — сохраните файл как CSV или вставьте таблицу");rows=await readXlsx(buf)}else rows=parseDelim(decodeText(buf));go(rows)}catch(x){err("Не удалось прочитать файл. Сохраните его как CSV (UTF-8) или вставьте таблицу текстом.")}};
+  m.querySelector("#inext").onclick=()=>{const t=m.querySelector("#ipaste").value;if(!t.trim())return err("Выберите файл или вставьте таблицу");go(parseDelim(t))}}
+function impDraw(m){const {rows,hdr,map,dup}=IMP,pl=impPlan(),nc=map.length,sample=i=>{const v=rows.slice(hdr?1:0,(hdr?1:0)+2).map(r=>String(r[i]==null?"":r[i]).slice(0,22)).filter(Boolean).join(" · ");return esc(v)};
+  const canGo=pl.add.length+(dup==="update"?pl.dups.length:0)>0&&map.includes("phone")&&(map.includes("name")||map.includes("last"));
+  m.querySelector(".sheet").innerHTML=`<h2 style="margin-top:0">⬆ Импорт клиентов</h2><div class="muted">Строк в файле: ${pl.total}. Проверьте, какой столбец что означает.</div>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:8px 0"><input type="checkbox" id="ihdr" ${hdr?"checked":""} style="width:auto;margin:0"> <span>Первая строка — заголовки</span></label>
+  ${Array.from({length:Math.min(nc,10)},(_,i)=>`<div class="card" style="padding:8px 10px;margin-bottom:6px"><div class="muted sm" style="margin-bottom:4px">Столбец ${i+1}${hdr&&rows[0][i]?": <b>"+esc(rows[0][i])+"</b>":""} <span style="opacity:.8">· ${sample(i)||"пусто"}</span></div><select data-ci="${i}" style="margin:0">${IMPF.map(([k,l])=>`<option value="${k}" ${map[i]===k?"selected":""}>${l}</option>`).join("")}</select></div>`).join("")}
+  <div class="card" style="margin-top:8px"><div class="row"><b>Новых клиентов</b><b class="pos">${pl.add.length}</b></div><div class="row"><span>Уже есть в базе (по телефону)</span><b>${pl.dups.length}</b></div><div class="row"><span>Пропустим (ошибки)</span><b class="${pl.bad.length?"neg":""}">${pl.bad.length}</b></div></div>
+  ${pl.dups.length?`<div class="muted sm">Если клиент уже есть в базе:</div><div class="chips" style="margin-top:4px"><div class="chip ${dup==="skip"?"on":""}" data-d="skip">Не трогать</div><div class="chip ${dup==="update"?"on":""}" data-d="update">Дополнить заметку и баллы</div></div>`:""}
+  ${pl.add.length?`<div class="muted sm" style="margin-top:6px">Пример, что добавится:</div>${pl.add.slice(0,5).map(x=>`<div class="sm" style="padding:3px 0;border-top:1px solid var(--line)"><b>${esc(x.nm)}</b> · +7${x.ph}${x.note?" · "+esc(x.note):""}${x.bonus?" · "+x.bonus+" б.":""}</div>`).join("")}${pl.add.length>5?`<div class="muted sm">…и ещё ${pl.add.length-5}</div>`:""}`:""}
+  ${pl.bad.length?`<div class="muted sm" style="margin-top:6px">Не импортируем:</div>${pl.bad.slice(0,5).map(x=>`<div class="sm neg" style="padding:2px 0">строка ${x.line}: ${esc(x.nm||"—")} — ${x.why}</div>`).join("")}${pl.bad.length>5?`<div class="muted sm">…и ещё ${pl.bad.length-5}</div>`:""}`:""}
+  ${!map.includes("phone")?`<div class="neg sm" style="margin-top:6px">Укажите столбец с телефоном</div>`:!(map.includes("name")||map.includes("last"))?`<div class="neg sm" style="margin-top:6px">Укажите столбец с именем</div>`:""}
+  <div class="row" style="margin-top:10px"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="idone" ${canGo?"":"disabled"}>Импортировать (${pl.add.length+(dup==="update"?pl.dups.length:0)})</button></div>`;
+  m.querySelector("#ihdr").onchange=e=>{IMP.hdr=e.target.checked;IMP.map=impAuto(IMP.rows,IMP.hdr);impDraw(m)};
+  m.querySelectorAll("select[data-ci]").forEach(s=>s.onchange=()=>{const i=+s.dataset.ci,k=s.value;if(k!=="skip"&&k!=="note")IMP.map=IMP.map.map((x,j)=>j!==i&&x===k?"skip":x);IMP.map[i]=k;impDraw(m)});
+  m.querySelectorAll("[data-d]").forEach(c=>c.onclick=()=>{IMP.dup=c.dataset.d;impDraw(m)});
+  m.querySelector("#idone").onclick=()=>{const p=impPlan();p.add.forEach(x=>CLIENTS.push({id:nid(),name:x.nm,phone:"7"+x.ph,note:x.note,bonus:x.bonus,chan:"whatsapp"}));let up=0;
+    if(IMP.dup==="update")p.dups.forEach(x=>{let ch=false;if(x.note&&!(x.ex.note||"").includes(x.note)){x.ex.note=(x.ex.note?x.ex.note+"; ":"")+x.note;ch=true}if(x.bonus&&x.bonus!==x.ex.bonus){x.ex.bonus=x.bonus;ch=true}if(ch)up++});
+    m.remove();S.q="";S.cf="all";render();toast("✔ Импортировано: "+p.add.length+(up?", обновлено: "+up:""))}}
+Object.assign(A,{impc(){impModal()}});
 /* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
   const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
