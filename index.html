@@ -311,7 +311,7 @@ function vLogin(role){
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
   const r=S.role,t=S.tab[r];let body;
-  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,cal:vCashCal,rep:vReport,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,log:vLog,set:vSettings,msg:vOutbox}[t]();
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,cal:vCashCal,rep:vReport,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,log:vLog,recs:vRecs,set:vSettings,msg:vOutbox}[t]();
   const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
   return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
   ${r==="master"?body:`<div class="shell"><div class="tabs side">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div><div class="main">${body}</div></div>`}`}
@@ -555,6 +555,29 @@ function vPay(){const r=calc(S.period),sm=k=>r.pm.reduce((a,x)=>a+x[k],0),dueTag
   ${payHist(r)}
   <div class="card"><b>День выплаты ЗП</b><div class="muted sm" style="margin-bottom:6px">Если срок прошёл, а остаток есть — красная метка «просрочка».</div><div class="row gap"><input id="pdy" type="number" min="1" max="28" value="${CFG.payDay}" style="margin:0;width:90px"><button class="btn s" data-act="payday">Сохранить</button></div></div>
   <div class="muted sm">«Материалы» — сколько расходников списано на клиентов мастера: видно, кто расходует больше нормы.</div>`}
+/* реестр записей */
+const crOf=b=>b.created||b.date;
+const SRCN={app:"Онлайн",phone:"Телефон",walkin:"Без записи"};
+function recFilter(){const f=S.rf||(S.rf={vf:addDays(TODAY,-30),vt:addDays(TODAY,30),cf:"",ct:"",m:"0",st:"",src:"",pay:"",q:""});
+  const q=f.q.trim().toLowerCase(),pd=digits(f.q);
+  return B.filter(b=>b.date>=f.vf&&b.date<=f.vt&&(!f.cf||crOf(b)>=f.cf)&&(!f.ct||crOf(b)<=f.ct)&&(f.m==="0"||b.master===+f.m)&&(!f.st||b.status===f.st)&&(!f.src||b.source===f.src)
+   &&(!f.pay||(f.pay==="paid"?!!b.paid:!b.paid))&&(!q||(()=>{const c=cById(b.client);return (c.name+" "+svName(b)).toLowerCase().includes(q)||(pd.length>=3&&digits(c.phone).includes(pd))})()))
+   .sort((a,b)=>a.date+a.start<b.date+b.start?1:-1)}
+function vRecs(){const f=S.rf||(recFilter(),S.rf),l=recFilter(),sum=l.filter(b=>b.status!=="cancelled").reduce((a,b)=>a+total(b),0);
+  const sel=(id,opts,v)=>`<select id="${id}">${opts.map(([k,t])=>`<option value="${k}" ${String(k)===String(v)?"selected":""}>${t}</option>`).join("")}</select>`;
+  return `<h2 style="margin-top:0">Записи</h2>
+  <div class="card"><div class="grid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+   <div><label class="l">Визит с</label><input id="rvf" type="date" value="${f.vf}"></div><div><label class="l">Визит по</label><input id="rvt" type="date" value="${f.vt}"></div>
+   <div><label class="l">Создана с</label><input id="rcf" type="date" value="${f.cf}"></div><div><label class="l">Создана по</label><input id="rct" type="date" value="${f.ct}"></div>
+   <div><label class="l">Мастер</label>${sel("rm",[["0","Все"],...MASTERS.map(m=>[m.id,m.name])],f.m)}</div>
+   <div><label class="l">Статус</label>${sel("rst",[["","Все"],...Object.entries(ST)],f.st)}</div>
+   <div><label class="l">Источник</label>${sel("rsrc",[["","Все"],...Object.entries(SRCN)],f.src)}</div>
+   <div><label class="l">Оплата</label>${sel("rpay",[["","Все"],["paid","Оплачены"],["unpaid","Не оплачены"]],f.pay)}</div>
+   <div><label class="l">Клиент / телефон / услуга</label><input id="rq" value="${esc(f.q)}" placeholder="Поиск"></div></div>
+   <div class="row wrap gap" style="margin-top:10px;justify-content:flex-start"><button class="btn ok" data-act="rapply">Показать</button><button class="btn alt" data-act="rreset">Сбросить</button><button class="btn blue" data-act="rxlsx">⬇ Excel</button></div></div>
+  <div class="muted" style="margin:6px 0">Найдено: <b>${l.length}</b> · на сумму ${rub(sum)} (без отменённых)</div>
+  ${htmlTable(["Визит","Время","Клиент","Услуги","Мастер","Статус","Источник","Создана","Сумма"],l.slice(0,300).map(b=>[`<a href="#" data-act="bk" data-id="${b.id}">${b.date.split("-").reverse().join(".")}</a>`,b.start,esc(cById(b.client).name),esc(svName(b)),esc(mById(b.master).name),ST[b.status],SRCN[b.source]||"—",crOf(b).split("-").reverse().join("."),nbs(total(b))]),null)}
+  ${l.length>300?`<div class="muted sm">Показаны первые 300, остальное — в Excel.</div>`:""}`}
 function vLog(){const roleN={master:"Мастер",admin:"Администратор",owner:"Владелец"};
   return `<h2 style="margin-top:0">Журнал действий</h2><div class="muted" style="margin-bottom:8px">Кто и что менял в записях. Новые сверху.</div>
   ${LOG.slice(0,150).map(x=>`<div class="card"><div class="row sm"><b>${esc(x.who)}</b><span class="muted">${x.at}</span></div><div>${esc(x.text)}</div><div class="muted sm">${esc(x.client)} · запись на ${x.when}</div></div>`).join("")||'<div class="card muted">Пока действий нет — они появятся, когда в программе что-то изменят.</div>'}
@@ -905,7 +928,7 @@ document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closes
 document.addEventListener("click",e=>{if(SUPP){e.stopPropagation();e.preventDefault()}},true);
 
 /* ===== владелец: финансовый отчёт (таблицы + выгрузка в Excel) ===== */
-TABS.owner.splice(2,0,["rep","📑 Отчёт"]);TABS.owner.push(["log","🕘 Журнал действий"]);
+TABS.owner.splice(2,0,["rep","📑 Отчёт"]);TABS.owner.push(["log","🕘 Журнал действий"]);TABS.owner.splice(2,0,["recs","📋 Записи"]);TABS.admin.splice(2,0,["recs","📋 Записи"]);
 const EXPL={rent:"Аренда",ads:"Реклама",utilities:"Коммунальные услуги"};
 const ymd2ru=d=>d.split("-").reverse().join(".");
 function repRange(){const m0=TODAY.slice(0,8)+"01";if(!S.fr){S.fr=m0;S.fto=TODAY}if(S.fr>S.fto){const t=S.fr;S.fr=S.fto;S.fto=t}return{from:S.fr,to:S.fto}}
@@ -979,6 +1002,8 @@ function buildXlsx(R){const T=(l)=>({v:l,s:XS.title}),H=a=>a.map(x=>({v:x,s:XS.h
   const n4=R.services.length,tr4=5+n4;s4.push([{v:"Итого",s:XS.ttxt},{v:R.services.reduce((s,x)=>s+x.cnt,0),f:n4?`SUM(B5:B${tr4-1})`:"0",s:XS.tint},{v:R.svc,f:n4?`SUM(C5:C${tr4-1})`:"0",s:XS.tmoney},{v:1,s:XS.tpct},{v:R.visits?R.svc/R.visits:0,f:`IFERROR(C${tr4}/B${tr4},0)`,s:XS.tmoney}]);
   const sheets=[{n:"Итоги",rows:s1,cols:[46,18,16],freeze:4},{n:"По дням",rows:s2,cols:[13,8,10,14,13,14,14,13,13],freeze:4},{n:"Мастера",rows:s3,cols:[18,10,10,14,15,12,15,15,15,20],freeze:4,ht:{3:34}},{n:"Услуги",rows:s4,cols:[40,10,15,10,16],freeze:4}];
   sheets[2].ht={3:34};
+  return packXlsx(sheets)}
+function packXlsx(sheets){
   const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',RS='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
   const styles=X+`<styleSheet ${NS}><numFmts count="3"><numFmt numFmtId="164" formatCode="#,##0&quot; ₽&quot;;[Red]\\-#,##0&quot; ₽&quot;"/><numFmt numFmtId="165" formatCode="0.0%"/><numFmt numFmtId="166" formatCode="dd\\.mm\\.yyyy"/></numFmts>
 <fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="15"/><name val="Calibri"/></font><font><i/><sz val="10"/><color rgb="FF6C655E"/><name val="Calibri"/></font></fonts>
@@ -1007,6 +1032,13 @@ function buildXlsx(R){const T=(l)=>({v:l,s:XS.title}),H=a=>a.map(x=>({v:x,s:XS.h
    {name:"xl/styles.xml",data:styles},...sheets.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s)}))];
   return zipStore(files)}
 Object.assign(A,{
+  rapply(){const g=i=>document.getElementById(i).value;S.rf={vf:g("rvf")||addDays(TODAY,-30),vt:g("rvt")||addDays(TODAY,30),cf:g("rcf"),ct:g("rct"),m:g("rm"),st:g("rst"),src:g("rsrc"),pay:g("rpay"),q:g("rq")};render()},
+  rreset(){S.rf=null;render()},
+  rxlsx(){A.rapply();const l=recFilter(),f=S.rf,T=t=>({v:t,s:XS.title}),H=a=>a.map(x=>({v:x,s:XS.hdr}));
+    const rows=[[T("Записи · "+CFG.name)],[{v:"Визиты: "+ymd2ru(f.vf)+" — "+ymd2ru(f.vt)+" · найдено "+l.length,s:XS.note}],[],H(["Визит","Время","Клиент","Телефон","Услуги","Мастер","Статус","Источник","Создана","Сумма, ₽","Оплачено, ₽"])];
+    l.forEach(b=>{const c=cById(b.client);rows.push([{v:xserial(b.date),s:XS.date},{v:b.start,s:XS.txt},{v:c.name,s:XS.txt},{v:"+"+c.phone,s:XS.txt},{v:svName(b),s:XS.txt},{v:mById(b.master).name,s:XS.txt},{v:ST[b.status],s:XS.txt},{v:SRCN[b.source]||"—",s:XS.txt},{v:xserial(crOf(b)),s:XS.date},{v:total(b),s:XS.money},{v:b.paid?b.paid.amount:0,s:XS.money}])});
+    const e=rows.length,n=l.length;rows.push([{v:"Итого",s:XS.ttxt},...Array(8).fill({v:"",s:XS.ttxt}),{v:l.reduce((a,b)=>a+total(b),0),f:n?`SUM(J5:J${e})`:"0",s:XS.tmoney},{v:l.reduce((a,b)=>a+(b.paid?b.paid.amount:0),0),f:n?`SUM(K5:K${e})`:"0",s:XS.tmoney}]);
+    const bl=packXlsx([{n:"Записи",rows,cols:[12,8,24,16,34,12,13,12,12,14,14],freeze:4}]),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=`zapisi_${f.vf}_${f.vt}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800);toast("⬇ Excel-файл скачан")},
   rrange(el){S.fr=el.dataset.a;S.fto=el.dataset.b;render()},
   print(){window.print()},
   xlsx(){const {from,to}=repRange(),R=finReport(from,to),bl=buildXlsx(R),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=`finotchet_${from}_${to}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800);toast("⬇ Excel-файл скачан")},
