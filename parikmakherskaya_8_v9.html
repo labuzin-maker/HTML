@@ -1,0 +1,744 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Парикмахерская #8</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f5f2ee;--ink:#1d1a17;--muted:#6c655e;--card:#fff;--line:#e6dfd5;--accent:#b8432f;--ok:#1f8a5b;--blue:#2f66b3;--warn:#c98a12;--bad:#c0392b;--row:44px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141110;--ink:#f4ede6;--muted:#a79d93;--card:#211c19;--line:#352d28;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141110;--ink:#f4ede6;--muted:#a79d93;--card:#211c19;--line:#352d28;color-scheme:dark}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+button{font:inherit;cursor:pointer}
+.demo{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;gap:6px;align-items:center;padding:8px max(10px,env(safe-area-inset-left,0px));background:#1d1a17;color:#fff;overflow-x:auto;white-space:nowrap}
+.demo b{font-size:12px;opacity:.7;margin-right:4px}
+.demo button{border:0;border-radius:99px;padding:7px 13px;background:#3a332e;color:#fff;font-size:14px}
+.demo button.on{background:var(--accent)}
+#app{max-width:1200px;margin:0 auto;padding-block:12px 90px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:21px;margin:6px 0}h2{font-size:17px;margin:16px 0 8px}h3{font-size:15px;margin:10px 0 4px}
+.muted{color:var(--muted);font-size:14px}.sm{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.wrap{flex-wrap:wrap}.gap{gap:8px}
+.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;font-weight:700;font-size:15px}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn.ok{background:var(--ok)}.btn.blue{background:var(--blue)}.btn.s{padding:6px 10px;font-size:13px}.btn.full{width:100%}
+.btn[disabled]{opacity:.4}
+input,select,textarea{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;margin-bottom:8px}
+label.l{display:block;font-size:13px;color:var(--muted);margin:2px 0}
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin:6px 0 10px}
+.tabs button{border:0;background:none;padding:10px 11px;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;font-weight:600}
+.tabs button.on{color:var(--accent);border-color:var(--accent)}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--line);white-space:nowrap}
+.tag.new{background:#f6e7c1;color:#7a5200}.tag.confirmed{background:#d5e4f7;color:#1c4a85}.tag.done{background:#cdeedd;color:#14603f}.tag.noshow{background:#f6d4cf;color:#8e2417}
+.tag.bad{background:var(--bad);color:#fff}.tag.ok{background:#cdeedd;color:#14603f}.tag.warn{background:#f6e7c1;color:#7a5200}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer;font-size:15px}.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}.chip.off{opacity:.35;pointer-events:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}@media(min-width:800px){.grid{grid-template-columns:repeat(4,1fr)}}
+.k{font-size:24px;font-weight:800}.neg{color:var(--bad)}.pos{color:var(--ok)}
+.ov{position:fixed;inset:0;background:#0008;display:flex;align-items:flex-end;justify-content:center;z-index:80}
+.sheet{background:var(--card);width:100%;max-width:580px;border-radius:18px 18px 0 0;padding:16px;max-height:92vh;overflow:auto}
+@media(min-width:700px){.ov{align-items:center}.sheet{border-radius:18px}}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}
+table.t{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap}
+.t th,.t td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line)}.t th:first-child,.t td:first-child{text-align:left;position:sticky;left:0;background:var(--card);font-weight:700}
+.t th{font-size:12px;color:var(--muted);font-weight:600}.t tfoot td{font-weight:800;border-bottom:0}.t td.hl{background:rgba(184,67,47,.08);font-weight:700}
+.t.lt th,.t.lt td{text-align:left}
+.bar{height:9px;border-radius:5px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}.bar.low i{background:var(--bad)}
+/* журнал */
+.jwrap{overflow:auto;max-height:calc(100vh - 230px);min-height:380px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.jr{display:grid;grid-template-columns:46px repeat(var(--n),minmax(150px,1fr));min-width:min-content}
+.jh{position:sticky;top:0;z-index:4;background:var(--card);border-bottom:1px solid var(--line);border-left:1px solid var(--line);padding:8px;display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.jh .av{width:28px;height:28px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:2px}
+.jh small{color:var(--muted);font-size:11px;line-height:1.2}
+.jcorner{left:0;z-index:6;border-left:0}
+.jt{position:sticky;left:0;z-index:3;background:var(--card);height:calc(var(--rows)*var(--row))}
+.jt span{position:absolute;right:6px;font-size:11px;color:var(--muted);transform:translateY(-7px)}
+.jc{position:relative;border-left:1px solid var(--line);height:calc(var(--rows)*var(--row));background-image:repeating-linear-gradient(#0000 0 calc(var(--row) - 1px),var(--line) calc(var(--row) - 1px) var(--row));cursor:cell}
+.bk{position:absolute;left:3px;right:3px;border-radius:9px;padding:4px 7px;overflow:hidden;font-size:12px;line-height:1.25;cursor:pointer;border-left:4px solid;box-shadow:0 1px 2px #0002}
+.bk b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bk.new{background:#fbefcf;border-color:var(--warn);color:#4d3500}.bk.confirmed{background:#dbe8f8;border-color:var(--blue);color:#143a6e}
+.bk.done{background:#d3f0e1;border-color:var(--ok);color:#0f4d32}.bk.noshow{background:#f8dad6;border-color:var(--bad);color:#74180e}
+.now{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:2;pointer-events:none}.now:before{content:"";position:absolute;left:-1px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:6px 0}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+/* запись клиента */
+.steps{display:flex;gap:4px;margin:6px 0 12px}.steps i{flex:1;height:4px;border-radius:2px;background:var(--line)}.steps i.on{background:var(--accent)}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:6px;cursor:pointer}
+.opt:hover{border-color:var(--accent)}.opt.on{border-color:var(--accent);box-shadow:0 0 0 2px #b8432f33}
+.av2{width:44px;height:44px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:700;font-size:18px;flex:none}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}.day{flex:none;width:54px;text-align:center;padding:7px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer}
+.day small{display:block;color:var(--muted);font-size:11px}.day b{font-size:17px}.day.on{background:var(--accent);color:#fff;border-color:var(--accent)}.day.on small{color:#fffc}.day.off{opacity:.4}
+.sticky{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:40}.sticky>div{max-width:1200px;margin:0 auto}
+.ok-ring{width:64px;height:64px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:34px;margin:10px auto}
+.note{background:#c98a1214;border:1px solid #c98a1255;border-radius:12px;padding:10px;font-size:14px;margin:8px 0}
+details>summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+/* заставка клиента: птичка на ножницах */
+#splash{position:fixed;inset:0;z-index:300;background:#17130f;color:#f6efe6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px;cursor:pointer;animation:spOut .5s ease 3.4s forwards}
+#splash .badge{width:190px;height:190px;border-radius:50%;background:#5a1f26;display:grid;place-items:center;box-shadow:0 0 0 5px #17130f,0 0 0 7px #c9a15a;animation:spPop .8s cubic-bezier(.2,.9,.3,1.15) both}
+#splash .badge svg{width:150px;height:150px;overflow:visible}
+#splash .lg{animation:spFade .8s ease .35s both}
+#splash .lg path{fill:#f3dccf;fill-rule:evenodd;transform-box:view-box}
+#splash .lo{transform-origin:52.8px 84.8px;animation:spOpen 1.1s ease-in-out 1.5s both}
+#splash .bk{stroke:#f3dccf;stroke-width:.5;stroke-linejoin:round;transform-origin:102.2px 34.4px;animation:spChirp 1.5s ease-in-out 1s both}
+#splash .nm{font-size:30px;font-weight:800;letter-spacing:.02em;line-height:1.1;animation:spUp .7s ease 1.1s both}
+#splash .nm b{color:#e0a96a}
+#splash .sub{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:#b5aa9d;animation:spUp .7s ease 1.4s both}
+#splash .hint{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));font-size:12px;color:#7d7368;animation:spUp .5s ease 1.7s both}
+@keyframes spPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes spOpen{0%,100%{transform:rotate(0)}40%,60%{transform:rotate(-15deg)}}
+@keyframes spChirp{0%,100%,45%{transform:rotate(0)}20%{transform:rotate(-34deg)}70%{transform:rotate(-26deg)}}@keyframes spFade{from{opacity:0}to{opacity:1}}
+@keyframes spUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes spOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important;animation-delay:0s!important}#splash{animation:spOut .3s ease 1.2s forwards!important}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:#1d1a17;color:#fff;padding:10px 16px;border-radius:12px;z-index:300;font-size:14px;box-shadow:0 4px 16px #0006;max-width:90%;text-align:center}
+a.btn{text-decoration:none;display:inline-block;text-align:center}
+.blkd{position:absolute;left:3px;right:3px;border-radius:9px;padding:4px 7px;overflow:hidden;font-size:12px;background:repeating-linear-gradient(45deg,#8883 0 6px,#8881 6px 12px);border:1px dashed var(--muted);color:var(--muted);cursor:pointer;z-index:1}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.kpi div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}.kpi b{display:block;font-size:17px}.kpi small{color:var(--muted);font-size:11px}
+@media(max-width:420px){.kpi div{padding:6px 2px}.kpi b{font-size:13px}.kpi small{font-size:10px}}
+.dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin:0 1px}
+</style>
+
+
+
+<div class="demo" id="demo"><b>ДЕМО ВХОДА КАК:</b>
+<button data-act="role" data-v="client">📱 Клиент</button><button data-act="role" data-v="master">💇 Мастер</button><button data-act="role" data-v="admin">🖥 Администратор</button><button data-act="role" data-v="owner">👑 Владелец</button>
+<button data-act="reset" style="margin-left:auto;background:#5b2a22">↺ Сброс</button></div>
+<div id="app"></div>
+
+<script>
+/* ===== утилиты ===== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rub=n=>Math.round(n).toLocaleString("ru-RU")+" ₽";
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const NOW=new Date(),TODAY=ymd(NOW),NOWMIN=NOW.getHours()*60+NOW.getMinutes();
+const addDays=(s,n)=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return ymd(d)};
+const tm=s=>+s.slice(0,2)*60+ +s.slice(3);
+const hm=m=>pad(Math.floor(m/60))+":"+pad(m%60);
+const DOW=["вс","пн","вт","ср","чт","пт","сб"],MONG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],MONN=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const dLong=s=>{const d=new Date(s+"T12:00:00");return DOW[d.getDay()]+", "+d.getDate()+" "+MONG[d.getMonth()]};
+const OPEN=10,CLOSE=20,ROW=44;
+const ST={new:"Ожидает",confirmed:"Подтверждена",done:"Оплачена",noshow:"Не пришёл",cancelled:"Отмена"};
+let seq=1000;const nid=()=>++seq;
+let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)%n};
+
+/* ===== справочники ===== */
+let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS,BLOCKS,WAIT,NOTIF;
+function seed(){
+  seq=1000;rs=20261028;
+  CFG={ntf:{confirm:1,remind:1,hours:2,from:"09:00"},payDay:5,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
+  USERS={admin:{login:"admin",pass:"admin123",name:"Администратор"},owner:{login:"owner",pass:"owner123",name:"Владелец"}};
+  MASTERS=[
+    {id:1,name:"Анна",role:"Стилист-колорист",percent:40,login:"anna",pass:"anna123",color:"#b8432f",rating:4.9,active:1},
+    {id:2,name:"Игорь",role:"Парикмахер",percent:40,login:"igor",pass:"igor123",color:"#2f66b3",rating:4.8,active:1},
+    {id:3,name:"Марина",role:"Парикмахер",percent:35,login:"marina",pass:"marina123",color:"#7a4fa3",rating:5.0,active:1}];
+  SERVICES=[
+    {id:1,cat:"Стрижки",name:"Стрижка женская",price:900,dur:60},{id:2,cat:"Стрижки",name:"Стрижка мужская",price:600,dur:30},
+    {id:3,cat:"Стрижки",name:"Стрижка детская",price:500,dur:30},{id:4,cat:"Стрижки",name:"Стрижка + укладка",price:1200,dur:60},
+    {id:5,cat:"Уход",name:"Стрижка + уход",price:1300,dur:60},{id:6,cat:"Окрашивание",name:"Окрашивание + стрижка + уход",price:3300,dur:180},
+    {id:7,cat:"Окрашивание",name:"Тонирование",price:1800,dur:90},{id:8,cat:"Борода",name:"Борода / оформление",price:300,dur:30}];
+  MATS=[
+    {id:1,name:"Краска 7/1 (пепельный блонд)",unit:"г",pack:60,packName:"тюбик",packPrice:280,min:120},
+    {id:2,name:"Краска 9/0 (светлый блонд)",unit:"г",pack:60,packName:"тюбик",packPrice:280,min:120},
+    {id:3,name:"Окислитель 6%",unit:"мл",pack:1000,packName:"флакон",packPrice:350,min:500},
+    {id:4,name:"Маска для волос",unit:"г",pack:500,packName:"банка",packPrice:900,min:150},
+    {id:5,name:"Шампунь профессиональный",unit:"мл",pack:1000,packName:"флакон",packPrice:600,min:300},
+    {id:6,name:"Перчатки",unit:"шт",pack:100,packName:"упаковка",packPrice:250,min:20}];
+  MATS.forEach(m=>m.cost=m.packPrice/m.pack);
+  NORMS={6:[[1,60],[3,90],[6,2]],7:[[2,30],[3,45],[6,2]],5:[[4,20],[5,10]],1:[[5,10]],4:[[5,10]]};
+  CLIENTS=[["Мария Иванова","79141000001","любит каре, аллергия на аммиак"],["Сергей Петров","79141000002",""],["Алексей Громов","79141000003","борода 3 мм"],["Ольга Смирнова","79141000004","окрашивание блонд, формула 7/1 + 6%"],["Дмитрий Орлов","79141000005",""],["Екатерина Волкова","79141000006","стрижка боб"],["Иван Козлов","79141000007","сын 7 лет — детская"],["Наталья Белова","79141000008","тонирование раз в 6 недель"],["Андрей Нестеров","79141000009",""],["Виктория Лис","79141000010",""],["Павел Морозов","79141000011","борода"]].map((c,i)=>({id:i+1,name:c[0],phone:c[1],note:c[2],bonus:0}));
+  {const fn=["Анна","Елена","Ирина","Светлана","Татьяна","Юлия","Алексей","Андрей","Максим","Роман","Денис","Артём","Кирилл","Мария","Оксана","Игорь"],ln=["Кузнецов","Соколов","Попов","Лебедев","Новиков","Морозов","Волков","Зайцев","Павлов","Семёнов","Фёдоров","Михайлов","Беляев","Тарасов","Белоусов","Комаров"];
+   for(let i=0;i<40;i++){const f=fn[(i*7)%fn.length],l=ln[(i*5+3)%ln.length],fem=/[ая]$/.test(f);CLIENTS.push({id:12+i,name:f+" "+l+(fem&&!/[ая]$/.test(l)?"а":""),phone:"791420"+String(10000+i*37).slice(-5),note:"",bonus:0})}}
+  B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];
+  const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
+    const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
+  const settle=(b,withUse=true)=>{const m=MASTERS.find(x=>x.id===b.master),total=b.price+b.extras.reduce((a,x)=>a+x.a,0);
+    const method=["card","cash","sbp"][rnd(3)];PAY.push({id:nid(),booking:b.id,date:b.date,amount:total,method,kind:"service",master:b.master,pct:m.percent});
+    if(rnd(4)===0)PAY.push({id:nid(),booking:b.id,date:b.date,amount:100,method:"cash",kind:"tip",master:b.master,pct:0});
+    b.paid={amount:total,method,fiscal:"№"+(1000+b.id)};
+    CLIENTS.find(c=>c.id===b.client).bonus+=Math.round(total*0.05);
+    if(withUse)(NORMS[b.service]||[]).forEach(([mid,q])=>{const k=0.85+rnd(40)/100;MOV.push({id:nid(),date:b.date,mat:mid,qty:-Math.round(q*k*(MATS.find(x=>x.id===mid).unit==="шт"?0+1/k:1)),type:"out",cost:MATS.find(x=>x.id===mid).cost,booking:b.id,master:b.master,note:""})})};
+  const wsv=[1,1,2,2,2,3,4,4,5,6,7,8],POOL=[1,2,3,4,5,6,7,8].concat(CLIENTS.filter(c=>c.id>=12).map(c=>c.id));
+  for(let d=-45;d<=5;d++){const date=addDays(TODAY,d);
+    if(d===0)continue;
+    for(const m of MASTERS){if(m.id===3&&!(d%3===0))continue;
+      let t=600+rnd(3)*30;const n=m.id===3?2:3+rnd(3);
+      for(let i=0;i<n;i++){const sid=m.id===1&&rnd(3)===0?[6,7][rnd(2)]:wsv[rnd(wsv.length)],sv=SERVICES.find(s=>s.id===sid);
+        if(t+sv.dur>1200)break;
+        const st=d<0?(rnd(20)===0?"noshow":rnd(20)===0?"cancelled":"done"):(rnd(2)?"confirmed":"new");
+        const b=addB(date,m.id,hm(t),sid,st,POOL[rnd(POOL.length)]);if(st==="done")settle(b,true);t+=sv.dur+rnd(3)*30}}}
+  [[9,-52,1],[10,-40,2],[11,-71,4]].forEach(([cid,dd,sid])=>{const b=addB(addDays(TODAY,dd),1+rnd(2),hm(600+60*rnd(5)),sid,"done",cid);settle(b,false)});
+  /* сегодня — вручную, чтобы журнал выглядел живым */
+  [[1,"10:00",1,"done",1],[1,"11:30",6,"confirmed",4],[1,"15:00",7,"new",8],[2,"10:30",2,"done",2],[2,"12:00",2,"new",5],[2,"13:00",4,"confirmed",6],[2,"16:00",8,"new",3],[2,"17:00",2,"new",7]]
+    .forEach(([mm,s,sid,st,cid])=>{const b=addB(TODAY,mm,s,sid,st,cid,{source:"phone"});if(st==="done")settle(b,true)});
+  B.find(b=>b.date===TODAY&&b.service===6).note="окрашивание, как в прошлый раз, 7/1";
+  BLOCKS.push({id:nid(),master:2,date:TODAY,from:"14:00",to:"15:00",title:"Обед"},{id:nid(),master:3,date:addDays(TODAY,1),from:"10:00",to:"20:00",title:"Выходной"});
+  WAIT.push({id:nid(),client:6,service:2,master:0,date:addDays(TODAY,1)});
+  CLIENTS.forEach(c=>{c.chan=c.id%5===1?"telegram":c.id%7===3?"sms":"whatsapp"});
+  B.filter(b=>b.date>=TODAY&&["new","confirmed"].includes(b.status)).forEach(b=>{b.created=addDays(TODAY,b.date>TODAY?-1:-2);scheduleNotifs(b,"seed")});
+  /* расходы (не материалы) */
+  const m0=TODAY.slice(0,8)+"01",pm=addDays(m0,-1).slice(0,8)+"01";
+  [[m0,25000,"rent","Аренда"],[pm,25000,"rent","Аренда"],[addDays(m0,3),3000,"ads","Листовки"],[addDays(pm,4),3000,"ads","Реклама"],[addDays(m0,2),4200,"utilities","Коммуналка"],[addDays(pm,3),4200,"utilities","Коммуналка"]]
+    .forEach(([date,amount,cat,note])=>EXP.push({id:nid(),date,amount,cat,note,master:0}));
+  EXP.push({id:nid(),date:addDays(pm,35>28?28:28),amount:8000,cat:"salary",note:"Выплата",master:1});
+  EXP.push({id:nid(),date:addDays(m0,2),amount:3000,cat:"salary",note:"Аванс",master:2});
+  /* склад: остатки считаются из движений */
+  const used={};MOV.filter(x=>x.type==="out").forEach(x=>used[x.mat]=(used[x.mat]||0)-x.qty);
+  const target={1:300,2:100,3:1800,4:380,5:650,6:40},recent={3:[2000,-8],4:[500,-3],5:[1000,-6]};
+  MATS.forEach(m=>{const r=recent[m.id];const open=Math.max(m.pack,(used[m.id]||0)+target[m.id]-(r?r[0]:0));
+    MOV.push({id:nid(),date:addDays(TODAY,-46),mat:m.id,qty:open,type:"in",cost:m.cost,note:"Начальный остаток"});
+    if(r)MOV.push({id:nid(),date:addDays(TODAY,r[1]),mat:m.id,qty:r[0],type:"in",cost:m.cost,note:"Поставка"})});
+}
+seed();
+const stockOf=id=>MOV.filter(x=>x.mat===id).reduce((a,x)=>a+x.qty,0);
+const matById=id=>MATS.find(m=>m.id===id),svById=id=>SERVICES.find(s=>s.id===id),mById=id=>MASTERS.find(m=>m.id===id),cById=id=>CLIENTS.find(c=>c.id===id);
+const total=b=>b.price+b.extras.reduce((a,x)=>a+x.a,0);
+const usageOf=bid=>MOV.filter(x=>x.booking===bid&&x.type==="out");
+const usageCost=bid=>usageOf(bid).reduce((a,x)=>a-x.qty*x.cost,0);
+const conflict=(date,mid,t,dur,ign)=>B.some(b=>b.id!==ign&&b.date===date&&b.master===mid&&b.status!=="cancelled"&&tm(b.start)<t+dur&&tm(b.start)+b.dur>t)||BLOCKS.some(x=>x.master===mid&&x.date===date&&tm(x.from)<t+dur&&tm(x.to)>t);
+function freeTimes(date,master,dur,ign,anyTime){const ms=(master?[master]:MASTERS.filter(m=>m.active).map(m=>m.id)),out=[];
+  for(let t=OPEN*60;t+dur<=CLOSE*60;t+=30){if(!anyTime&&date===TODAY&&t<NOWMIN+30)continue;if(!anyTime&&date<TODAY)continue;
+    const free=ms.filter(mid=>!conflict(date,mid,t,dur,ign));if(free.length)out.push({t:hm(t),free})}return out}
+function packsText(m,st){const full=Math.floor(st/m.pack),rest=Math.round((st-full*m.pack)*10)/10;
+  return (full?full+" "+m.packName+(full>1&&full<5?"а":full>=5?"ов":"")+(rest?" + ":""):"")+(rest||!full?rest+" "+m.unit+(full?" вскрытого":""):"")}
+/* уникальный номер клиента: 6 цифр, однозначно по id; по нему клиент входит в личный кабинет */
+const clientNo=id=>String(100000+((id*7919+13)%900000));
+const fmtNo=id=>{const n=clientNo(id);return n.slice(0,3)+" "+n.slice(3)};
+const findByNo=s=>{const d=String(s||"").replace(/\D/g,"");return d.length===6?CLIENTS.find(c=>clientNo(c.id)===d):null};
+/* ===== автоуведомления клиентам ===== */
+const chanName={whatsapp:"WhatsApp",telegram:"Telegram",sms:"SMS"};
+function nowStr(){const n=new Date();return ymd(n)+" "+hm(n.getHours()*60+n.getMinutes())}
+/* когда слать напоминание: в день записи за N часов; не раньше «from» (ночью не пишем); запись «день в день» — без напоминания */
+function remindAt(b){const n=CFG.ntf;if(!n.remind)return null;const cr=b.created||TODAY;if(b.date<=cr)return null;
+  const st=tm(b.start),win=tm(n.from);let at=st-n.hours*60,date=b.date;if(at<win)at=win;if(at>st-30){date=addDays(b.date,-1);at=20*60}
+  return date+" "+hm(at)}
+function scheduleNotifs(b,mode){NOTIF=NOTIF.filter(x=>!(x.b===b.id&&x.kind==="remind"&&!x.sent));const c=CLIENTS.find(z=>z.id===b.client),ch=c.chan||"whatsapp",n=CFG.ntf;
+  if(mode==="seed")NOTIF.push({id:nid(),b:b.id,kind:"confirm",at:b.created+" 12:00",sent:true,chan:ch});
+  else if(mode==="new"&&n.confirm)NOTIF.push({id:nid(),b:b.id,kind:"confirm",at:nowStr(),sent:true,chan:ch});
+  else if(mode==="move")NOTIF.push({id:nid(),b:b.id,kind:"move",at:nowStr(),sent:true,chan:ch});
+  const at=remindAt(b);if(at&&(mode==="seed"||at>nowStr()))NOTIF.push({id:nid(),b:b.id,kind:"remind",at,sent:at<=nowStr(),chan:ch})}
+function cancelNotifs(b,notice){NOTIF=NOTIF.filter(x=>!(x.b===b.id&&x.kind==="remind"&&!x.sent));if(notice)NOTIF.push({id:nid(),b:b.id,kind:"cancel",at:nowStr(),sent:true,chan:CLIENTS.find(z=>z.id===b.client).chan||"whatsapp"})}
+function processDue(){const t=nowStr();let ch=false;NOTIF.forEach(x=>{if(!x.sent&&x.at<=t){x.sent=true;ch=true}});return ch}
+/* ===== расчёт периода ===== */
+function period(p){const m0=TODAY.slice(0,8)+"01";if(p==="prev"){const e=addDays(m0,-1);return{from:e.slice(0,8)+"01",to:e,label:MONN[+e.slice(5,7)-1]+" "+e.slice(0,4)}}return{from:m0,to:TODAY,label:MONN[+TODAY.slice(5,7)-1]+" "+TODAY.slice(0,4)}}
+function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
+  const pay=PAY.filter(x=>inR(x.date)),rev=pay.reduce((a,x)=>a+x.amount,0);
+  const mats=MOV.filter(x=>x.type==="out"&&inR(x.date)).reduce((a,x)=>a-x.qty*x.cost,0)+MOV.filter(x=>x.type==="inv"&&inR(x.date)&&x.qty<0).reduce((a,x)=>a-x.qty*x.cost,0);
+  const bought=MOV.filter(x=>x.type==="in"&&inR(x.date)&&x.note!=="Начальный остаток").reduce((a,x)=>a+x.qty*x.cost,0);
+  const other=EXP.filter(e=>inR(e.date)&&e.cat!=="salary").reduce((a,e)=>a+e.amount,0);
+  const pm=MASTERS.map(m=>{const mp=pay.filter(x=>x.master===m.id),sv=mp.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount,0),tips=mp.filter(x=>x.kind==="tip").reduce((a,x)=>a+x.amount,0);
+    const pct=Math.round(mp.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount*x.pct,0)/100),paid=EXP.filter(e=>e.cat==="salary"&&e.master===m.id&&inR(e.date)).reduce((a,e)=>a+e.amount,0);
+    const visits=new Set(mp.filter(x=>x.kind==="service").map(x=>x.booking)).size,mc=MOV.filter(x=>x.type==="out"&&inR(x.date)&&x.master===m.id).reduce((a,x)=>a-x.qty*x.cost,0);
+    const [y,mo]=to.split("-").map(Number),due=`${mo===12?y+1:y}-${pad(mo===12?1:mo+1)}-${pad(CFG.payDay)}`,sal=pct+tips,bal=sal-paid;
+    return{m,visits,sv,pct,tips,sal,paid,bal,mats:mc,due,over:bal>0&&TODAY>due?Math.round((new Date(TODAY)-new Date(due))/864e5):0}});
+  const accrued=pm.reduce((a,x)=>a+x.sal,0);
+  const byDay={};pay.forEach(x=>byDay[x.date]=(byDay[x.date]||0)+x.amount);
+  const bySvc={};pay.filter(x=>x.kind==="service").forEach(x=>{const b=B.find(z=>z.id===x.booking);if(!b)return;const n=svById(b.service).name;bySvc[n]=bySvc[n]||{n:0,s:0};bySvc[n].n++;bySvc[n].s+=x.amount});
+  return{from,to,pay,rev,mats,bought,other,pm,accrued,profit:rev-mats-other-accrued,byDay,bySvc,visits:new Set(pay.filter(x=>x.kind==="service").map(x=>x.booking)).size}}
+
+/* ===== состояние ===== */
+const S={hist:0,mym:"",role:"client",sess:{},tab:{client:"book",master:"day",admin:"jr",owner:"sum"},date:TODAY,period:"cur",w:{step:1},open:0,q:"",me:0};
+const MEKEY="salon8_me";const remember=c=>{try{localStorage.setItem(MEKEY,clientNo(c.id))}catch(e){}};const forget=()=>{try{localStorage.removeItem(MEKEY)}catch(e){}};
+try{const k=localStorage.getItem(MEKEY);if(k)S.me=(CLIENTS.find(c=>clientNo(c.id)===k)||{}).id||0}catch(e){}
+const TABS={admin:[["jr","📅 Журнал"],["cl","👥 Клиенты"],["cash","💰 Касса"],["st","🧴 Склад"],["msg","✉ Сообщения"]],owner:[["sum","📊 Сводка"],["jr","📅 Журнал"],["pay","💵 ЗП мастеров"],["st","🧴 Склад"],["msg","✉ Сообщения"],["set","⚙ Настройки"],["acc","🔑 Доступы"]]};
+const isOwner=()=>S.role==="owner";
+function modal(html){const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);return m}
+function ask(text,yes){const m=modal(`<h2 style="margin-top:0">${esc(text)}</h2><div class="row"><button class="btn alt" data-act="close">Нет</button><button class="btn" id="yes">Да</button></div>`);m.querySelector("#yes").onclick=()=>{m.remove();yes()}}
+const closeModal=()=>document.querySelectorAll(".ov").forEach(x=>x.remove());
+const digits=s=>String(s||"").replace(/\D/g,"").replace(/^[78]/,"");
+const tag=(st)=>`<span class="tag ${st}">${ST[st]}</span>`;
+const kv=(a,b)=>`<div class="row"><span class="muted">${a}</span><b>${b}</b></div>`;
+
+/* ===== общий каркас ===== */
+function render(){
+  document.querySelectorAll("#demo [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.role));
+  let h;
+  if(S.role==="client")h=vClient();else if(!S.sess[S.role])h=vLogin(S.role);else h=vStaff();
+  const y=window.scrollY,tb=document.querySelector(".tabs"),ts=tb?tb.scrollLeft:0,same=S._last===S.role+"|"+S.tab[S.role];
+  $("#app").innerHTML=h;S._last=S.role+"|"+S.tab[S.role];after();
+  const nt=document.querySelector(".tabs");if(nt){const on=nt.querySelector(".on");nt.scrollLeft=ts;if(on){const l=on.offsetLeft,r=l+on.offsetWidth;if(l<nt.scrollLeft||r>nt.scrollLeft+nt.clientWidth)nt.scrollLeft=l-(nt.clientWidth-on.offsetWidth)/2}}
+  if(same)window.scrollTo(0,y);
+}
+function after(){const j=$(".jwrap");if(j&&S.role!=="client"){const n=(TODAY===S.date?NOWMIN:600)-OPEN*60-60;j.scrollTop=Math.max(0,n/30*ROW-20)}}
+function vLogin(role){
+  const L={master:["Вход для сотрудников","Каждый мастер видит только свои записи","anna","anna123","Анна · igor / igor123 — Игорь · marina / marina123 — Марина"],admin:["Рабочее место администратора","Журнал всех мастеров, клиенты, касса, склад","admin","admin123",""],owner:["Кабинет владельца","Всё: выручка, зарплаты, склад, доступы","owner","owner123",""]}[role];
+  return `<div style="max-width:420px;margin:30px auto"><h1>${L[0]}</h1><div class="muted" style="margin-bottom:10px">${L[1]}</div>
+  <div class="card"><label class="l">Логин</label><input id="lg" autocomplete="username"><label class="l">Пароль</label><input id="pw" type="password" autocomplete="current-password">
+  <div id="lerr" class="neg"></div><button class="btn full" data-act="login">Войти</button></div>
+  <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
+function vStaff(){
+  const r=S.role,t=S.tab[r];let body;
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,cal:vCashCal,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,set:vSettings,msg:vOutbox}[t]();
+  const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
+  return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
+  ${r==="master"?"":`<div class="tabs">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div>`}${body}`}
+
+/* ===== журнал (как у YCLIENTS: колонки сотрудников × время) ===== */
+function dateBar(extra=""){return `<div class="row wrap" style="margin-bottom:8px"><div class="row gap"><button class="btn alt s" data-act="dshift" data-n="-1">‹</button><button class="btn alt" data-act="cal">📅 ${S.date===TODAY?"Сегодня, ":""}${dLong(S.date)}</button><button class="btn alt s" data-act="dshift" data-n="1">›</button>${S.date!==TODAY?`<button class="btn alt s" data-act="dtoday">Сегодня</button>`:""}</div>${extra}</div>`}
+function blk(b){const top=(tm(b.start)-OPEN*60)/30*ROW,h=Math.max(b.dur/30*ROW-2,22),c=cById(b.client),sv=svById(b.service);
+  return `<div class="bk ${b.status}" data-act="bk" data-id="${b.id}" style="top:${top}px;height:${h}px"><b>${b.rem?"🔔 ":""}${b.start} ${esc(c.name)}</b>${h>40?esc(sv.name):""}${h>62?`<br>${rub(total(b))}${b.paid?" ✓":""}${usageOf(b.id).length?" 🧴":""}`:""}</div>`}
+function vJournal(){
+  const ms=MASTERS.filter(m=>m.active),rows=(CLOSE-OPEN)*2,bs=B.filter(b=>b.date===S.date&&b.status!=="cancelled");
+  const times=Array.from({length:CLOSE-OPEN},(_,i)=>`<span style="top:${i*2*ROW}px">${pad(OPEN+i)}:00</span>`).join("");
+  const nowTop=(NOWMIN-OPEN*60)/30*ROW,showNow=S.date===TODAY&&NOWMIN>=OPEN*60&&NOWMIN<=CLOSE*60;
+  return `${todayCard()}${dateBar(`<div class="row gap"><button class="btn alt" data-act="blknew" title="Закрыть время">🔒</button><button class="btn alt" data-act="wait">⏳ ${WAIT.length}</button><button class="btn" data-act="new">＋ Запись</button></div>`)}
+  <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span></div>
+  <div class="jwrap"><div class="jr" style="--n:${ms.length};--rows:${rows};--row:${ROW}px">
+  <div class="jh jcorner"></div>${ms.map(m=>{const mb=bs.filter(b=>b.master===m.id),busy=mb.reduce((a,b)=>a+b.dur,0);return `<div class="jh"><span class="av" style="background:${m.color}">${m.name[0]}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small><small>${mb.length} зап. · занято ${Math.round(busy/((CLOSE-OPEN)*60)*100)}%</small></div>`}).join("")}
+  <div class="jt">${times}</div>${ms.map(m=>`<div class="jc" data-act="slot" data-m="${m.id}">${BLOCKS.filter(x=>x.master===m.id&&x.date===S.date).map(blkd).join("")}${bs.filter(b=>b.master===m.id).map(blk).join("")}${showNow?`<div class="now" style="top:${nowTop}px"></div>`:""}</div>`).join("")}
+  </div></div>`}
+
+/* ===== карточка записи ===== */
+function openSheet(id){
+  const b=B.find(x=>x.id===id);if(!b)return;closeModal();
+  const c=cById(b.client),sv=svById(b.service),m=mById(b.master),open=["new","confirmed"].includes(b.status),staff=S.role!=="master",ow=isOwner();
+  const us=usageOf(b.id),uc=usageCost(b.id),norm=NORMS[b.service]||[];
+  const sal=b.paid?Math.round(b.paid.amount*m.percent/100):0;
+  modal(`<div class="row"><h2 style="margin:0">${b.start}–${hm(tm(b.start)+b.dur)} · ${dLong(b.date)}</h2>${tag(b.status)}</div>
+  <div class="card" style="margin-top:10px"><b>${esc(c.name)}</b>${staff?` · <a href="tel:+${c.phone}">+${c.phone}</a> · № ${fmtNo(c.id)}`:""}<div class="muted">${esc(sv.name)} · мастер ${esc(m.name)}</div>${c.note?`<div class="muted">📝 ${esc(c.note)}</div>`:""}${b.note?`<div class="muted">💬 ${esc(b.note)}</div>`:""}${staff&&noshows(c.id)?`<div class="sm" style="color:var(--bad);margin-top:4px">⚠ Не приходил(а) ${noshows(c.id)} раз(а)</div>`:""}</div>
+  ${staff?`<div class="card">${kv("По прайсу",rub(b.price))}${b.extras.map((x,i)=>`<div class="row sm"><span>${x.a>0?"＋":"−"} ${esc(x.t)}</span><span>${rub(Math.abs(x.a))} ${open?`<a href="#" data-act="xdel" data-id="${b.id}" data-i="${i}">✕</a>`:""}</span></div>`).join("")}${kv("Итого",rub(total(b)))}</div>`:""}
+  <div class="card"><div class="row"><b>🧴 Расходные материалы</b><button class="btn alt s" data-act="mats" data-id="${b.id}">${us.length?"Изменить":"＋ Списать"}</button></div>
+  ${us.length?us.map(x=>{const mt=matById(x.mat);return `<div class="row sm"><span>${esc(mt.name)}</span><span>${-x.qty} ${mt.unit}${ow?" · "+rub(-x.qty*x.cost):""}</span></div>`}).join(""):`<div class="muted">Ещё не списано.${norm.length?` Норма: ${norm.map(([i,q])=>matById(i).name.split(" (")[0]+" "+q+" "+matById(i).unit).join(", ")}.`:""}</div>`}
+  ${ow&&us.length?`<div class="muted sm" style="margin-top:4px">Себестоимость материалов: ${rub(uc)}</div>`:""}</div>
+  ${b.paid&&staff?`<button class="btn blue full" data-act="rebook" data-id="${b.id}" style="margin-bottom:8px">↻ Записать снова</button>`:""}${b.paid&&staff?`<div class="card">${kv("Оплачено",rub(b.paid.amount)+" · "+{card:"карта",cash:"наличные",sbp:"СБП"}[b.paid.method])}${kv("Чек",b.paid.fiscal+" (демо)")}${ow?kv("Маржа визита",rub(b.paid.amount-uc-sal)+" <span class='muted sm'>(выручка − материалы − ЗП мастера)</span>"):""}</div>`:""}
+  ${staff&&open?`<div class="row wrap gap"><button class="btn ok" data-act="payb" data-id="${b.id}">Оплатить</button><button class="btn blue" data-act="extra" data-id="${b.id}">＋ Доплата</button><button class="btn alt" data-act="editb" data-id="${b.id}">Перенести</button><button class="btn alt" data-act="remind" data-id="${b.id}">🔔 Напомнить${b.rem?" ✓":""}</button></div>
+  <div class="row wrap gap" style="margin-top:8px"><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="noshow">Не пришёл</button><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="cancelled">Отменить запись</button><button class="btn alt s" data-act="close">Закрыть</button></div>`:`<button class="btn alt full" data-act="close" style="margin-top:6px">Закрыть</button>`}`);
+}
+const refresh=()=>{render()};
+/* оплата + чек */
+function payModal(id){
+  const b=B.find(x=>x.id===id),sv=svById(b.service),norm=NORMS[b.service]||[],hasUse=usageOf(b.id).length>0;closeModal();
+  const cl0=cById(b.client),maxB=Math.min(cl0.bonus,Math.floor(total(b)*0.5));
+  const items=[{n:sv.name,p:b.price},...b.extras.map(x=>({n:x.t,p:x.a}))];
+  const m=modal(`<h2 style="margin-top:0">Оплата</h2><div class="muted">${esc(cById(b.client).name)}</div>
+  <div class="card" style="margin-top:8px"><b>Чек: позиции для кассы</b>${items.map(i=>`<div class="row sm"><span>${esc(i.n)} × 1</span><span>${rub(i.p)}</span></div>`).join("")}<div class="muted sm" style="margin-top:4px">Именно эти названия уйдут в кассу и попадут в чек клиента.</div></div>
+  ${cl0.bonus>0?`<div class="card" style="margin-top:8px"><div class="row"><span>Бонусы клиента: <b>${cl0.bonus}</b> (1 балл = 1 ₽, до 50% чека)</span></div><label class="l">Списать баллов</label><input id="pbn" type="number" min="0" max="${maxB}" value="0"></div>`:""}
+  <label class="l">К оплате деньгами, ₽</label><input id="pm" type="number" value="${total(b)}"><label class="l">Способ оплаты</label><select id="pt"><option value="card">Карта (терминал)</option><option value="cash">Наличные</option><option value="sbp">СБП</option></select>
+  <label class="l">Чаевые мастеру</label><input id="ptip" type="number" value="0">
+  ${norm.length&&!hasUse?`<label class="row" style="justify-content:flex-start;gap:8px;margin:4px 0 10px"><input type="checkbox" id="pnorm" checked style="width:auto;margin:0"> <span>Списать расходники по норме (${norm.length} поз.)</span></label>`:""}
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="pok">Принять и пробить чек</button></div>`);
+  const bn=m.querySelector("#pbn");if(bn)bn.oninput=()=>{const v=Math.max(0,Math.min(maxB,Math.round(+bn.value||0)));m.querySelector("#pm").value=total(b)-v};
+  m.querySelector("#pok").onclick=()=>{const used=bn?Math.max(0,Math.min(maxB,Math.round(+bn.value||0))):0,amount=Math.max(0,Math.round(+m.querySelector("#pm").value)),method=m.querySelector("#pt").value,tip=Math.round(+m.querySelector("#ptip").value||0),mm=mById(b.master);
+    b.status="done";b.paid={amount,method,bonusUsed:used,fiscal:"№"+(5000+b.id)};PAY.push({id:nid(),booking:b.id,date:b.date,amount,method,kind:"service",master:b.master,pct:mm.percent});
+    if(tip)PAY.push({id:nid(),booking:b.id,date:b.date,amount:tip,method,kind:"tip",master:b.master,pct:0});
+    const cl=cById(b.client);cl.bonus+=Math.round(amount*0.05)-used;
+    const nm=m.querySelector("#pnorm");if(nm&&nm.checked)norm.forEach(([mid,q])=>MOV.push({id:nid(),date:b.date,mat:mid,qty:-q,type:"out",cost:matById(mid).cost,booking:b.id,master:b.master,note:"по норме"}));
+    m.remove();receiptModal(b,items,amount,method,used);render()};
+}
+function receiptModal(b,items,amount,method,used=0){
+  modal(`<div class="ok-ring">✓</div><h2 style="text-align:center;margin:0">Чек пробит (демо)</h2><div class="muted" style="text-align:center;margin-bottom:10px">Так программа передаст данные кассе</div>
+  <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#fffdf6;color:#222"><div style="text-align:center"><b>КАССОВЫЙ ЧЕК · ПРИХОД</b><br>${esc(CFG.name)} · ИП …<br>${b.date.split("-").reverse().join(".")} ${(d=>hm(d.getHours()*60+d.getMinutes()))(new Date())}</div><hr style="border:0;border-top:1px dashed #999">
+  ${items.map(i=>`<div class="row"><span>${esc(i.n)}</span><span>${i.p.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">1 × ${i.p.toFixed(2)} · услуга · без НДС</div>`).join("")}
+  <hr style="border:0;border-top:1px dashed #999">${used?`<div class="row"><span>Оплачено баллами</span><span>−${used.toFixed(2)}</span></div>`:""}<div class="row"><b>ИТОГО К ОПЛАТЕ</b><b>${amount.toFixed(2)}</b></div><div class="row"><span>${{card:"Безналичными",cash:"Наличными",sbp:"СБП"}[method]}</span><span>${amount.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">ФД №${b.paid.fiscal.slice(1)} · ФП (демо) · чек отправлен клиенту</div></div>
+  <button class="btn full" data-act="close">Готово</button>`)}
+/* доплата */
+function extraModal(id){closeModal();const P=[["Длинные волосы",300],["Доп. краска",500],["Уход / маска",400],["Сложная укладка",300],["Скидка",-100]];
+  const m=modal(`<h2 style="margin-top:0">Доплата к визиту</h2><div class="muted">Если сумма отличается от прайса. Минус — скидка.</div><div class="chips" style="margin-top:8px">${P.map((p,i)=>`<div class="chip" data-i="${i}">${p[0]} ${p[1]>0?"+":""}${p[1]}</div>`).join("")}</div>
+  <label class="l">Что именно</label><input id="xt"><label class="l">Сумма</label><input id="xa" type="number"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="xok">Добавить</button></div>`);
+  m.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const p=P[+c.dataset.i];m.querySelector("#xt").value=p[0];m.querySelector("#xa").value=p[1]});
+  m.querySelector("#xok").onclick=()=>{const t=m.querySelector("#xt").value.trim(),a=Math.round(+m.querySelector("#xa").value);if(!t||!a)return;B.find(x=>x.id===id).extras.push({t,a});render();openSheet(id)}}
+/* запись / перенос */
+function bookModal(o){
+  const edit=o.id?B.find(b=>b.id===o.id):null,st={time:edit?edit.start:o.time||null};
+  const m=modal(`<h2 style="margin-top:0">${edit?"Перенести / изменить":"Новая запись"}</h2>
+  ${edit?`<div class="muted" style="margin-bottom:6px">${esc(cById(edit.client).name)} · ${esc(svById(edit.service).name)}</div>`:`
+  <label class="l">Телефон</label><input id="bp" type="tel" placeholder="+7 914 …"><div id="found" class="muted sm" style="margin:-4px 0 6px"></div>
+  <label class="l">Имя</label><input id="bn" placeholder="Имя клиента">
+  <label class="l">Услуга</label><select id="bs">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}" ${o.service===s.id?"selected":""}>${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
+  <label class="l">Мастер</label><select id="bm">${edit?"":'<option value="0">Любой свободный</option>'}${MASTERS.filter(x=>x.active).map(x=>`<option value="${x.id}" ${(edit?edit.master:o.master)===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
+  <label class="l">Дата</label><input id="bd" type="date" value="${edit?edit.date:o.date||S.date}"><label class="l">Время</label><div class="chips" id="bt"></div>
+  <label class="l">Цена, ₽ ${edit?"":"(если не по прайсу)"}</label><input id="bpr" type="number" value="${edit?edit.price:""}" placeholder="по прайсу"><label class="l">Заметка</label><input id="bnote" value="${edit?esc(edit.note):""}">
+  <div id="berr" class="neg"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="bok">${edit?"Сохранить":"Записать"}</button></div>`);
+  const q=s=>m.querySelector(s);
+  const times=()=>{const sid=edit?edit.service:+q("#bs").value,dur=svById(sid).dur,list=freeTimes(q("#bd").value,+q("#bm").value,dur,edit&&edit.id,true);
+    if(!list.some(x=>x.t===st.time))st.time=null;q("#bt").innerHTML=list.map(x=>`<div class="chip ${x.t===st.time?"on":""}" data-t="${x.t}">${x.t}</div>`).join("")||"<span class='muted'>Окон нет</span>"};
+  ["#bs","#bm","#bd"].forEach(s=>q(s)&&(q(s).onchange=times));q("#bt").onclick=e=>{const c=e.target.closest("[data-t]");if(c){st.time=c.dataset.t;times()}};
+  if(!edit)q("#bp").oninput=()=>{const d=digits(q("#bp").value),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone)===d.slice(-10));q("#found").textContent=c?`Клиент найден: ${c.name}, визитов ${B.filter(b=>b.client===c.id&&b.status==="done").length}`:"";if(c)q("#bn").value=c.name};
+  q("#bok").onclick=()=>{const err=t=>q("#berr").textContent=t;if(!st.time)return err("Выберите время");
+    const date=q("#bd").value,pr=q("#bpr").value;
+    if(edit){const mid=+q("#bm").value;const mv=edit.date!==date||edit.start!==st.time;edit.master=mid;edit.date=date;edit.start=st.time;if(mv){edit.created=TODAY;scheduleNotifs(edit,"move");toast("✉ Клиенту ушло уведомление о переносе")}if(pr!=="")edit.price=Math.round(+pr);edit.note=q("#bnote").value;m.remove();render();openSheet(edit.id);return}
+    const ph=digits(q("#bp").value),nm=q("#bn").value.trim();let c=ph.length>=10&&CLIENTS.find(x=>digits(x.phone)===ph.slice(-10));
+    if(!c){if(ph.length<10||nm.length<2)return err("Нужны имя и телефон");c={id:nid(),name:nm,phone:"7"+ph.slice(-10),note:"",bonus:0};CLIENTS.push(c)}
+    const sv=svById(+q("#bs").value),list=freeTimes(date,+q("#bm").value,sv.dur,0,true),slot=list.find(x=>x.t===st.time),mid=+q("#bm").value||slot.free[0];
+    const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:"phone"};B.push(nb);scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
+    if(o.waitId)WAIT=WAIT.filter(w=>w.id!==o.waitId);S.date=date;m.remove();render()};
+  if(o.client&&!edit){const c=cById(o.client);q("#bp").value="+"+c.phone;q("#bp").oninput()}
+  times();
+}
+/* календарь */
+function calModal(){let ym=S.date.slice(0,7);const m=modal(`<div id="cal"></div>`);
+  const draw=()=>{const [Y,M]=ym.split("-").map(Number),first=(new Date(Y,M-1,1).getDay()+6)%7,n=new Date(Y,M,0).getDate();
+    let cells=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(x=>`<i style="text-align:center;font-style:normal;font-size:12px;color:var(--muted)">${x}</i>`).join("")+"<span></span>".repeat(first);
+    for(let d=1;d<=n;d++){const ds=`${ym}-${pad(d)}`,c=B.filter(b=>b.date===ds&&b.status!=="cancelled").length;
+      cells+=`<div data-d="${ds}" style="text-align:center;padding:9px 0;border-radius:10px;cursor:pointer;border:1px solid ${ds===TODAY?"var(--blue)":"transparent"};background:${ds===S.date?"var(--accent)":c?(ds<TODAY?"#1f8a5b24":"#b8432f24"):"none"};color:${ds===S.date?"#fff":"inherit"};font-weight:${c?700:400}">${d}${c?`<div style="font-size:10px;line-height:1">${c}</div>`:""}</div>`}
+    m.querySelector("#cal").innerHTML=`<div class="row" style="margin-bottom:8px"><button class="btn alt s" data-m="-1">←</button><b>${MONN[M-1]} ${Y}</b><button class="btn alt s" data-m="1">→</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div><div class="muted sm" style="margin-top:8px">Подсвечены дни с записями, цифра — сколько.</div>`;
+    m.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{const d=new Date(Y,M-1+ +b.dataset.m,1);ym=d.getFullYear()+"-"+pad(d.getMonth()+1);draw()});
+    m.querySelectorAll("[data-d]").forEach(c=>c.onclick=()=>{S.date=c.dataset.d;m.remove();render()})};draw()}
+/* ===== расход материалов по записи (частичный расход) ===== */
+function matsModal(id){
+  const b=B.find(x=>x.id===id),norm=NORMS[b.service]||[];closeModal();
+  let rows=usageOf(id).map(x=>({mat:x.mat,qty:-x.qty}));
+  const m=modal(`<h2 style="margin-top:0">🧴 Расход материалов</h2><div class="muted">${esc(cById(b.client).name)} · ${esc(svById(b.service).name)}. Вводите, сколько реально ушло — хоть 7 грамм из тюбика.</div><div id="rows" style="margin-top:8px"></div>
+  <div class="row wrap gap" style="margin-bottom:8px"><button class="btn alt s" id="addr">＋ Материал</button>${norm.length?`<button class="btn alt s" id="nrm">Подставить норму</button>`:""}</div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sv">Сохранить</button></div>`);
+  const draw=()=>{m.querySelector("#rows").innerHTML=rows.map((r,i)=>{const mt=matById(r.mat),st=stockOf(r.mat),over=r.qty>st+(usageOf(id).find(x=>x.mat===r.mat)?-usageOf(id).find(x=>x.mat===r.mat).qty:0);
+    const nq=(norm.find(n=>n[0]===r.mat)||[])[1];
+    return `<div class="card" style="padding:10px"><select data-i="${i}" data-f="mat">${MATS.map(x=>`<option value="${x.id}" ${x.id===r.mat?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
+    <div class="row gap"><button class="btn alt s" data-i="${i}" data-d="-5">−5</button><input type="number" data-i="${i}" data-f="qty" value="${r.qty}" style="margin:0;text-align:center"><button class="btn alt s" data-i="${i}" data-d="5">+5</button><b>${mt.unit}</b><button class="btn alt s" data-i="${i}" data-d="x">✕</button></div>
+    <div class="muted sm" style="margin-top:4px">${nq!=null?`норма ${nq} ${mt.unit}${r.qty>nq*1.2?` · <span class="neg">перерасход ${Math.round((r.qty/nq-1)*100)}%</span>`:""} · `:""}на складе ${packsText(mt,st)}${over?` · <span class="neg">не хватает на складе</span>`:""}</div></div>`}).join("")||"<div class='muted'>Пока ничего не списано.</div>";
+    m.querySelectorAll("[data-f]").forEach(el=>el.onchange=()=>{const r=rows[+el.dataset.i];if(el.dataset.f==="mat")r.mat=+el.value;else r.qty=Math.max(0,+el.value||0);draw()});
+    m.querySelectorAll("[data-d]").forEach(el=>el.onclick=()=>{const i=+el.dataset.i;if(el.dataset.d==="x")rows.splice(i,1);else rows[i].qty=Math.max(0,rows[i].qty+ +el.dataset.d);draw()})};
+  m.querySelector("#addr").onclick=()=>{rows.push({mat:(MATS.find(x=>!rows.some(r=>r.mat===x.id))||MATS[0]).id,qty:10});draw()};
+  const nb=m.querySelector("#nrm");if(nb)nb.onclick=()=>{rows=norm.map(([mat,qty])=>({mat,qty}));draw()};
+  m.querySelector("#sv").onclick=()=>{for(let i=MOV.length-1;i>=0;i--)if(MOV[i].booking===id&&MOV[i].type==="out")MOV.splice(i,1);
+    rows.filter(r=>r.qty>0).forEach(r=>MOV.push({id:nid(),date:b.date,mat:r.mat,qty:-r.qty,type:"out",cost:matById(r.mat).cost,booking:id,master:b.master,note:""}));m.remove();render();openSheet(id)};
+  draw();
+}
+/* ===== мастер ===== */
+function mCal(me){const ym=S.mym||S.date.slice(0,7),[Y,M]=ym.split("-").map(Number),first=(new Date(Y,M-1,1).getDay()+6)%7,n=new Date(Y,M,0).getDate();
+  let cells=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(x=>`<i style="text-align:center;font-style:normal;font-size:12px;color:var(--muted)">${x}</i>`).join("")+"<span></span>".repeat(first);
+  for(let d=1;d<=n;d++){const ds=`${ym}-${pad(d)}`,c=B.filter(b=>b.master===me.id&&b.date===ds&&b.status!=="cancelled").length,sel=ds===S.date;
+    cells+=`<div data-act="mday" data-d="${ds}" style="text-align:center;padding:7px 0;border-radius:10px;cursor:pointer;border:1px solid ${ds===TODAY?"var(--blue)":c?(ds<TODAY?"#1f8a5b66":"#b8432f66"):"transparent"};background:${sel?"var(--accent)":c?(ds<TODAY?"#1f8a5b24":"#b8432f24"):"none"};color:${sel?"#fff":"inherit"};font-weight:${c?700:400}">${d}<div style="font-size:10px;line-height:1;min-height:10px">${c||""}</div></div>`}
+  return `<div class="card"><div class="row" style="margin-bottom:8px"><button class="btn alt s" data-act="mmon" data-n="-1">←</button><b>${MONN[M-1]} ${Y}</b><div class="row gap"><button class="btn alt s" data-act="mtoday">Сегодня</button><button class="btn alt s" data-act="mmon" data-n="1">→</button></div></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div><div class="muted sm" style="margin-top:6px">Подсвечены дни, где у вас есть записи (цифра — сколько). Красные впереди, зелёные прошедшие. Нажмите на день — ниже кто и на какое время.</div></div>`}
+function vMaster(){
+  const me=mById(S.sess.master),mine=B.filter(b=>b.master===me.id&&b.date===S.date&&b.status!=="cancelled").sort((a,b)=>a.start<b.start?-1:1);
+  return `<div class="muted" style="margin-bottom:8px">${esc(me.role)} · вы видите только свои записи</div>
+  ${mCal(me)}
+  <div class="row gap" style="justify-content:flex-start;margin-bottom:8px"><button class="btn alt s" data-act="blknew">🔒 Закрыть время (обед, выходной)</button></div>
+  ${BLOCKS.filter(x=>x.master===me.id&&x.date===S.date).map(x=>`<div class="card row" style="border-style:dashed"><div>🔒 <b>${esc(x.title)}</b> <span class="muted">${x.from}–${x.to}</span></div><button class="btn alt s" data-act="blkdel" data-id="${x.id}">Снять</button></div>`).join("")}
+  <h2>${S.date===TODAY?"Сегодня":dLong(S.date)}: ${mine.length?mine.length+" "+(mine.length<5?"записи":"записей"):"записей нет"}</h2>
+  ${mine.map(b=>`<div class="card" data-act="bk" data-id="${b.id}" style="cursor:pointer"><div class="row"><b style="font-size:19px">${b.start}–${hm(tm(b.start)+b.dur)}</b>${tag(b.status)}</div><div><b>${esc(cById(b.client).name)}</b> · ${esc(svById(b.service).name)}</div>${b.note||cById(b.client).note?`<div class="muted">📝 ${esc(b.note||cById(b.client).note)}</div>`:""}<div class="muted sm" style="margin-top:4px">${usageOf(b.id).length?"🧴 материалы списаны":"нажмите — списать расходники"}</div></div>`).join("")||`<div class="card muted" style="text-align:center;padding:26px">На этот день у вас нет записей 🎉</div>`}`}
+/* ===== клиенты (администратор) ===== */
+const lastDone=cid=>B.filter(b=>b.client===cid&&b.status==="done").map(b=>b.date).sort().pop()||"";
+const noshows=cid=>B.filter(b=>b.client===cid&&b.status==="noshow").length;
+const daysAgo=d=>Math.round((new Date(TODAY+"T12:00:00")-new Date(d+"T12:00:00"))/864e5);
+const upcoming=cid=>B.some(b=>b.client===cid&&b.date>=TODAY&&["new","confirmed"].includes(b.status));
+const lapsedList=()=>CLIENTS.filter(c=>{const l=lastDone(c.id);return l&&daysAgo(l)>=30&&!upcoming(c.id)}).sort((a,b)=>lastDone(a.id)<lastDone(b.id)?-1:1);
+function vClients(){const lp=lapsedList().length;return `<div class="chips"><div class="chip ${S.cf!=="lapsed"?"on":""}" data-act="cf" data-f="all">Все (${CLIENTS.length})</div><div class="chip ${S.cf==="lapsed"?"on":""}" data-act="cf" data-f="lapsed">Давно не были (${lp})</div></div>${S.cf==="lapsed"?`<div class="note" style="margin-top:0">Клиенты, у которых последний визит был 30+ дней назад и нет будущей записи. Нажмите «Написать» — текст уже готов.</div>`:""}<input id="cq" data-in="cq" placeholder="Поиск: телефон, имя, «блонд», «борода»…" value="${esc(S.q)}"><div id="cl">${clList()}</div>`}
+function clList(){const q=S.q.toLowerCase().trim(),pd=digits(S.q);
+  let list=CLIENTS.map(c=>{const bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date<b.date?1:-1);return{c,bs}});
+  if(S.cf==="lapsed"){const ids=new Set(lapsedList().map(c=>c.id));list=list.filter(x=>ids.has(x.c.id)).sort((a,b)=>lastDone(a.c.id)<lastDone(b.c.id)?-1:1)}
+  if(q)list=list.filter(({c,bs})=>q.split(/\s+/).every(t=>(c.name+" "+c.note+" "+bs.map(b=>svById(b.service).name+" "+b.note).join(" ")).toLowerCase().includes(t)||(pd.length>=3&&(digits(c.phone).includes(pd)||clientNo(c.id).includes(S.q.replace(/\D/g,""))))));
+  return list.map(({c,bs})=>{const done=bs.filter(b=>b.status==="done"),op=S.open===c.id;
+    return `<div class="card"><div class="row" data-act="clo" data-id="${c.id}" style="cursor:pointer"><div><b>${esc(c.name)}</b><div class="muted">№ ${fmtNo(c.id)} · +${c.phone} · визитов ${done.length} · бонусов ${c.bonus}${noshows(c.id)?` · <span style="color:var(--bad)">⚠ неявок ${noshows(c.id)}</span>`:""}${S.cf==="lapsed"?` · <b>не был(а) ${daysAgo(lastDone(c.id))} дн.</b>`:""}</div></div><span>${op?"▲":"▼"}</span></div>
+    ${S.cf==="lapsed"?`<button class="btn ok s" style="margin-top:8px" data-act="comeback" data-id="${c.id}">Написать</button>`:""}
+    ${op?`<div style="margin-top:8px">${c.note?`<div class="note" style="margin:0 0 8px">📝 ${esc(c.note)}</div>`:""}<div class="row wrap gap" style="margin:0 0 8px;justify-content:flex-start"><button class="btn s" data-act="newfor" data-id="${c.id}">＋ Записать</button><button class="btn alt s" data-act="waitfor" data-id="${c.id}">⏳ В лист ожидания</button><button class="btn alt s" data-act="comeback" data-id="${c.id}">✉ Написать</button></div><div class="row" data-act="hist" data-id="${c.id}" style="cursor:pointer;padding:8px 0;border-top:1px solid var(--line)"><b>История визитов (${bs.length})</b><span>${S.hist===c.id?"▲":"▼"}</span></div>${S.hist===c.id?bs.slice(0,15).map(b=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line);align-items:flex-start"><div><div class="sm"><b>${b.date.split("-").reverse().slice(0,2).join(".")} ${b.start}</b> · ${esc(svById(b.service).name)}</div><div class="muted sm">${esc(mById(b.master).name)} · ${rub(total(b))}</div></div>${tag(b.status)}</div>`).join(""):""}</div>`:""}</div>`}).join("")||"<div class='card muted'>Никого не найдено</div>"}
+/* ===== касса ===== */
+function vCash(){const pay=PAY.filter(x=>x.date===S.date),by={};pay.forEach(x=>by[x.method]=(by[x.method]||0)+x.amount);
+  return `${dateBar()}<div class="grid"><div class="card"><div class="muted">Принято за день</div><div class="k">${rub(pay.reduce((a,x)=>a+x.amount,0))}</div></div>${["cash","card","sbp"].map(k=>`<div class="card"><div class="muted">${{cash:"Наличные",card:"Карта",sbp:"СБП"}[k]}</div><div class="k">${rub(by[k]||0)}</div></div>`).join("")}</div>
+  ${pay.map(x=>{const b=B.find(z=>z.id===x.booking);return `<div class="card row"><div><b>${b?esc(cById(b.client).name):"—"}</b><div class="muted">${b?esc(svById(b.service).name):""} · ${esc(mById(x.master).name)} · ${x.kind==="tip"?"чаевые":""}</div></div><b>${rub(x.amount)}</b></div>`}).join("")||"<div class='card muted'>Оплат за этот день нет</div>"}`}
+/* ===== склад ===== */
+function vStock(){const ow=isOwner(),low=MATS.filter(m=>stockOf(m.id)<m.min),val=MATS.reduce((a,m)=>a+stockOf(m.id)*m.cost,0);
+  const mv=MOV.filter(x=>x.note!=="Начальный остаток").sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id).slice(0,18);
+  return `<div class="row wrap gap" style="margin-bottom:10px"><button class="btn ok" data-act="in">＋ Приход</button><button class="btn alt" data-act="out">− Расход без записи</button><button class="btn alt" data-act="inv">☑ Инвентаризация</button><button class="btn alt" data-act="buy">🛒 Что докупить${low.length?` (${low.length})`:""}</button><button class="btn alt" data-act="norms">⚙ Нормы</button></div>
+  ${low.length?`<div class="note">⚠ Заканчивается: ${low.map(m=>esc(m.name)).join(", ")}</div>`:""}
+  ${ow?`<div class="muted" style="margin-bottom:6px">Стоимость остатка на складе: <b>${rub(val)}</b></div>`:""}
+  ${MATS.map(m=>{const st=stockOf(m.id),pc=Math.min(100,st/(m.min*3)*100);return `<div class="card"><div class="row"><b>${esc(m.name)}</b>${st<m.min?`<span class="tag bad">мало</span>`:`<span class="tag ok">в наличии</span>`}</div>
+  <div class="row"><span>${Math.round(st*10)/10} ${m.unit} <span class="muted">≈ ${packsText(m,st)}</span></span><span class="muted sm">мин. ${m.min} ${m.unit}</span></div><div class="bar ${st<m.min?"low":""}" style="margin:6px 0"><i style="width:${pc}%"></i></div>
+  <div class="muted sm">${m.packName} ${m.pack} ${m.unit}${ow?` · ${rub(m.packPrice)} за ${m.packName} · ${m.cost.toFixed(2)} ₽/${m.unit}`:""}</div></div>`}).join("")}
+  <h2>Движение</h2><div class="tw"><table class="t lt"><thead><tr><th>Дата</th><th>Тип</th><th>Материал</th><th>Кол-во</th><th>Кому / за что</th>${ow?"<th>Сумма</th>":""}</tr></thead><tbody>
+  ${mv.map(x=>{const mt=matById(x.mat),b=x.booking&&B.find(z=>z.id===x.booking);return `<tr><td>${x.date.split("-").reverse().slice(0,2).join(".")}</td><td>${{in:"приход",out:"расход",inv:"инвент."}[x.type]}</td><td>${esc(mt.name.split(" (")[0])}</td><td class="${x.qty>0?"pos":"neg"}">${x.qty>0?"+":""}${x.qty} ${mt.unit}</td><td>${b?esc(mById(x.master).name+" · "+cById(b.client).name):esc(x.note||"—")}</td>${ow?`<td>${rub(Math.abs(x.qty)*x.cost)}</td>`:""}</tr>`}).join("")}</tbody></table></div>
+  <details class="card"><summary><b>Как это работает</b></summary><div class="sm" style="line-height:1.6">• Остаток хранится в граммах и миллилитрах, а не в тюбиках. Открыли тюбик, ушло 7 г — списали 7 г.<br>• <b>Приход</b>: сколько упаковок и по какой цене. Средняя цена грамма пересчитывается сама.<br>• <b>Расход</b>: мастер или администратор отмечает граммы прямо в записи клиента. Можно «по норме» одной кнопкой, можно вписать факт.<br>• Если ушло больше нормы на 20% — подсветка «перерасход».<br>• <b>Инвентаризация</b>: пересчитали руками — программа запишет разницу как излишек или потерю.<br>• Когда остаток ниже минимума — «мало» и список «что докупить».<br>• Владелец видит себестоимость каждого визита и маржу; администратор и мастера цен не видят.</div></details>`}
+function stockModal(kind){
+  const ow=isOwner();
+  if(kind==="in"){const m=modal(`<h2 style="margin-top:0">Приход (поставка)</h2><label class="l">Материал</label><select id="im">${MATS.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+    <label class="l">Сколько упаковок</label><input id="iq" type="number" value="1" min="1"><div id="ihint" class="muted sm" style="margin:-4px 0 8px"></div>${ow?`<label class="l">Цена за упаковку, ₽</label><input id="ip" type="number"><label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="ie" checked style="width:auto;margin:0"> <span>Записать закупку в расходы</span></label>`:""}
+    <label class="l">Поставщик / комментарий</label><input id="in"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="iok">Принять на склад</button></div>`);
+    const q=s=>m.querySelector(s),upd=()=>{const mt=matById(+q("#im").value);if(q("#ip"))q("#ip").value=mt.packPrice;q("#ihint").textContent=`1 ${mt.packName} = ${mt.pack} ${mt.unit}. Будет добавлено ${mt.pack*(+q("#iq").value||0)} ${mt.unit}`};q("#im").onchange=upd;q("#iq").oninput=upd;upd();
+    q("#iok").onclick=()=>{const mt=matById(+q("#im").value),n=Math.max(1,Math.round(+q("#iq").value)),qty=n*mt.pack,pp=q("#ip")?+q("#ip").value||mt.packPrice:mt.packPrice;
+      const st=stockOf(mt.id);mt.cost=(Math.max(st,0)*mt.cost+qty*pp/mt.pack)/(Math.max(st,0)+qty);mt.packPrice=Math.round(mt.cost*mt.pack);
+      MOV.push({id:nid(),date:TODAY,mat:mt.id,qty,type:"in",cost:pp/mt.pack,note:q("#in").value||"Поставка"});m.remove();render()}}
+  if(kind==="out"){const m=modal(`<h2 style="margin-top:0">Расход без записи</h2><div class="muted">Хозяйственные нужды, брак, пробники.</div><label class="l">Материал</label><select id="om">${MATS.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select><label class="l">Сколько</label><input id="oq" type="number" value="10"><label class="l">Причина</label><select id="on"><option>Хозяйственный расход</option><option>Брак / испорчено</option><option>Пробник клиенту</option></select><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="ook">Списать</button></div>`);
+    m.querySelector("#ook").onclick=()=>{const mt=matById(+m.querySelector("#om").value),q=Math.round(+m.querySelector("#oq").value);if(q>0)MOV.push({id:nid(),date:TODAY,mat:mt.id,qty:-q,type:"out",cost:mt.cost,note:m.querySelector("#on").value});m.remove();render()}}
+  if(kind==="inv"){const m=modal(`<h2 style="margin-top:0">Инвентаризация</h2><div class="muted">Впишите, сколько реально осталось. Разница спишется как излишек или потеря.</div><div style="margin-top:8px">${MATS.map(x=>`<label class="l">${esc(x.name)} (по программе ${Math.round(stockOf(x.id))} ${x.unit})</label><input type="number" data-m="${x.id}" value="${Math.round(stockOf(x.id))}">`).join("")}</div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="vok">Применить</button></div>`);
+    m.querySelector("#vok").onclick=()=>{m.querySelectorAll("[data-m]").forEach(i=>{const mt=matById(+i.dataset.m),d=Math.round(+i.value)-Math.round(stockOf(mt.id));if(d)MOV.push({id:nid(),date:TODAY,mat:mt.id,qty:d,type:"inv",cost:mt.cost,note:"Инвентаризация"})});m.remove();render()}}
+  if(kind==="buy"){const need=MATS.filter(x=>stockOf(x.id)<x.min).map(x=>{const n=Math.max(1,Math.ceil((x.min*3-stockOf(x.id))/x.pack));return{x,n}});
+    modal(`<h2 style="margin-top:0">Что докупить</h2>${need.map(({x,n})=>`<div class="card row"><div><b>${esc(x.name)}</b><div class="muted">осталось ${packsText(x,stockOf(x.id))}</div></div><div style="text-align:right"><b>${n} ${x.packName}</b>${ow?`<div class="muted sm">≈ ${rub(n*x.packPrice)}</div>`:""}</div></div>`).join("")||"<div class='muted'>Всё в порядке</div>"}${ow&&need.length?`<div class="row"><b>Итого</b><b>${rub(need.reduce((a,{x,n})=>a+n*x.packPrice,0))}</b></div>`:""}<button class="btn full" data-act="close" style="margin-top:8px">Закрыть</button>`)}
+  if(kind==="norms")modal(`<h2 style="margin-top:0">Нормы расхода на услугу</h2><div class="muted" style="margin-bottom:8px">Подставляются при оплате и в окне списания. Фактический расход можно менять.</div>${Object.entries(NORMS).map(([sid,l])=>`<div class="card"><b>${esc(svById(+sid).name)}</b><div class="muted">${l.map(([i,q])=>esc(matById(i).name)+" — "+q+" "+matById(i).unit).join("<br>")}</div></div>`).join("")}<button class="btn full" data-act="close">Закрыть</button>`)
+}
+/* ===== владелец ===== */
+function perBar(p){return `<div class="row gap" style="margin-bottom:8px"><button class="btn ${p==="cur"?"":"alt"} s" data-act="per" data-p="cur">Этот месяц</button><button class="btn ${p==="prev"?"":"alt"} s" data-act="per" data-p="prev">Прошлый месяц</button><span class="muted">${period(p).label}</span></div>`}
+function vSummary(){const r=calc(S.period),days=[];for(let d=r.from;d<=r.to;d=addDays(d,1))days.push(d);const mx=Math.max(1,...days.map(d=>r.byDay[d]||0));
+  const over=calc("prev").pm.filter(x=>x.over>0),low=MATS.filter(m=>stockOf(m.id)<m.min);
+  return `${perBar(S.period)}${over.length?`<div class="note" style="border-color:#c0392b66;background:#c0392b14">⏰ Просрочена выплата ЗП за прошлый месяц: ${over.map(x=>esc(x.m.name)+" — "+rub(x.bal)+" ("+x.over+" дн.)").join("; ")}. <a href="#" data-act="tab" data-t="pay">Открыть</a></div>`:""}${low.length?`<div class="note">🧴 Мало на складе: ${low.map(m=>esc(m.name)).join(", ")}. <a href="#" data-act="tab" data-t="st">Склад</a></div>`:""}
+  <div class="grid"><div class="card"><div class="muted">Выручка</div><div class="k">${rub(r.rev)}</div></div><div class="card"><div class="muted">Прибыль</div><div class="k ${r.profit<0?"neg":"pos"}">${rub(r.profit)}</div></div><div class="card"><div class="muted">Визитов / ср. чек</div><div class="k">${r.visits} / ${rub(r.visits?r.pay.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount,0)/r.visits:0)}</div></div><div class="card"><div class="muted">ЗП мастерам</div><div class="k">${rub(r.accrued)}</div></div></div>
+  <div class="card"><b>Из чего складывается прибыль</b>${kv("Выручка",rub(r.rev))}${kv("− Материалы (израсходовано)",rub(r.mats))}${kv("− Аренда, реклама, коммуналка",rub(r.other))}${kv("− Зарплата мастеров",rub(r.accrued))}<hr style="border:0;border-top:1px solid var(--line)">${kv("= Прибыль",rub(r.profit))}<div class="muted sm" style="margin-top:6px">Закуплено материалов за период на ${rub(r.bought)} — это деньги, ушедшие на склад. В прибыль идёт только то, что израсходовано, чтобы закупка не считалась дважды.</div></div>
+  <h2>Выручка по дням</h2><div class="card" style="display:flex;align-items:flex-end;gap:3px;height:130px">${days.map(d=>`<div title="${d}: ${rub(r.byDay[d]||0)}" style="flex:1;background:${d===TODAY?"var(--blue)":"var(--accent)"};height:${Math.max(2,(r.byDay[d]||0)/mx*100)}%;border-radius:3px 3px 0 0;opacity:${r.byDay[d]?1:.2}"></div>`).join("")}</div>
+  <h2>Услуги</h2>${Object.entries(r.bySvc).sort((a,b)=>b[1].s-a[1].s).map(([n,v])=>`<div class="card row"><span>${esc(n)} × ${v.n}</span><b>${rub(v.s)}</b></div>`).join("")}`}
+function vPay(){const r=calc(S.period),sm=k=>r.pm.reduce((a,x)=>a+x[k],0),dueTag=x=>x.bal<=0?`<span class="tag ok">выплачено</span>`:x.over>0?`<span class="tag bad">просрочка ${x.over} дн.</span>`:`<span class="tag">до ${x.due.split("-").reverse().join(".")}</span>`;
+  return `${perBar(S.period)}<div class="card row"><span>Отчётная дата выплаты ЗП за период</span><b>${r.pm[0].due.split("-").reverse().join(".")}</b></div>
+  <div class="tw"><table class="t"><thead><tr><th>Мастер</th><th>Визитов</th><th>Услуги</th><th>%</th><th>ЗП от %</th><th>Чаевые</th><th>Итого ЗП</th><th>Выплачено</th><th>Остаток</th><th>Материалы</th><th>Срок ЗП</th><th></th></tr></thead><tbody>
+  ${r.pm.map(x=>`<tr><td>${esc(x.m.name)}</td><td>${x.visits}</td><td>${rub(x.sv)}</td><td>${x.m.percent}%</td><td>${rub(x.pct)}</td><td>${rub(x.tips)}</td><td class="hl">${rub(x.sal)}</td><td>${rub(x.paid)}</td><td class="${x.bal>0?"neg":"pos"}">${rub(x.bal)}</td><td>${rub(x.mats)}</td><td>${dueTag(x)}</td><td>${x.bal>0?`<button class="btn ok s" data-act="paym" data-id="${x.m.id}" data-b="${x.bal}">Выплатить</button>`:""}</td></tr>`).join("")}</tbody>
+  <tfoot><tr><td>Итого</td><td>${sm("visits")}</td><td>${rub(sm("sv"))}</td><td></td><td>${rub(sm("pct"))}</td><td>${rub(sm("tips"))}</td><td>${rub(sm("sal"))}</td><td>${rub(sm("paid"))}</td><td>${rub(sm("bal"))}</td><td>${rub(sm("mats"))}</td><td></td><td></td></tr></tfoot></table></div>
+  <div class="card"><b>День выплаты ЗП</b><div class="muted sm" style="margin-bottom:6px">Если срок прошёл, а остаток есть — красная метка «просрочка».</div><div class="row gap"><input id="pdy" type="number" min="1" max="28" value="${CFG.payDay}" style="margin:0;width:90px"><button class="btn s" data-act="payday">Сохранить</button></div></div>
+  <div class="muted sm">«Материалы» — сколько расходников списано на клиентов мастера: видно, кто расходует больше нормы.</div>`}
+function vAccess(){const rows=[...MASTERS.map(m=>({n:m.name,r:"Мастер",l:m.login,p:m.pass,id:m.id,a:m.active,m:1})),{n:"Администратор",r:"Администратор",l:USERS.admin.login,p:USERS.admin.pass,k:"admin"},{n:"Владелец",r:"Владелец",l:USERS.owner.login,p:USERS.owner.pass,k:"owner"}];
+  return `<div class="note" style="margin-top:0">Каждый сотрудник входит под своим логином и видит только своё: мастер — свои записи, администратор — всех мастеров и клиентов, владелец — всё.</div>
+  <div class="tw"><table class="t"><thead><tr><th>Сотрудник</th><th>Роль</th><th>Логин</th><th>Пароль</th><th>Доступ</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.r}</td><td>${esc(x.l)}</td><td>••••••</td><td>${x.m?(x.a?`<span class="tag ok">включён</span>`:`<span class="tag bad">закрыт</span>`):`<span class="tag ok">включён</span>`}</td><td><button class="btn alt s" data-act="reset" data-id="${x.id||""}" data-k="${x.k||""}">Новый пароль</button> ${x.m?`<button class="btn alt s" data-act="toggle" data-id="${x.id}">${x.a?"Отключить":"Включить"}</button>`:""}</td></tr>`).join("")}</tbody></table></div>
+  <button class="btn" data-act="addstaff">＋ Добавить сотрудника</button>`}
+/* ===== настройки владельца ===== */
+function vSettings(){const cats=[...new Set(SERVICES.map(s=>s.cat))];
+  return `<h2 style="margin-top:0">Прайс-лист</h2><div class="muted sm" style="margin-bottom:6px">Новая цена действует на новые записи. Старые записи и чеки не меняются.</div>
+  ${cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+SERVICES.filter(x=>x.cat===c).map(x=>`<div class="card row"><div><b>${esc(x.name)}</b> ${x.off?`<span class="tag">скрыта</span>`:""}<div class="muted">${x.dur} мин</div></div><div class="row gap"><b>${rub(x.price)}</b><button class="btn alt s" data-act="svc" data-id="${x.id}">Изменить</button></div></div>`).join("")).join("")}
+  <button class="btn" data-act="svc" data-id="0">＋ Добавить услугу</button>
+  ${ntfCard()}
+  <h2>Расходные материалы</h2><div class="muted sm" style="margin-bottom:6px">Цена упаковки задаёт цену грамма. Новая цена считается для будущих списаний.</div>
+  ${MATS.map(m=>`<div class="card row"><div><b>${esc(m.name)}</b><div class="muted">${m.packName} ${m.pack} ${m.unit} · ${rub(m.packPrice)} · ${m.cost.toFixed(2)} ₽/${m.unit} · минимум ${m.min} ${m.unit}</div></div><button class="btn alt s" data-act="matE" data-id="${m.id}">Изменить</button></div>`).join("")}
+  <button class="btn" data-act="matE" data-id="0">＋ Добавить материал</button> <span class="muted sm">Поставку на склад вносите во вкладке «Склад» → «Приход».</span>
+  <h2>Нормы расхода на услугу</h2><div class="muted sm" style="margin-bottom:6px">Сколько материалов обычно уходит. Подставляется при оплате и в списании, факт можно править.</div>
+  ${SERVICES.map(x=>`<div class="card row"><div><b>${esc(x.name)}</b><div class="muted">${(NORMS[x.id]||[]).map(([i,q])=>esc(matById(i).name.split(" (")[0])+" "+q+" "+matById(i).unit).join(", ")||"нормы нет"}</div></div><button class="btn alt s" data-act="normE" data-id="${x.id}">Изменить</button></div>`).join("")}
+  <h2>Проценты мастеров</h2><div class="card">${MASTERS.map(m=>`<div class="row" style="margin-bottom:6px"><span>${esc(m.name)}</span><span class="row gap"><input type="number" min="0" max="100" data-pc="${m.id}" value="${m.percent}" style="margin:0;width:80px"> %</span></div>`).join("")}<div class="muted sm">Действует на будущие оплаты. Прошлые месяцы не пересчитываются.</div><button class="btn s" data-act="pcs" style="margin-top:6px">Сохранить проценты</button></div>
+  <h2>Салон</h2><div class="card"><label class="l">Название</label><input id="cn" value="${esc(CFG.name)}"><label class="l">Адрес</label><input id="ca" value="${esc(CFG.addr)}"><label class="l">День выплаты ЗП (число месяца)</label><input id="cp" type="number" min="1" max="28" value="${CFG.payDay}"><button class="btn s" data-act="salon">Сохранить</button><div class="muted sm" style="margin-top:6px">Часы работы и телефон в настоящем приложении задаются при установке.</div></div>`}
+function svcModal(id){const x=id?svById(id):{name:"",cat:"",price:"",dur:60};const cats=[...new Set(SERVICES.map(s=>s.cat))];
+  const m=modal(`<h2 style="margin-top:0">${id?"Изменить услугу":"Новая услуга"}</h2><label class="l">Название (так оно попадёт в чек)</label><input id="sn" value="${esc(x.name)}"><label class="l">Раздел</label><select id="scs">${cats.map(c=>`<option value="${esc(c)}" ${c===x.cat?"selected":""}>${esc(c)}</option>`).join("")}<option value="__new" ${x.cat&&!cats.includes(x.cat)||!cats.length?"selected":""}>➕ Создать новый раздел…</option></select><input id="sc" placeholder="Название нового раздела, например: Маникюр" style="display:none">
+  <label class="l">Цена, ₽</label><input id="sp" type="number" value="${x.price}"><label class="l">Длительность</label><select id="sd">${[30,60,90,120,150,180,210,240].map(v=>`<option value="${v}" ${v===x.dur?"selected":""}>${v} мин</option>`).join("")}</select>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="so" ${x.off?"":"checked"} style="width:auto;margin:0"> <span>Показывать клиентам в онлайн-записи</span></label><div id="se" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sok">Сохранить</button></div>`);
+  const sel=m.querySelector("#scs"),ni=m.querySelector("#sc"),tg=()=>{ni.style.display=sel.value==="__new"?"":"none"};sel.onchange=()=>{tg();if(sel.value==="__new")ni.focus()};tg();
+  m.querySelector("#sok").onclick=()=>{const n=m.querySelector("#sn").value.trim(),c=(sel.value==="__new"?(cats.find(z=>z.toLowerCase()===m.querySelector("#sc").value.trim().toLowerCase())||m.querySelector("#sc").value.trim()):sel.value)||"Прочее",p=Math.round(+m.querySelector("#sp").value);if(!n||!(p>0)){m.querySelector("#se").textContent="Нужны название и цена";return}
+    const v={name:n,cat:c,price:p,dur:+m.querySelector("#sd").value,off:m.querySelector("#so").checked?0:1};if(id)Object.assign(svById(id),v);else SERVICES.push({id:nid(),...v});m.remove();render()}}
+function matModal(id){const x=id?matById(id):{name:"",unit:"г",pack:100,packName:"упаковка",packPrice:"",min:0};
+  const m=modal(`<h2 style="margin-top:0">${id?"Изменить материал":"Новый материал"}</h2><label class="l">Название</label><input id="mn" value="${esc(x.name)}"><label class="l">Единица учёта</label><select id="mu">${["г","мл","шт"].map(u=>`<option ${u===x.unit?"selected":""}>${u}</option>`).join("")}</select>
+  <label class="l">В одной упаковке (в этих единицах)</label><input id="mk" type="number" value="${x.pack}"><label class="l">Как называется упаковка</label><input id="mpn" value="${esc(x.packName)}" placeholder="тюбик, флакон, банка"><label class="l">Цена упаковки, ₽</label><input id="mpp" type="number" value="${x.packPrice}"><label class="l">Минимальный остаток (ниже — «мало»)</label><input id="mm" type="number" value="${x.min}"><div id="me" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="mok">Сохранить</button></div>`);
+  m.querySelector("#mok").onclick=()=>{const q=s=>m.querySelector(s),n=q("#mn").value.trim(),pk=+q("#mk").value,pp=+q("#mpp").value;if(!n||!(pk>0)||!(pp>=0)||q("#mpp").value===""){q("#me").textContent="Заполните название, размер и цену упаковки";return}
+    const v={name:n,unit:q("#mu").value,pack:pk,packName:q("#mpn").value||"упаковка",packPrice:pp,min:+q("#mm").value||0};v.cost=pp/pk;if(id)Object.assign(matById(id),v);else MATS.push({id:nid(),...v});m.remove();render()}}
+function normModal(sid){let rows=(NORMS[sid]||[]).map(([mat,qty])=>({mat,qty}));
+  const m=modal(`<h2 style="margin-top:0">Норма: ${esc(svById(sid).name)}</h2><div id="nr"></div><button class="btn alt s" id="na">＋ Материал</button><div class="row" style="margin-top:10px"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="nok">Сохранить</button></div>`);
+  const draw=()=>{m.querySelector("#nr").innerHTML=rows.map((r,i)=>`<div class="row gap" style="margin-bottom:6px"><select data-i="${i}" data-f="mat" style="margin:0">${MATS.map(x=>`<option value="${x.id}" ${x.id===r.mat?"selected":""}>${esc(x.name)}</option>`).join("")}</select><input type="number" data-i="${i}" data-f="qty" value="${r.qty}" style="margin:0;width:80px"><button class="btn alt s" data-i="${i}" data-x="1">✕</button></div>`).join("")||"<div class='muted'>Нормы нет</div>";
+    m.querySelectorAll("[data-f]").forEach(e=>e.onchange=()=>{const r=rows[+e.dataset.i];if(e.dataset.f==="mat")r.mat=+e.value;else r.qty=Math.max(0,+e.value||0)});m.querySelectorAll("[data-x]").forEach(e=>e.onclick=()=>{rows.splice(+e.dataset.i,1);draw()})};
+  m.querySelector("#na").onclick=()=>{rows.push({mat:MATS[0].id,qty:10});draw()};m.querySelector("#nok").onclick=()=>{const r=rows.filter(x=>x.qty>0).map(x=>[x.mat,x.qty]);if(r.length)NORMS[sid]=r;else delete NORMS[sid];m.remove();render()};draw()}
+/* ===== клиентское приложение (запись по шагам) ===== */
+const W=()=>S.w;
+function nearest(mid,sv){for(let i=0;i<14;i++){const d=addDays(TODAY,i),l=freeTimes(d,mid,sv.dur);if(l.length)return (i===0?"сегодня ":i===1?"завтра ":dLong(d)+" ")+l[0].t}return "нет окон"}
+function vClient(){const t=S.tab.client;
+  return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">${esc(CFG.addr)}</div></div></div>
+  <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
+function vWiz(){const w=W();
+  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}${w.isNew?`<div class="note" style="text-align:left"><b>Ваш номер клиента: ${fmtNo(w.cid)}</b><br><span class="sm">Сохраните его: по нему вы заходите в личный кабинет с историей визитов и бонусами. Этот телефон мы запомнили, на другом введите номер.</span></div>`:`<div class="muted sm" style="margin-top:6px">Вы уже наш клиент: в личный кабинет входите по номеру клиента (он указан в сообщении о записи).</div>`}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
+  const sv=w.service&&svById(w.service),mm=w.master!=null&&(w.master?mById(w.master):{name:"Любой мастер"});
+  const head=`<div class="row"><button class="btn alt s" data-act="wback" ${w.step===1?"disabled":""}>← Назад</button><span class="muted">Шаг ${w.step} из 5</span></div><div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=w.step?"on":""}"></i>`).join("")}</div>`;
+  let body="";
+  if(w.step===1){const AS=SERVICES.filter(s=>!s.off),cats=[...new Set(AS.map(s=>s.cat))];body=`<h2 style="margin-top:0">Выберите услугу</h2>`+cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+AS.filter(s=>s.cat===c).map(s=>`<div class="opt ${w.service===s.id?"on":""}" data-act="wsv" data-id="${s.id}"><div><b>${esc(s.name)}</b><div class="muted">${s.dur} мин</div></div><b>${rub(s.price)}</b></div>`).join("")).join("")}
+  if(w.step===2)body=`<h2 style="margin-top:0">Выберите мастера</h2><div class="opt ${w.master===0?"on":""}" data-act="wm" data-id="0"><div class="row gap"><span class="av2" style="background:#6c655e">★</span><div><b>Любой мастер</b><div class="muted">Ближайшее время: ${nearest(0,sv)}</div></div></div></div>`+MASTERS.filter(m=>m.active).map(m=>`<div class="opt ${w.master===m.id?"on":""}" data-act="wm" data-id="${m.id}"><div class="row gap"><span class="av2" style="background:${m.color}">${m.name[0]}</span><div><b>${esc(m.name)}</b> <span class="muted">★ ${m.rating}</span><div class="muted">${esc(m.role)} · ближайшее: ${nearest(m.id,sv)}</div></div></div></div>`).join("");
+  if(w.step===3){const list=freeTimes(w.date,w.master,sv.dur),groups=[["Утро",0,12*60],["День",12*60,17*60],["Вечер",17*60,24*60]];
+    body=`<h2 style="margin-top:0">Дата и время</h2><div class="days">${Array.from({length:14},(_,i)=>{const d=addDays(TODAY,i),dt=new Date(d+"T12:00:00"),n=freeTimes(d,w.master,sv.dur).length;return `<div class="day ${d===w.date?"on":""} ${n?"":"off"}" data-act="wd" data-d="${d}"><small>${DOW[dt.getDay()]}</small><b>${dt.getDate()}</b><small>${MONG[dt.getMonth()].slice(0,3)}</small></div>`}).join("")}</div>
+    ${groups.map(([n,a,b])=>{const l=list.filter(x=>tm(x.t)>=a&&tm(x.t)<b);return l.length?`<h3 class="muted">${n}</h3><div class="chips">${l.map(x=>`<div class="chip ${w.time===x.t?"on":""}" data-act="wt" data-t="${x.t}">${x.t}</div>`).join("")}</div>`:""}).join("")||"<div class='card muted'>На этот день окон нет, выберите другую дату</div>"}`}
+  if(w.step===4)body=`<h2 style="margin-top:0">Ваши контакты</h2><label class="l">Имя</label><input data-in="wname" value="${esc(w.name||"")}" placeholder="Как к вам обращаться"><label class="l">Телефон</label><input data-in="wphone" type="tel" value="${esc(w.phone||"")}" placeholder="+7 914 …"><label class="l">Комментарий мастеру</label><input data-in="wnote" value="${esc(w.note||"")}" placeholder="Пожелания (необязательно)"><label class="l">Куда прислать подтверждение и напоминание</label><div class="chips">${["whatsapp","telegram","sms"].map(k=>`<div class="chip ${(w.chan||"whatsapp")===k?"on":""}" data-act="wchan" data-k="${k}">${chanName[k]}</div>`).join("")}</div><div class="muted sm">Нажимая «Далее», вы соглашаетесь на обработку персональных данных.</div>`;
+  if(w.step===5){const known=CLIENTS.find(c=>digits(c.phone)===digits(w.phone).slice(-10)&&digits(w.phone).length>=10),disc=known?0:15,pr=Math.round(sv.price*(1-disc/100));
+    body=`<h2 style="margin-top:0">Проверьте запись</h2><div class="card">${kv("Услуга",esc(sv.name))}${kv("Мастер",esc(mm.name))}${kv("Когда",dLong(w.date)+", "+w.time)}${kv("Клиент",esc(w.name)+" · "+esc(w.phone))}${disc?kv("Скидка первого визита",disc+"%"):""}<hr style="border:0;border-top:1px solid var(--line)">${kv("К оплате в салоне",rub(pr))}</div>`}
+  const can=(w.step===1&&w.service)||(w.step===2&&w.master!=null)||(w.step===3&&w.time)||(w.step===4&&w.name&&digits(w.phone).length>=10)||w.step===5;
+  const bar=w.step>=2?`<div class="sticky"><div class="row gap"><div class="sm"><b>${esc(sv.name)}</b><div class="muted">${mm?esc(mm.name):""}${w.time?" · "+dLong(w.date)+" "+w.time:""} · ${rub(sv.price)}</div></div>${w.step>=3||w.step===2?`<button class="btn ${w.step===5?"ok":""}" data-act="wnext" ${can?"":"disabled"}>${w.step===5?"Записаться":"Далее"}</button>`:""}</div></div>`:"";
+  return head+body+bar}
+function vCabLogin(){const demo=[1,4,8].map(i=>cById(i));
+  return `<div class="card"><h2 style="margin:0 0 4px">Личный кабинет</h2><div class="muted" style="margin-bottom:10px">История визитов и бонусы. Введите ваш номер клиента — он есть в сообщении о записи и на карте клиента.</div>
+  <label class="l">Номер клиента</label><input id="cno" inputmode="numeric" maxlength="7" placeholder="123 456" autocomplete="off"><div id="cerr" class="neg"></div>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 10px"><input type="checkbox" id="crem" checked style="width:auto;margin:0"> <span>Запомнить на этом телефоне</span></label>
+  <button class="btn full" data-act="cablogin">Войти</button></div>
+  <div class="card"><b>Забыли номер?</b><div class="muted sm" style="margin-bottom:6px">Введите телефон, на который вы записывались. Мы пришлём номер в сообщении.</div><input id="cph" type="tel" placeholder="+7 914 …"><button class="btn alt full" data-act="cabforgot">Прислать номер</button></div>
+  <div class="note"><b>Демо:</b> ${demo.map(c=>`${esc(c.name)} — <a href="#" data-act="cabfill" data-id="${c.id}"><b>${fmtNo(c.id)}</b></a>`).join("; ")}. В настоящем приложении вход можно дополнительно защитить кодом из SMS или Telegram, а запомненный вход держится на телефоне, пока клиент сам не выйдет.</div>`}
+function vMy(){if(!S.me)return vCabLogin();const c=cById(S.me),bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date+a.start<b.date+b.start?1:-1),next=bs.filter(b=>b.date+" "+b.start>TODAY+" "+hm(NOWMIN)&&["new","confirmed"].includes(b.status)).sort((a,b)=>a.date+a.start>b.date+b.start?1:-1)[0];
+  return `<div class="card"><div class="row"><div class="muted">Здравствуйте,</div><button class="btn alt s" data-act="cablogout">Выйти</button></div><h2 style="margin:0">${esc(c.name)}</h2><div class="muted sm">Ваш номер клиента: <b class="k" style="font-size:15px">${fmtNo(c.id)}</b></div><div class="row" style="margin-top:8px"><span>Бонусные баллы</span><b class="k" style="font-size:22px">${c.bonus}</b></div><div class="muted sm">1 балл = 1 ₽, можно оплатить до 50% чека. Начисляем 5% с каждого визита.</div></div>
+  ${next?`<div class="card"><b>Ближайшая запись</b><div>${dLong(next.date)}, ${next.start} · ${esc(svById(next.service).name)}</div><div class="muted">мастер ${esc(mById(next.master).name)}</div><button class="btn alt s" style="margin-top:6px" data-act="ccancel" data-id="${next.id}">Отменить запись</button></div>`:""}
+  <h2>История визитов</h2>${bs.slice(0,15).map(b=>`<div class="card row"><div><b>${esc(svById(b.service).name)}</b><div class="muted">${dLong(b.date)}, ${b.start} · ${esc(mById(b.master).name)}</div></div><div style="text-align:right">${rub(b.paid?b.paid.amount:total(b))}<br>${b.paid?`<span class="muted sm">+${Math.round(b.paid.amount*.05)} баллов${b.paid.bonusUsed?" · −"+b.paid.bonusUsed+" списано":""} · чек ${b.paid.fiscal}</span><br><button class="btn alt s" style="margin-top:4px" data-act="repeat" data-id="${b.id}">↻ Повторить</button>`:tag(b.status)}</div></div>`).join("")}
+  <div class="note">В настоящем приложении вход запоминается в браузере, а с другого телефона — по номеру и коду.</div>`}
+
+/* ===== действия ===== */
+const A={
+  role(el){S.role=el.dataset.v;closeModal();render()},reset(){seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;S.me=0;forget();closeModal();render()},
+  fill(el){$("#lg").value=el.dataset.l;$("#pw").value=el.dataset.p},
+  login(){const l=$("#lg").value.trim(),p=$("#pw").value;let ok=false;
+    if(S.role==="master"){const m=MASTERS.find(x=>x.login===l&&x.pass===p);if(m){if(!m.active){$("#lerr").textContent="Доступ закрыт владельцем";return}S.sess.master=m.id;S.date=TODAY;ok=true}}
+    else if(USERS[S.role].login===l&&USERS[S.role].pass===p){S.sess[S.role]=1;ok=true}
+    if(ok)render();else $("#lerr").textContent="Неверный логин или пароль"},
+  logout(){delete S.sess[S.role];render()},tab(el){S.tab[S.role]=el.dataset.t;render()},ctab(el){S.tab.client="book"===el.dataset.t?"book":"my";render()},
+  dshift(el){S.date=addDays(S.date,+el.dataset.n);render()},dtoday(){S.date=TODAY;render()},cal(){calModal()},mday(el){S.date=el.dataset.d;S.mym=S.date.slice(0,7);render()},mmon(el){const [y,m]=(S.mym||S.date.slice(0,7)).split("-").map(Number),d=new Date(y,m-1+ +el.dataset.n,1);S.mym=d.getFullYear()+"-"+pad(d.getMonth()+1);render()},mtoday(){S.date=TODAY;S.mym=TODAY.slice(0,7);render()},
+  bk(el){openSheet(+el.dataset.id)},slot(el,e){if(e.target!==el)return;const y=e.clientY-el.getBoundingClientRect().top,t=OPEN*60+Math.floor(y/ROW)*30;bookModal({master:+el.dataset.m,date:S.date,time:hm(t)})},
+  new(){bookModal({date:S.date})},newfor(el){bookModal({date:TODAY,client:+el.dataset.id})},
+  close(){closeModal()},payb(el){payModal(+el.dataset.id)},extra(el){extraModal(+el.dataset.id)},editb(el){closeModal();bookModal({id:+el.dataset.id})},mats(el){matsModal(+el.dataset.id)},
+  xdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id);b.extras.splice(+el.dataset.i,1);render();openSheet(b.id)},
+  bst(el){const b=B.find(x=>x.id===+el.dataset.id),s=el.dataset.s;closeModal();ask(s==="noshow"?"Отметить неявку?":"Отменить запись?",()=>{b.status=s;cancelNotifs(b,s==="cancelled");render();freedModal(b)})},
+  clo(el){S.open=S.open===+el.dataset.id?0:+el.dataset.id;S.hist=0;$("#cl").innerHTML=clList()},
+  in(){stockModal("in")},out(){stockModal("out")},inv(){stockModal("inv")},buy(){stockModal("buy")},norms(){stockModal("norms")},
+  per(el){S.period=el.dataset.p;render()},
+  paym(el){const mm=mById(+el.dataset.id),m=modal(`<h2 style="margin-top:0">Выплата: ${esc(mm.name)}</h2><label class="l">Сумма, ₽</label><input id="ma" type="number" value="${el.dataset.b}"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="mok">Выплатить</button></div>`);
+    m.querySelector("#mok").onclick=()=>{const a=Math.round(+m.querySelector("#ma").value);if(a>0)EXP.push({id:nid(),date:period(S.period).to,amount:a,cat:"salary",note:"Выплата",master:mm.id});m.remove();render()}},
+  payday(){CFG.payDay=Math.min(28,Math.max(1,Math.round(+$("#pdy").value||5)));render()},
+  toggle(el){const m=mById(+el.dataset.id);m.active=m.active?0:1;render()},
+  addstaff(){const m=modal(`<h2 style="margin-top:0">Новый сотрудник</h2><label class="l">Имя</label><input id="sn"><label class="l">Должность</label><input id="sr" value="Парикмахер"><label class="l">Процент от услуг</label><input id="sp" type="number" value="40"><label class="l">Логин</label><input id="sl"><label class="l">Пароль</label><input id="sw"><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sok">Добавить</button></div>`);
+    m.querySelector("#sok").onclick=()=>{const n=m.querySelector("#sn").value.trim(),l=m.querySelector("#sl").value.trim(),p=m.querySelector("#sw").value;const er=t=>{let e=m.querySelector("#serr");if(!e){e=document.createElement("div");e.id="serr";e.className="neg";m.querySelector("#sok").parentNode.before(e)}e.textContent=t};if(!n)return er("Укажите имя");if(!l)return er("Укажите логин");if(p.length<4)return er("Пароль — не короче 4 символов");if(MASTERS.some(x=>x.login.toLowerCase()===l.toLowerCase())||[USERS.admin.login,USERS.owner.login].includes(l))return er("Такой логин уже занят");MASTERS.push({id:nid(),name:n,role:m.querySelector("#sr").value,percent:Math.min(100,Math.max(0,+m.querySelector("#sp").value||40)),login:l,pass:p,color:"#2d8a8a",rating:5,active:1});m.remove();render()}},
+  /* клиентский мастер записи */
+  svc(el){svcModal(+el.dataset.id)},matE(el){matModal(+el.dataset.id)},normE(el){normModal(+el.dataset.id)},
+  pcs(){document.querySelectorAll("[data-pc]").forEach(i=>{mById(+i.dataset.pc).percent=Math.min(100,Math.max(0,Math.round(+i.value||0)))});render()},
+  salon(){CFG.name=$("#cn").value.trim()||CFG.name;CFG.addr=$("#ca").value.trim()||CFG.addr;CFG.payDay=Math.min(28,Math.max(1,Math.round(+$("#cp").value||5)));render()},
+  wsv(el){S.w.service=+el.dataset.id;S.w.step=2;render()},
+  wm(el){const w=W();w.master=+el.dataset.id;w.step=3;const sv=svById(w.service);w.time=null;w.date=Array.from({length:14},(_,i)=>addDays(TODAY,i)).find(d=>freeTimes(d,w.master,sv.dur).length)||TODAY;render()},
+  wd(el){S.w.date=el.dataset.d;S.w.time=null;render()},wt(el){S.w.time=el.dataset.t;S.w.step=4;render()},wback(){S.w.step=Math.max(1,S.w.step-1);render()},
+  wnext(){const w=W();if(w.step<5){w.step++;render();return}
+    const sv=svById(w.service),ph=digits(w.phone).slice(-10);let c=CLIENTS.find(x=>digits(x.phone)===ph);const isNew=!c,disc=c?0:15;if(!c){c={id:nid(),name:w.name,phone:"7"+ph,note:"",bonus:0};CLIENTS.push(c)}
+    const slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);if(!slot){w.step=3;render();modal(`<h2 style="margin-top:0">Это время только что заняли</h2><div class="muted">Выберите другое.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
+    const b={id:nid(),date:w.date,master:w.master||slot.free[0],start:w.time,dur:sv.dur,service:sv.id,client:c.id,status:"new",price:Math.round(sv.price*(1-disc/100)),extras:[],note:w.note||"",source:"app",created:TODAY};c.chan=w.chan||c.chan||"whatsapp";B.push(b);scheduleNotifs(b,"new");w.isNew=isNew;w.cid=c.id;if(isNew){S.me=c.id;remember(c)}w.done=b.id;render()},
+  wnew(){S.w={step:1};render()},
+  ccancel(el){const b=B.find(x=>x.id===+el.dataset.id),left=(new Date(b.date+"T"+b.start+":00")-new Date())/60000;
+    if(left<120){modal(`<h2 style="margin-top:0">Отмена менее чем за 2 часа</h2><div class="muted">Бесплатно отменить можно не позднее чем за 2 часа. Пожалуйста, позвоните в салон: ${esc(CFG.addr)}.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
+    ask("Отменить запись?",()=>{b.status="cancelled";cancelNotifs(b,true);render()})},
+};
+A.reset=function(el){if(el.dataset.k||el.dataset.id){const np="pw"+(1000+Math.floor(Math.random()*9000)),t=el.dataset.k?USERS[el.dataset.k]:mById(+el.dataset.id);t.pass=np;modal(`<h2 style="margin-top:0">Новый пароль</h2><div class="card" style="font-size:22px;text-align:center"><b>${np}</b></div><div class="muted">Передайте сотруднику. Старый пароль больше не работает.</div><button class="btn full" data-act="close" style="margin-top:8px">Готово</button>`);return}
+  seed();S.sess={};S.w={step:1};S.date=TODAY;S.open=0;S.me=0;forget();closeModal();render()};
+document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el)return;const f=A[el.dataset.act];if(f){if(el.tagName==="A")e.preventDefault();f(el,e)}});
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.in;if(!k)return;if(k==="cq"){S.q=e.target.value;$("#cl").innerHTML=clList()}else{const w=W();if(k==="wname")w.name=e.target.value;if(k==="wphone")w.phone=e.target.value;if(k==="wnote")w.note=e.target.value;const nb=document.querySelector("[data-act=wnext]");if(nb&&S.w.step===4)nb.disabled=!(w.name&&digits(w.phone).length>=10)}});
+render();
+
+
+/* ===== фишки: «Сегодня», напоминания, блокировки времени, лист ожидания, возврат клиентов ===== */
+const whenWord=d=>d===TODAY?"сегодня":d===addDays(TODAY,1)?"завтра":dLong(d);
+const first=c=>c.name.split(" ")[0];
+const remText=b=>`Здравствуйте, ${first(cById(b.client))}! Напоминаем о записи в «${CFG.name}»: ${whenWord(b.date)} в ${b.start} — ${svById(b.service).name} (мастер ${mById(b.master).name}). Адрес: ${CFG.addr}. Если не получится прийти, ответьте, пожалуйста, на это сообщение.`;
+const ph11=c=>"7"+digits(c.phone).slice(-10);
+function msgModal(c,text,title,onSent){
+  const m=modal(`<h2 style="margin-top:0">${esc(title)}</h2><div class="muted" style="margin-bottom:6px">${esc(c.name)} · +${c.phone}</div><textarea id="mt" rows="6">${esc(text)}</textarea>
+  <div class="row wrap gap" style="margin-top:4px;justify-content:flex-start"><a class="btn ok" id="mwa" target="_blank" rel="noopener">WhatsApp</a><a class="btn blue" id="mtg" target="_blank" rel="noopener">Telegram</a><a class="btn alt" id="msm">SMS</a><button class="btn alt" id="mcp">Копировать</button></div>
+  <div class="muted sm" style="margin-top:6px">Откроется ваш мессенджер с готовым текстом. В Telegram текст копируется — вставьте его в чат.</div><button class="btn alt full" data-act="close" style="margin-top:8px">Закрыть</button>`);
+  const t=()=>m.querySelector("#mt").value,up=()=>{m.querySelector("#mwa").href="https://wa.me/"+ph11(c)+"?text="+encodeURIComponent(t());m.querySelector("#mtg").href="https://t.me/+"+ph11(c);m.querySelector("#msm").href="sms:+"+ph11(c)+"?&body="+encodeURIComponent(t())};
+  const cp=()=>{const x=t(),fb=()=>{try{const a=m.querySelector("#mt");a.select();document.execCommand("copy");a.setSelectionRange(0,0)}catch(e){}};try{navigator.clipboard.writeText(x).catch(fb)}catch(e){fb()}},sent=()=>{onSent&&onSent()};
+  m.querySelector("#mt").oninput=up;up();
+  m.querySelector("#mwa").onclick=sent;m.querySelector("#msm").onclick=sent;m.querySelector("#mtg").onclick=()=>{cp();sent()};
+  m.querySelector("#mcp").onclick=e=>{cp();e.target.textContent="Скопировано ✓";sent()}}
+function todayCard(){const d=S.date,bs=B.filter(x=>x.date===d&&x.status!=="cancelled").sort((a,b)=>a.start<b.start?-1:1),op=bs.filter(x=>["new","confirmed"].includes(x.status));
+  const paid=PAY.filter(p=>p.date===d).reduce((a,p)=>a+p.amount,0),plan=op.reduce((a,x)=>a+total(x),0);
+  const free=MASTERS.filter(m=>m.active).reduce((a,m)=>a+freeTimes(d,m.id,30,0,d!==TODAY).length,0)/2;
+  const nx=op.find(x=>d!==TODAY||tm(x.start)+x.dur>NOWMIN),tom=addDays(TODAY,1),un=B.filter(x=>x.date===tom&&["new","confirmed"].includes(x.status)&&!x.rem);
+  return `<div class="kpi"><div><b>${bs.length}</b><small>записей</small></div><div><b>${rub(paid)}</b><small>оплачено</small></div><div><b>${rub(plan)}</b><small>ожидается</small></div><div><b>${free%1?free.toFixed(1):free} ч</b><small>свободно</small></div></div>
+  ${nx?`<div class="card row" style="border-left:4px solid var(--accent)"><div><div class="muted sm">${d===TODAY&&tm(nx.start)<=NOWMIN?"Сейчас":"Следующий клиент"}</div><b>${nx.start} ${esc(cById(nx.client).name)}</b><div class="muted">${esc(svById(nx.service).name)} · ${esc(mById(nx.master).name)}</div></div><div class="row gap"><button class="btn alt s" data-act="bk" data-id="${nx.id}">Открыть</button><button class="btn s" data-act="remind" data-id="${nx.id}">🔔</button></div></div>`:""}
+  ${d===TODAY&&un.length?`<button class="btn blue full" data-act="remall" style="margin-bottom:8px">🔔 Напомнить клиентам на завтра (${un.length})</button>`:""}`}
+function remAllModal(){const tom=addDays(TODAY,1),list=B.filter(x=>x.date===tom&&["new","confirmed"].includes(x.status)).sort((a,b)=>a.start<b.start?-1:1);
+  const m=modal(`<h2 style="margin-top:0">Напоминания на завтра</h2><div class="muted" style="margin-bottom:8px">Нажмите WhatsApp у каждого — откроется чат с готовым текстом. Отправленные отмечаются галочкой.</div>
+  ${list.map(b=>{const c=cById(b.client);return `<div class="card row"><div><b>${b.start} ${esc(c.name)}</b><div class="muted sm">${esc(svById(b.service).name)}</div></div><a class="btn ${b.rem?"alt":"ok"} s" target="_blank" rel="noopener" data-id="${b.id}" href="https://wa.me/${ph11(c)}?text=${encodeURIComponent(remText(b))}">${b.rem?"✓ ещё раз":"WhatsApp"}</a></div>`}).join("")||"<div class='muted'>На завтра записей нет</div>"}
+  <button class="btn alt full" data-act="close">Закрыть</button>`);
+  m.querySelectorAll("a[data-id]").forEach(a=>a.onclick=()=>{const b=B.find(x=>x.id===+a.dataset.id);b.rem=true;a.className="btn alt s";a.textContent="✓ отправлено";render()})}
+function blkd(x){const top=(tm(x.from)-OPEN*60)/30*ROW,h=Math.max((tm(x.to)-tm(x.from))/30*ROW-2,22);return `<div class="blkd" data-act="blkinfo" data-id="${x.id}" style="top:${top}px;height:${h}px">🔒 <b style="display:inline">${esc(x.title)}</b><br>${x.from}–${x.to}</div>`}
+function blockModal(o={}){const mine=S.role==="master"?S.sess.master:0,ms=MASTERS.filter(m=>m.active),times=[];for(let t=OPEN*60;t<=CLOSE*60;t+=30)times.push(hm(t));
+  const m=modal(`<h2 style="margin-top:0">🔒 Закрыть время</h2><div class="muted" style="margin-bottom:6px">В это время клиенты не смогут записаться (ни онлайн, ни через администратора).</div>
+  ${mine?"":`<label class="l">Мастер</label><select id="km">${ms.map(x=>`<option value="${x.id}" ${o.master===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`}
+  <label class="l">Причина</label><div class="chips" id="kc">${["Обед","Выходной","Больничный","Отпуск","Личные дела"].map((t,i)=>`<div class="chip ${i?"":"on"}" data-t="${t}">${t}</div>`).join("")}</div>
+  <label class="l">Дата начала</label><input id="kd" type="date" value="${o.date||S.date}" min="${TODAY}"><label class="l">Сколько дней подряд</label><input id="kn" type="number" min="1" max="60" value="1">
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="ka" style="width:auto;margin:0"> <span>Весь рабочий день (${OPEN}:00–${CLOSE}:00)</span></label>
+  <div class="row gap" id="kt"><div style="flex:1"><label class="l">С</label><select id="kf">${times.slice(0,-1).map(t=>`<option ${t===(o.time||"13:00")?"selected":""}>${t}</option>`).join("")}</select></div><div style="flex:1"><label class="l">До</label><select id="ke">${times.slice(1).map(t=>`<option ${t===hm(tm(o.time||"13:00")+60)?"selected":""}>${t}</option>`).join("")}</select></div></div>
+  <div id="kerr" class="neg"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="kok">Закрыть время</button></div>`);
+  const q=s=>m.querySelector(s);let title="Обед";q("#kc").onclick=e=>{const c=e.target.closest("[data-t]");if(!c)return;title=c.dataset.t;q("#kc").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));if(["Выходной","Больничный","Отпуск"].includes(title)){q("#ka").checked=true;q("#kt").style.display="none"}};
+  q("#ka").onchange=()=>q("#kt").style.display=q("#ka").checked?"none":"";
+  q("#kok").onclick=()=>{const mid=mine||+q("#km").value,day=q("#ka").checked,from=day?hm(OPEN*60):q("#kf").value,to=day?hm(CLOSE*60):q("#ke").value,n=Math.max(1,Math.min(60,+q("#kn").value||1)),d0=q("#kd").value;
+    if(!d0)return q("#kerr").textContent="Выберите дату";if(tm(to)<=tm(from))return q("#kerr").textContent="Время «до» должно быть позже «с»";
+    const bad=[];for(let i=0;i<n;i++){const d=addDays(d0,i);B.filter(b=>b.master===mid&&b.date===d&&["new","confirmed"].includes(b.status)&&tm(b.start)<tm(to)&&tm(b.start)+b.dur>tm(from)).forEach(b=>bad.push(`${b.date.slice(8)}.${b.date.slice(5,7)} ${b.start} ${cById(b.client).name}`))}
+    if(bad.length)return q("#kerr").innerHTML="В это время уже есть записи — сначала перенесите их:<br>"+bad.slice(0,5).map(esc).join("<br>")+(bad.length>5?"<br>…":"");
+    for(let i=0;i<n;i++)BLOCKS.push({id:nid(),master:mid,date:addDays(d0,i),from,to,title});S.date=d0;m.remove();render()}}
+function waitModal(pre={}){closeModal();const sorted=[...WAIT].sort((a,b)=>a.date<b.date?-1:1);
+  const m=modal(`<h2 style="margin-top:0">⏳ Лист ожидания</h2><div class="muted" style="margin-bottom:8px">Когда у мастера освободится окно (отмена, неявка), программа сама подскажет, кому написать.</div>
+  ${sorted.map(w=>{const c=cById(w.client);return `<div class="card"><div class="row"><div><b>${esc(c.name)}</b><div class="muted sm">${esc(svById(w.service).name)} · ${whenWord(w.date)} · ${w.master?esc(mById(w.master).name):"любой мастер"}</div></div><button class="btn alt s" data-act="wdel" data-id="${w.id}">✕</button></div>
+  <div class="row wrap gap" style="margin-top:6px;justify-content:flex-start"><button class="btn s" data-act="wbook" data-id="${w.id}">Записать</button><button class="btn alt s" data-act="wmsg" data-id="${w.id}">Написать</button></div></div>`}).join("")||"<div class='card muted'>Список пуст</div>"}
+  <h3 style="margin:10px 0 4px">Добавить клиента</h3>
+  <label class="l">Клиент</label><select id="wc">${CLIENTS.map(c=>`<option value="${c.id}" ${pre.client===c.id?"selected":""}>${esc(c.name)} · +${c.phone}</option>`).join("")}</select>
+  <label class="l">Услуга</label><select id="ws">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
+  <label class="l">Желаемая дата</label><input id="wd" type="date" value="${addDays(TODAY,1)}" min="${TODAY}">
+  <label class="l">Мастер</label><select id="wm"><option value="0">Любой</option>${MASTERS.filter(x=>x.active).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join("")}</select>
+  <div class="row"><button class="btn alt" data-act="close">Закрыть</button><button class="btn ok" id="wok">Добавить</button></div>`);
+  m.querySelector("#wok").onclick=()=>{WAIT.push({id:nid(),client:+m.querySelector("#wc").value,service:+m.querySelector("#ws").value,master:+m.querySelector("#wm").value,date:m.querySelector("#wd").value});render();waitModal()}}
+function freeMsg(w,b){const c=cById(w.client);return `Здравствуйте, ${first(c)}! В «${CFG.name}» освободилось время: ${whenWord(b.date)} в ${b.start} (мастер ${mById(b.master).name}). Хотите записаться на ${svById(w.service).name.toLowerCase()}? Ответьте, пожалуйста, пока окно свободно.`}
+function freedModal(b){const hit=WAIT.filter(w=>w.date===b.date&&(!w.master||w.master===b.master)&&svById(w.service).dur<=b.dur);if(!hit.length)return;
+  modal(`<h2 style="margin-top:0">Освободилось окно!</h2><div class="muted" style="margin-bottom:8px">${b.start}–${hm(tm(b.start)+b.dur)} · ${esc(mById(b.master).name)} · ${whenWord(b.date)}. В листе ожидания подходят:</div>
+  ${hit.map(w=>`<div class="card"><b>${esc(cById(w.client).name)}</b><div class="muted sm">${esc(svById(w.service).name)}</div><div class="row wrap gap" style="margin-top:6px;justify-content:flex-start"><button class="btn s" data-act="wfill" data-id="${w.id}" data-b="${b.id}">Записать</button><button class="btn alt s" data-act="wmsg" data-id="${w.id}" data-b="${b.id}">Написать</button></div></div>`).join("")}<button class="btn alt full" data-act="close">Позже</button>`)}
+function rebookModal(b){const base=b.date>TODAY?b.date:TODAY;modal(`<h2 style="margin-top:0">↻ Записать снова</h2><div class="muted" style="margin-bottom:8px">${esc(cById(b.client).name)} · ${esc(svById(b.service).name)} · ${esc(mById(b.master).name)}. Через сколько недель?</div>
+  <div class="chips">${[2,3,4,6,8].map(w=>`<div class="chip" data-act="rebw" data-id="${b.id}" data-w="${w}">${w} нед.<br><small class="muted">${dLong(addDays(base,7*w))}</small></div>`).join("")}</div><button class="btn alt full" data-act="close">Не сейчас</button>`)}
+Object.assign(A,{
+  repeat(el){const b=B.find(x=>x.id===+el.dataset.id),sv=svById(b.service),c=cById(S.me),m=mById(b.master);const mid=m.active?b.master:0;
+    const w={step:3,service:b.service,master:mid,time:null,name:c.name,phone:"+"+c.phone};w.date=Array.from({length:14},(_,i)=>addDays(TODAY,i)).find(d=>freeTimes(d,mid,sv.dur).length)||TODAY;S.w=w;S.tab.client="book";render();window.scrollTo(0,0)},
+  cf(el){S.cf=el.dataset.f;render()},hist(el){S.hist=S.hist===+el.dataset.id?0:+el.dataset.id;$("#cl").innerHTML=clList()},
+  remind(el){const b=B.find(x=>x.id===+el.dataset.id);closeModal();msgModal(cById(b.client),remText(b),"🔔 Напомнить о записи",()=>{if(!b.rem){b.rem=true;render()}})},
+  remall(){remAllModal()},
+  blknew(){blockModal({date:S.date})},blkdel(el){BLOCKS=BLOCKS.filter(x=>x.id!==+el.dataset.id);closeModal();render()},
+  blkinfo(el){const x=BLOCKS.find(z=>z.id===+el.dataset.id);modal(`<h2 style="margin-top:0">🔒 ${esc(x.title)}</h2><div class="muted" style="margin-bottom:8px">${esc(mById(x.master).name)} · ${dLong(x.date)} · ${x.from}–${x.to}</div><div class="row"><button class="btn alt" data-act="close">Закрыть</button><button class="btn" data-act="blkdel" data-id="${x.id}">Снять блокировку</button></div>`)},
+  wait(){waitModal()},waitfor(el){waitModal({client:+el.dataset.id})},wdel(el){WAIT=WAIT.filter(w=>w.id!==+el.dataset.id);render();waitModal()},
+  wbook(el){const w=WAIT.find(x=>x.id===+el.dataset.id);closeModal();bookModal({date:w.date,master:w.master,service:w.service,client:w.client,waitId:w.id})},
+  wfill(el){const w=WAIT.find(x=>x.id===+el.dataset.id),b=B.find(x=>x.id===+el.dataset.b);closeModal();bookModal({date:b.date,master:b.master,time:b.start,service:w.service,client:w.client,waitId:w.id})},
+  wmsg(el){const w=WAIT.find(x=>x.id===+el.dataset.id),b=el.dataset.b?B.find(x=>x.id===+el.dataset.b):{date:w.date,start:"",master:w.master||1};closeModal();msgModal(cById(w.client),el.dataset.b?freeMsg(w,b):`Здравствуйте, ${first(cById(w.client))}! В «${CFG.name}» появилась возможность записаться на ${svById(w.service).name.toLowerCase()} ${whenWord(w.date)}. Пишите, подберём удобное время.`,"Написать из листа ожидания")},
+  comeback(el){const c=cById(+el.dataset.id),l=lastDone(c.id);msgModal(c,`Здравствуйте, ${first(c)}! Давно вас не видели в «${CFG.name}»${l?` (последний раз вы были ${daysAgo(l)} дн. назад)`:""}. Записать вас на стрижку? За каждый визит мы начисляем 5% бонусами. Адрес: ${CFG.addr}.`,"Вернуть клиента")},
+  rebook(el){const b=B.find(x=>x.id===+el.dataset.id);closeModal();rebookModal(b)},
+  rebw(el){const b=B.find(x=>x.id===+el.dataset.id),base=b.date>TODAY?b.date:TODAY;closeModal();bookModal({date:addDays(base,7*+el.dataset.w),master:b.master,service:b.service,client:b.client})},
+});
+
+/* ===== сообщения клиентам (автоматические) ===== */
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
+const nWhen=at=>{const d=at.slice(0,10);return (d===TODAY?"сегодня":d===addDays(TODAY,1)?"завтра":d===addDays(TODAY,-1)?"вчера":dLong(d))+" в "+at.slice(11)};
+function nText(x){const b=B.find(z=>z.id===x.b),c=cById(b.client),sv=svById(b.service),m=mById(b.master);
+  if(x.kind==="confirm")return `Здравствуйте, ${first(c)}! Вы записаны в «${CFG.name}»: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Адрес: ${CFG.addr}. Ваш номер клиента: ${fmtNo(c.id)} — по нему можно войти в личный кабинет (история визитов и бонусы). Если планы изменятся, пожалуйста, предупредите заранее.`;
+  if(x.kind==="move")return `${first(c)}, ваша запись перенесена: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Ждём вас!`;
+  if(x.kind==="cancel")return `${first(c)}, ваша запись на ${dLong(b.date)}, ${b.start} отменена. Будем рады видеть вас в другой день — записаться можно по ссылке или по телефону.`;
+  return `${first(c)}, напоминаем: сегодня в ${b.start} вас ждёт ${m.name} — ${sv.name}. Адрес: ${CFG.addr}. Если не получится прийти, ответьте на это сообщение.`}
+const KIND={confirm:"Подтверждение",remind:"Напоминание",move:"Перенос",cancel:"Отмена"};
+function notifBlock(b){const c=cById(b.client),r=NOTIF.find(x=>x.b===b.id&&x.kind==="remind"),n=CFG.ntf;
+  return `<div class="card" style="text-align:left;margin:10px 0 0"><div>✅ Подтверждение отправлено в <b>${chanName[c.chan||"whatsapp"]}</b> (+${c.phone})</div>${r?`<div style="margin-top:4px">🔔 Напомним <b>${nWhen(r.at)}</b></div>`:`<div class="muted" style="margin-top:4px">${b.date===TODAY?"Запись на сегодня — отдельное напоминание не нужно.":"Напоминание отключено."}</div>`}</div>`}
+function vOutbox(){const n=CFG.ntf,pend=NOTIF.filter(x=>!x.sent).sort((a,b)=>a.at<b.at?-1:1),sent=NOTIF.filter(x=>x.sent).sort((a,b)=>a.at<b.at?1:-1).slice(0,25);
+  const row=x=>{const b=B.find(z=>z.id===x.b),c=cById(b.client);return `<div class="card"><div class="row"><div><b>${esc(c.name)}</b> <span class="tag ${x.kind==="cancel"?"noshow":x.kind==="remind"?"new":"confirmed"}">${KIND[x.kind]}</span></div><span class="muted sm">${chanName[x.chan]}</span></div>
+  <div class="muted sm" style="margin:2px 0 6px">${x.sent?"Отправлено":"Уйдёт"} ${nWhen(x.at)} · запись ${dLong(b.date)}, ${b.start}</div><div class="sm" style="background:var(--bg);border-radius:10px;padding:8px">${esc(nText(x))}</div>
+  ${x.sent?"":`<div class="row gap" style="margin-top:6px;justify-content:flex-start"><button class="btn s" data-act="nsend" data-id="${x.id}">Отправить сейчас</button><button class="btn alt s" data-act="nskip" data-id="${x.id}">Не отправлять</button></div>`}</div>`};
+  return `<div class="note" style="margin-top:0"><b>Как это работает.</b> Клиент получает подтверждение сразу после записи. Если запись не на сегодня, ещё и напоминание в день визита за ${n.hours} ч до начала, но не раньше ${n.from} (рано утром не пишем). Запись «день в день» — только подтверждение. Сообщения уходят сами: на сервере их отправляет бот WhatsApp/Telegram или SMS-сервис. Здесь — очередь для наглядности. Настройки — у владельца.</div>
+  <h2>Запланировано (${pend.length})</h2>${pend.slice(0,12).map(row).join("")||"<div class='card muted'>Пока ничего не запланировано</div>"}${pend.length>12?`<div class="muted sm" style="text-align:center">…и ещё ${pend.length-12}</div>`:""}
+  <h2>Отправлено</h2>${sent.map(row).join("")||"<div class='card muted'>Пока пусто</div>"}`}
+function ntfCard(){const n=CFG.ntf;return `<h2>Уведомления клиентам</h2><div class="card">
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="nc" ${n.confirm?"checked":""} style="width:auto;margin:0"> <span>Подтверждение сразу после записи</span></label>
+  <label class="row" style="justify-content:flex-start;gap:8px;margin:0 0 8px"><input type="checkbox" id="nr" ${n.remind?"checked":""} style="width:auto;margin:0"> <span>Напоминание в день записи</span></label>
+  <label class="l">За сколько часов напомнить</label><select id="nh">${[1,2,3,4].map(h=>`<option value="${h}" ${h===n.hours?"selected":""}>за ${h} ч</option>`).join("")}</select>
+  <label class="l">Не писать клиентам раньше</label><select id="nf">${["08:00","09:00","10:00"].map(t=>`<option ${t===n.from?"selected":""}>${t}</option>`).join("")}</select>
+  <div class="muted sm" style="margin-bottom:8px">Если «за 2 часа» выпадает на раннее утро (например, запись на 10:00), напоминание придёт в указанное время, а не ночью. Запись на сегодняшний день напоминания не получает.</div><button class="btn" data-act="ntfsave">Сохранить</button></div>`}
+Object.assign(A,{
+  cablogin(){const c=findByNo($("#cno").value);if(!c){$("#cerr").textContent="Номер не найден. Проверьте цифры или нажмите «Забыли номер?»";return}S.me=c.id;if($("#crem").checked)remember(c);render()},
+  cabfill(el){const c=cById(+el.dataset.id);$("#cno").value=fmtNo(c.id)},
+  cablogout(){S.me=0;forget();render()},
+  cabforgot(){const d=digits($("#cph").value).slice(-10),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone).slice(-10)===d);toast(c?"✉ Номер отправлен в "+chanName[c.chan||"whatsapp"]+" на +"+c.phone:"Если такой номер есть в базе, мы отправим сообщение")},
+  wchan(el){S.w.chan=el.dataset.k;render()},
+  nsend(el){const x=NOTIF.find(z=>z.id===+el.dataset.id);x.sent=true;x.at=nowStr();toast("✉ Отправлено");render()},
+  nskip(el){NOTIF=NOTIF.filter(z=>z.id!==+el.dataset.id);render()},
+  ntfsave(){CFG.ntf={confirm:$("#nc").checked?1:0,remind:$("#nr").checked?1:0,hours:+$("#nh").value,from:$("#nf").value};
+    B.filter(b=>b.date>=TODAY&&["new","confirmed"].includes(b.status)).forEach(b=>scheduleNotifs(b,null));toast("Настройки уведомлений сохранены");render()},
+});
+setInterval(()=>{if(processDue()&&S.role!=="client"&&S.tab[S.role]==="msg")render()},30000);
+
+/* ===== владелец: касса по дням в виде календаря ===== */
+TABS.owner.splice(1,0,["cal","🗓 Касса"]);
+const MLAB={cash:"Наличные",card:"Карта",sbp:"СБП"};
+const nb=n=>Math.round(n).toLocaleString("ru-RU").replace(/\s/g," ");
+function vCashCal(){
+  const ym=S.cym||TODAY.slice(0,7),[Y,M]=ym.split("-").map(Number),first=(new Date(Y,M-1,1).getDay()+6)%7,n=new Date(Y,M,0).getDate();
+  const inM=PAY.filter(x=>x.date.slice(0,7)===ym),byDay={},cnt={};
+  inM.forEach(x=>{byDay[x.date]=(byDay[x.date]||0)+x.amount;if(x.kind==="service")cnt[x.date]=(cnt[x.date]||0)+1});
+  const tot=inM.reduce((a,x)=>a+x.amount,0),tips=inM.filter(x=>x.kind==="tip").reduce((a,x)=>a+x.amount,0),visits=inM.filter(x=>x.kind==="service").length;
+  const days=Object.keys(byDay).filter(d=>byDay[d]>0),best=days.sort((a,b)=>byDay[b]-byDay[a])[0],mx=Math.max(1,...Object.values(byDay));
+  const byM={};inM.forEach(x=>byM[x.method]=(byM[x.method]||0)+x.amount);
+  if(!S.cday||S.cday.slice(0,7)!==ym)S.cday=ym===TODAY.slice(0,7)?TODAY:ym+"-01";
+  let cells=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(x=>`<i style="text-align:center;font-style:normal;font-size:12px;color:var(--muted)">${x}</i>`).join("")+"<span></span>".repeat(first);
+  for(let d=1;d<=n;d++){const ds=`${ym}-${pad(d)}`,v=byDay[ds]||0,sel=ds===S.cday,fut=ds>TODAY;
+    cells+=`<div data-act="cday" data-d="${ds}" style="text-align:center;padding:6px 0 5px;border-radius:10px;cursor:pointer;min-width:0;border:1px solid ${sel?"var(--accent)":ds===TODAY?"var(--blue)":"transparent"};background:${sel?"var(--accent)":v?`rgba(31,138,91,${(.12+.4*v/mx).toFixed(2)})`:"none"};color:${sel?"#fff":fut?"var(--muted)":"inherit"};font-weight:${v?700:400}">${d}<div style="font-size:10px;line-height:1.1;min-height:11px;font-weight:600">${v?nb(v):""}</div></div>`}
+  const dp=PAY.filter(x=>x.date===S.cday),dby={};dp.forEach(x=>dby[x.method]=(dby[x.method]||0)+x.amount);
+  const dm={};dp.forEach(x=>dm[x.master]=(dm[x.master]||0)+x.amount);
+  return `<div class="card"><div class="row" style="margin-bottom:8px"><button class="btn alt s" data-act="cmon" data-n="-1">←</button><b>${MONN[M-1]} ${Y}</b><div class="row gap"><button class="btn alt s" data-act="cnow">Сегодня</button><button class="btn alt s" data-act="cmon" data-n="1">→</button></div></div>
+  <label class="l">Перейти к месяцу</label><input type="month" lang="ru" data-in="cym" value="${ym}" style="margin-bottom:10px">
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${cells}</div><div class="muted sm" style="margin-top:6px">Цифра под числом — выручка за день. Чем зеленее, тем больше. Нажмите на день, чтобы увидеть оплаты.</div></div>
+  <h2>За месяц</h2><div class="grid"><div class="card"><div class="muted">Выручка</div><div class="k">${rub(tot)}</div></div><div class="card"><div class="muted">Визитов оплачено</div><div class="k">${visits}</div></div><div class="card"><div class="muted">Средний чек</div><div class="k">${rub(visits?(tot-tips)/visits:0)}</div></div><div class="card"><div class="muted">Лучший день</div><div class="k" style="font-size:18px">${best?best.slice(8)+" · "+rub(byDay[best]):"—"}</div></div></div>
+  <div class="card sm">${["cash","card","sbp"].map(k=>kv(MLAB[k],rub(byM[k]||0))).join("")}${kv("в т.ч. чаевые",rub(tips))}</div>
+  <h2>${dLong(S.cday)}${S.cday===TODAY?" · сегодня":""}</h2>
+  <div class="grid"><div class="card"><div class="muted">Принято за день</div><div class="k">${rub(dp.reduce((a,x)=>a+x.amount,0))}</div></div>${["cash","card","sbp"].map(k=>`<div class="card"><div class="muted">${MLAB[k]}</div><div class="k">${rub(dby[k]||0)}</div></div>`).join("")}</div>
+  ${Object.keys(dm).length?`<div class="card sm">${Object.entries(dm).map(([id,v])=>kv("Мастер "+esc(mById(+id).name),rub(v))).join("")}</div>`:""}
+  ${dp.map(x=>{const b=B.find(z=>z.id===x.booking);return `<div class="card row"><div><b>${b?esc(cById(b.client).name):"—"}</b><div class="muted">${b?esc(svById(b.service).name):""} · ${esc(mById(x.master).name)} · ${MLAB[x.method]}${x.kind==="tip"?" · чаевые":""}</div></div><b style="white-space:nowrap">${rub(x.amount)}</b></div>`}).join("")||"<div class='card muted'>Оплат за этот день нет</div>"}`}
+Object.assign(A,{
+  cmon(el){const [y,m]=(S.cym||TODAY.slice(0,7)).split("-").map(Number),d=new Date(y,m-1+ +el.dataset.n,1);S.cym=d.getFullYear()+"-"+pad(d.getMonth()+1);render()},
+  cday(el){S.cday=el.dataset.d;render()},
+  cnow(){S.cym=TODAY.slice(0,7);S.cday=TODAY;render()},
+});
+document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.in==="cym"&&/^\d{4}-\d{2}$/.test(e.target.value)){S.cym=e.target.value;render()}});
+/* ===== заставка клиента: птичка на ножницах ===== */
+function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
+  const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
+  el.innerHTML=`<div class="badge"><svg viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="spcb"><polygon points="52.4,0 52.4,45 55.6,45 55.6,120 120,120 120,0"/></clipPath><clipPath id="spcr"><polygon points="0,0 47.8,0 47.8,50 50.8,50 50.8,60 55.6,64 55.6,120 0,120"/></clipPath></defs><g class="lg"><g transform="translate(60 62) scale(.85) rotate(-95) translate(-60 -62)"><path class="st" d="M48.9 78.6 L48.8 78.8 L48.8 87.5 L52.8 91.5 L53.8 92.9 L56.2 95.2 L56.5 95.7 L58.7 98.0 L59.8 99.0 L62.1 101.6 L62.4 102.1 L63.3 102.8 L65.3 104.8 L67.3 107.3 L68.0 107.8 L70.0 110.0 L70.3 110.0 L73.1 105.7 L73.0 105.2 L72.6 104.8 L72.0 103.6 L69.0 99.6 L68.2 98.2 L66.9 96.7 L63.9 92.1 L63.5 91.7 L61.8 89.3 L61.3 88.3 L60.7 87.6 L56.1 81.0 L55.4 80.6 L54.8 80.5 L54.3 80.2 L53.7 80.2 L51.5 79.5 L50.9 79.1 L50.3 79.1 L49.7 78.8ZM52.5 82.7 L53.0 82.7 L53.9 83.2 L54.4 83.9 L54.6 84.7 L54.5 85.3 L54.0 86.1 L53.6 86.5 L53.3 86.5 L52.8 86.8 L51.5 86.4 L51.2 86.0 L50.9 85.0 L50.9 84.5 L51.4 83.3 L51.8 83.0Z"/><path class="lo" d="M15.2 56.3 L13.9 58.1 L12.7 61.0 L12.1 64.4 L12.1 67.0 L12.5 69.3 L13.3 71.4 L14.3 73.1 L15.9 75.1 L16.7 75.9 L18.8 77.2 L21.5 77.9 L22.3 77.9 L22.9 78.1 L24.0 78.0 L26.3 77.3 L27.3 76.6 L28.0 76.3 L29.1 75.4 L29.4 75.3 L30.2 75.7 L31.6 76.0 L33.0 76.8 L33.7 76.9 L34.3 77.4 L36.1 78.1 L36.4 78.5 L40.3 80.5 L40.9 81.1 L42.1 81.7 L46.1 84.9 L49.0 87.6 L50.8 89.6 L52.8 91.5 L53.8 92.9 L56.2 95.2 L56.5 95.7 L58.7 98.0 L59.8 99.0 L62.1 101.6 L62.4 102.1 L63.3 102.8 L65.3 104.8 L67.3 107.3 L68.0 107.8 L70.0 110.0 L70.4 109.9 L73.0 105.9 L73.1 105.3 L70.7 101.8 L69.0 99.6 L68.2 98.2 L66.9 96.7 L63.9 92.1 L63.5 91.7 L61.8 89.3 L61.3 88.3 L60.7 87.6 L56.0 80.9 L55.4 80.6 L54.8 80.5 L54.3 80.2 L53.7 80.2 L51.5 79.5 L50.9 79.1 L50.3 79.1 L49.7 78.8 L48.8 78.6 L47.7 78.1 L47.2 78.1 L45.7 77.7 L41.8 76.1 L41.0 76.0 L39.6 75.3 L38.6 75.1 L35.8 74.0 L34.3 73.0 L32.4 72.2 L32.1 71.7 L32.0 71.1 L32.7 68.5 L32.9 65.8 L32.7 64.0 L31.9 61.3 L30.6 58.9 L28.9 56.8 L27.2 55.3 L23.9 53.6 L20.4 53.5 L18.9 53.9 L16.2 55.3ZM52.5 82.7 L53.0 82.7 L53.9 83.2 L54.4 83.9 L54.6 84.7 L54.5 85.3 L54.0 86.1 L53.6 86.5 L53.3 86.5 L52.8 86.8 L51.5 86.4 L51.2 86.0 L50.9 85.0 L50.9 84.5 L51.4 83.3 L51.8 83.0ZM20.1 57.0 L21.2 56.9 L23.5 57.3 L25.2 57.9 L25.9 58.4 L27.8 60.5 L28.9 62.4 L29.4 63.8 L29.7 66.0 L29.7 67.3 L29.6 68.4 L28.9 70.6 L27.4 72.8 L26.2 73.7 L24.7 74.4 L22.1 74.6 L21.0 74.3 L19.4 73.6 L17.0 71.4 L15.9 69.4 L15.5 68.1 L15.2 66.5 L15.1 64.9 L15.3 62.9 L15.9 60.8 L16.3 60.1 L17.4 58.7 L18.6 57.7Z"/><path d="M102.0 13.9 L98.8 12.1 L96.8 11.3 L95.7 11.1 L95.1 10.7 L93.8 10.4 L92.7 10.4 L91.8 10.1 L87.1 10.1 L84.4 10.4 L83.4 10.7 L82.8 11.1 L82.4 11.0 L78.5 12.9 L77.6 12.9 L76.0 12.5 L75.5 12.7 L74.4 12.7 L71.4 13.2 L70.0 13.8 L69.5 13.8 L68.4 14.4 L66.4 15.2 L64.4 16.4 L63.4 17.3 L62.2 17.9 L60.1 19.7 L59.5 20.5 L59.1 20.6 L58.7 21.3 L57.3 22.7 L56.8 23.7 L56.0 24.3 L54.6 26.7 L54.4 27.4 L53.6 28.7 L53.5 29.5 L53.1 30.2 L53.1 30.9 L52.6 31.9 L52.5 33.0 L52.2 33.6 L52.0 34.7 L52.1 35.3 L51.9 35.8 L51.8 37.5 L51.9 39.0 L51.8 40.0 L52.2 42.5 L51.8 43.0 L50.5 43.4 L48.6 43.6 L48.0 43.1 L46.9 41.3 L45.6 39.8 L44.3 38.7 L41.6 37.1 L40.9 37.0 L40.4 36.7 L38.9 36.5 L37.8 36.2 L36.7 36.4 L35.8 36.4 L34.7 36.7 L31.7 38.4 L30.1 39.8 L28.5 42.3 L27.4 45.7 L27.2 48.3 L27.3 49.7 L27.9 52.8 L29.3 55.3 L29.5 56.1 L31.0 57.9 L32.5 59.3 L35.0 60.7 L36.8 61.2 L37.3 61.1 L38.2 61.4 L39.2 61.4 L39.6 61.3 L40.8 61.3 L41.5 61.0 L43.5 60.4 L44.0 61.3 L44.2 62.4 L44.9 64.4 L45.4 66.9 L46.3 69.7 L46.3 70.9 L46.9 72.2 L47.0 73.3 L47.3 73.9 L47.3 74.5 L47.7 75.4 L48.1 76.0 L49.0 76.5 L49.9 76.5 L50.8 77.1 L51.8 77.1 L53.3 77.4 L53.6 76.8 L52.2 75.0 L51.4 73.2 L51.2 72.4 L50.3 70.3 L50.1 69.2 L48.8 65.1 L48.6 63.0 L48.0 60.9 L48.0 60.0 L47.4 58.4 L47.5 56.9 L48.1 56.1 L49.1 54.2 L49.1 53.7 L49.6 52.2 L49.6 50.8 L49.8 50.5 L50.3 50.3 L51.9 50.4 L55.1 51.7 L55.9 51.7 L56.2 51.3 L56.3 50.8 L56.7 50.3 L57.5 48.3 L57.9 47.8 L58.7 46.0 L59.3 45.5 L60.0 43.8 L60.5 43.3 L60.7 42.8 L61.3 42.3 L62.5 40.4 L64.4 38.4 L64.7 37.8 L68.3 34.3 L69.5 33.4 L70.1 33.3 L70.6 32.5 L71.2 32.4 L72.6 31.2 L73.0 31.1 L73.1 31.3 L73.1 31.6 L68.4 35.8 L65.7 38.9 L65.3 39.5 L64.4 40.6 L63.9 41.7 L63.1 42.9 L62.7 43.9 L62.3 44.3 L61.7 45.9 L60.9 47.2 L60.3 48.8 L59.9 49.5 L59.4 51.3 L58.8 52.2 L58.6 53.3 L58.1 54.4 L56.8 60.2 L56.8 61.2 L56.3 64.6 L56.4 66.1 L56.2 66.6 L56.2 68.4 L56.4 68.9 L56.3 70.3 L56.8 74.7 L57.0 75.1 L57.3 75.4 L57.7 75.5 L58.3 75.3 L58.7 74.7 L61.3 72.0 L61.6 71.4 L63.0 70.0 L63.2 69.7 L64.1 68.7 L64.7 68.2 L65.0 67.6 L65.8 66.9 L66.3 66.1 L67.5 64.5 L68.2 64.1 L68.9 62.9 L69.7 62.3 L70.0 61.4 L71.0 60.5 L71.7 59.5 L72.3 58.9 L73.1 57.7 L73.9 56.8 L74.1 56.3 L76.6 53.3 L76.8 52.7 L77.9 51.7 L78.5 50.4 L80.0 48.3 L80.3 47.6 L82.3 45.2 L82.6 44.4 L83.9 42.6 L85.7 39.5 L86.2 38.3 L86.6 37.9 L86.9 37.1 L87.3 36.7 L87.5 35.8 L88.7 33.8 L88.8 33.1 L89.5 31.7 L89.8 31.4 L90.4 31.7 L92.0 33.1 L93.0 33.5 L93.5 33.9 L94.2 33.9 L94.9 34.5 L100.6 34.5 L101.4 33.9 L102.5 33.3 L103.3 32.7 L104.2 32.5 L106.4 29.9 L107.3 27.7 L107.4 27.1 L107.7 26.5 L107.9 24.9 L107.9 24.0 L107.5 21.4 L106.8 19.7 L105.9 18.2 L105.5 17.8 L105.2 17.1 L104.0 15.8ZM34.7 40.3 L35.5 40.2 L36.4 39.8 L37.8 39.8 L38.1 39.9 L38.8 39.9 L39.2 40.2 L39.8 40.1 L42.3 41.5 L44.0 43.2 L45.6 45.8 L46.5 49.1 L46.4 51.1 L45.9 53.4 L45.5 54.2 L44.5 55.6 L43.2 56.9 L42.3 57.2 L41.5 57.8 L39.8 58.1 L37.5 57.9 L35.0 56.8 L34.1 56.2 L32.2 54.2 L31.0 51.9 L30.4 49.0 L30.4 47.0 L30.6 46.3 L30.6 45.7 L31.3 43.8 L32.5 41.9 L33.2 41.5 L33.8 40.9 L34.2 40.7ZM99.9 24.8 L101.0 25.0 L101.8 25.7 L102.2 26.5 L102.3 27.7 L102.0 28.2 L101.4 28.8 L101.1 29.2 L100.1 29.3 L98.7 28.5 L98.3 27.6 L98.3 26.4 L99.1 25.3Z" clip-path="url(#spcr)"/><g transform="rotate(40 54 46)"><g clip-path="url(#spcb)"><path class="bd" d="M102.0 13.9 L98.8 12.1 L96.8 11.3 L95.7 11.1 L95.1 10.7 L93.8 10.4 L92.7 10.4 L91.8 10.1 L87.1 10.1 L84.4 10.4 L83.4 10.7 L82.8 11.1 L82.4 11.0 L78.5 12.9 L77.6 12.9 L76.0 12.5 L75.5 12.7 L74.4 12.7 L71.4 13.2 L70.0 13.8 L69.5 13.8 L68.4 14.4 L66.4 15.2 L64.4 16.4 L63.4 17.3 L62.2 17.9 L60.1 19.7 L59.5 20.5 L59.1 20.6 L58.7 21.3 L57.3 22.7 L56.8 23.7 L56.0 24.3 L54.6 26.7 L54.4 27.4 L53.6 28.7 L53.5 29.5 L53.1 30.2 L53.1 30.9 L52.6 31.9 L52.5 33.0 L52.2 33.6 L52.0 34.7 L52.1 35.3 L51.9 35.8 L51.8 37.5 L51.9 39.0 L51.8 40.0 L52.2 42.5 L51.8 43.0 L50.5 43.4 L48.6 43.6 L48.0 43.1 L46.9 41.3 L45.6 39.8 L44.3 38.7 L41.6 37.1 L40.9 37.0 L40.4 36.7 L38.9 36.5 L37.8 36.2 L36.7 36.4 L35.8 36.4 L34.7 36.7 L31.7 38.4 L30.1 39.8 L28.5 42.3 L27.4 45.7 L27.2 48.3 L27.3 49.7 L27.9 52.8 L29.3 55.3 L29.5 56.1 L31.0 57.9 L32.5 59.3 L35.0 60.7 L36.8 61.2 L37.3 61.1 L38.2 61.4 L39.2 61.4 L39.6 61.3 L40.8 61.3 L41.5 61.0 L43.5 60.4 L44.0 61.3 L44.2 62.4 L44.9 64.4 L45.4 66.9 L46.3 69.7 L46.3 70.9 L46.9 72.2 L47.0 73.3 L47.3 73.9 L47.3 74.5 L47.7 75.4 L48.1 76.0 L49.0 76.5 L49.9 76.5 L50.8 77.1 L51.8 77.1 L53.3 77.4 L53.6 76.8 L52.2 75.0 L51.4 73.2 L51.2 72.4 L50.3 70.3 L50.1 69.2 L48.8 65.1 L48.6 63.0 L48.0 60.9 L48.0 60.0 L47.4 58.4 L47.5 56.9 L48.1 56.1 L49.1 54.2 L49.1 53.7 L49.6 52.2 L49.6 50.8 L49.8 50.5 L50.3 50.3 L51.9 50.4 L55.1 51.7 L55.9 51.7 L56.2 51.3 L56.3 50.8 L56.7 50.3 L57.5 48.3 L57.9 47.8 L58.7 46.0 L59.3 45.5 L60.0 43.8 L60.5 43.3 L60.7 42.8 L61.3 42.3 L62.5 40.4 L64.4 38.4 L64.7 37.8 L68.3 34.3 L69.5 33.4 L70.1 33.3 L70.6 32.5 L71.2 32.4 L72.6 31.2 L73.0 31.1 L73.1 31.3 L73.1 31.6 L68.4 35.8 L65.7 38.9 L65.3 39.5 L64.4 40.6 L63.9 41.7 L63.1 42.9 L62.7 43.9 L62.3 44.3 L61.7 45.9 L60.9 47.2 L60.3 48.8 L59.9 49.5 L59.4 51.3 L58.8 52.2 L58.6 53.3 L58.1 54.4 L56.8 60.2 L56.8 61.2 L56.3 64.6 L56.4 66.1 L56.2 66.6 L56.2 68.4 L56.4 68.9 L56.3 70.3 L56.8 74.7 L57.0 75.1 L57.3 75.4 L57.7 75.5 L58.3 75.3 L58.7 74.7 L61.3 72.0 L61.6 71.4 L63.0 70.0 L63.2 69.7 L64.1 68.7 L64.7 68.2 L65.0 67.6 L65.8 66.9 L66.3 66.1 L67.5 64.5 L68.2 64.1 L68.9 62.9 L69.7 62.3 L70.0 61.4 L71.0 60.5 L71.7 59.5 L72.3 58.9 L73.1 57.7 L73.9 56.8 L74.1 56.3 L76.6 53.3 L76.8 52.7 L77.9 51.7 L78.5 50.4 L80.0 48.3 L80.3 47.6 L82.3 45.2 L82.6 44.4 L83.9 42.6 L85.7 39.5 L86.2 38.3 L86.6 37.9 L86.9 37.1 L87.3 36.7 L87.5 35.8 L88.7 33.8 L88.8 33.1 L89.5 31.7 L89.8 31.4 L90.4 31.7 L92.0 33.1 L93.0 33.5 L93.5 33.9 L94.2 33.9 L94.9 34.5 L100.6 34.5 L101.4 33.9 L102.5 33.3 L103.3 32.7 L104.2 32.5 L106.4 29.9 L107.3 27.7 L107.4 27.1 L107.7 26.5 L107.9 24.9 L107.9 24.0 L107.5 21.4 L106.8 19.7 L105.9 18.2 L105.5 17.8 L105.2 17.1 L104.0 15.8ZM34.7 40.3 L35.5 40.2 L36.4 39.8 L37.8 39.8 L38.1 39.9 L38.8 39.9 L39.2 40.2 L39.8 40.1 L42.3 41.5 L44.0 43.2 L45.6 45.8 L46.5 49.1 L46.4 51.1 L45.9 53.4 L45.5 54.2 L44.5 55.6 L43.2 56.9 L42.3 57.2 L41.5 57.8 L39.8 58.1 L37.5 57.9 L35.0 56.8 L34.1 56.2 L32.2 54.2 L31.0 51.9 L30.4 49.0 L30.4 47.0 L30.6 46.3 L30.6 45.7 L31.3 43.8 L32.5 41.9 L33.2 41.5 L33.8 40.9 L34.2 40.7ZM99.9 24.8 L101.0 25.0 L101.8 25.7 L102.2 26.5 L102.3 27.7 L102.0 28.2 L101.4 28.8 L101.1 29.2 L100.1 29.3 L98.7 28.5 L98.3 27.6 L98.3 26.4 L99.1 25.3Z"/></g><path class="bk" d="M94.9 34.7 L95.4 35.5 L95.6 36.1 L96.0 36.6 L96.4 37.5 L97.1 38.1 L97.6 38.2 L98.6 37.5 L98.8 36.9 L99.4 36.1 L100.2 35.2 L100.7 34.4 L94.9 34.3Z"/></g></g></g></g></svg></div>
+  <div class="nm">${nm}</div><div class="sub">Запись онлайн</div><div class="hint">нажмите, чтобы пропустить</div>`;
+  const done=()=>{el.remove()};el.onclick=done;document.body.appendChild(el);setTimeout(done,3900)}
+splash();
+
+</script>
+
+</body></html>
