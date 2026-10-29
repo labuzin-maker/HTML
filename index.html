@@ -95,6 +95,28 @@ a.btn{text-decoration:none;display:inline-block;text-align:center}
 
 
 
+<style id="v10">
+.btn{box-shadow:0 2px 0 rgba(0,0,0,.22),0 5px 12px rgba(0,0,0,.12);transition:transform .08s,box-shadow .08s,filter .15s;-webkit-tap-highlight-color:transparent}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(2px);box-shadow:0 0 0 rgba(0,0,0,.2),0 1px 3px rgba(0,0,0,.15)}
+.btn.alt{box-shadow:0 1px 0 var(--line),0 3px 8px rgba(0,0,0,.06)}
+.btn[disabled]{box-shadow:none;transform:none;filter:none}
+.btn:focus-visible,.chip:focus-visible,.opt:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #b8432f22;outline:none}
+.card{box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.chip,.opt,.day{transition:transform .08s,box-shadow .12s,border-color .12s}
+.chip:active,.opt:active,.day:active{transform:scale(.97)}
+.chip.on{box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.ov{animation:v10fade .18s ease-out}.sheet{animation:v10up .24s cubic-bezier(.2,.9,.3,1)}
+@keyframes v10fade{from{opacity:0}to{opacity:1}}@keyframes v10up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media(min-width:700px){@keyframes v10up{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}}
+@media(prefers-reduced-motion:reduce){.ov,.sheet{animation:none}.btn,.chip,.opt,.day{transition:none}}
+.bk.arr{box-shadow:0 0 0 2px var(--ok),0 2px 6px #0003}
+.tag.arr{background:var(--ok);color:#fff}.tag.fresh{background:#e4d6f5;color:#4a2b78}
+.stars{display:flex;gap:6px;justify-content:center;margin:8px 0}.stars button{border:0;background:none;font-size:34px;line-height:1;color:#c9bfb2;padding:2px;transition:transform .1s}.stars button.on{color:#e0a100}.stars button:active{transform:scale(1.2)}
+.rv{border-left:4px solid var(--ok)}.rv.low{border-left-color:var(--bad)}
+.ear{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.ear div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+</style>
 <div class="demo" id="demo"><b>ДЕМО ВХОДА КАК:</b>
 <button data-act="role" data-v="client">📱 Клиент</button><button data-act="role" data-v="master">💇 Мастер</button><button data-act="role" data-v="admin">🖥 Администратор</button><button data-act="role" data-v="owner">👑 Владелец</button>
 <button data-act="reset" style="margin-left:auto;background:#5b2a22">↺ Сброс</button></div>
@@ -184,11 +206,16 @@ function seed(){
   MATS.forEach(m=>{const r=recent[m.id];const open=Math.max(m.pack,(used[m.id]||0)+target[m.id]-(r?r[0]:0));
     MOV.push({id:nid(),date:addDays(TODAY,-46),mat:m.id,qty:open,type:"in",cost:m.cost,note:"Начальный остаток"});
     if(r)MOV.push({id:nid(),date:addDays(TODAY,r[1]),mat:m.id,qty:r[0],type:"in",cost:m.cost,note:"Поставка"})});
+  /* отзывы клиентов */
+  {const rv=[[5,""],[5,"Отличная стрижка, спасибо!"],[4,""],[5,""],[3,"Долго ждала своей очереди"],[5,"Лучший мастер"],[2,"Не понравился результат"],[4,""]];
+   B.filter(b=>b.status==="done"&&b.date<TODAY).forEach((b,i)=>{if(i%6===0){const x=rv[(i/6)%rv.length|0];b.review={r:x[0],t:x[1],date:b.date}}})}
 }
 seed();
 const stockOf=id=>MOV.filter(x=>x.mat===id).reduce((a,x)=>a+x.qty,0);
 const matById=id=>MATS.find(m=>m.id===id),svById=id=>SERVICES.find(s=>s.id===id),mById=id=>MASTERS.find(m=>m.id===id),cById=id=>CLIENTS.find(c=>c.id===id);
 const total=b=>b.price+b.extras.reduce((a,x)=>a+x.a,0);
+const firstVisit=b=>!B.some(x=>x.client===b.client&&x.id!==b.id&&x.status==="done"&&x.date<=b.date);
+const mRating=m=>{const r=B.filter(b=>b.master===m.id&&b.review).map(b=>b.review.r);return r.length>=3?Math.round(r.reduce((a,x)=>a+x,0)/r.length*10)/10:m.rating};
 const usageOf=bid=>MOV.filter(x=>x.booking===bid&&x.type==="out");
 const usageCost=bid=>usageOf(bid).reduce((a,x)=>a-x.qty*x.cost,0);
 const conflict=(date,mid,t,dur,ign)=>B.some(b=>b.id!==ign&&b.date===date&&b.master===mid&&b.status!=="cancelled"&&tm(b.start)<t+dur&&tm(b.start)+b.dur>t)||BLOCKS.some(x=>x.master===mid&&x.date===date&&tm(x.from)<t+dur&&tm(x.to)>t);
@@ -272,13 +299,13 @@ function vStaff(){
 /* ===== журнал (как у YCLIENTS: колонки сотрудников × время) ===== */
 function dateBar(extra=""){return `<div class="row wrap" style="margin-bottom:8px"><div class="row gap"><button class="btn alt s" data-act="dshift" data-n="-1">‹</button><button class="btn alt" data-act="cal">📅 ${S.date===TODAY?"Сегодня, ":""}${dLong(S.date)}</button><button class="btn alt s" data-act="dshift" data-n="1">›</button>${S.date!==TODAY?`<button class="btn alt s" data-act="dtoday">Сегодня</button>`:""}</div>${extra}</div>`}
 function blk(b){const top=(tm(b.start)-OPEN*60)/30*ROW,h=Math.max(b.dur/30*ROW-2,22),c=cById(b.client),sv=svById(b.service);
-  return `<div class="bk ${b.status}" data-act="bk" data-id="${b.id}" style="top:${top}px;height:${h}px"><b>${b.rem?"🔔 ":""}${b.start} ${esc(c.name)}</b>${h>40?esc(sv.name):""}${h>62?`<br>${rub(total(b))}${b.paid?" ✓":""}${usageOf(b.id).length?" 🧴":""}`:""}</div>`}
+  return `<div class="bk ${b.status}${b.arrived&&["new","confirmed"].includes(b.status)?" arr":""}" data-act="bk" data-id="${b.id}" style="top:${top}px;height:${h}px"><b>${b.arrived&&["new","confirmed"].includes(b.status)?"✔ ":""}${b.rem?"🔔 ":""}${b.start} ${esc(c.name)}</b>${h>40?esc(sv.name):""}${h>62?`<br>${rub(total(b))}${b.paid?" ✓":""}${usageOf(b.id).length?" 🧴":""}`:""}</div>`}
 function vJournal(){
   const ms=MASTERS.filter(m=>m.active),rows=(CLOSE-OPEN)*2,bs=B.filter(b=>b.date===S.date&&b.status!=="cancelled");
   const times=Array.from({length:CLOSE-OPEN},(_,i)=>`<span style="top:${i*2*ROW}px">${pad(OPEN+i)}:00</span>`).join("");
   const nowTop=(NOWMIN-OPEN*60)/30*ROW,showNow=S.date===TODAY&&NOWMIN>=OPEN*60&&NOWMIN<=CLOSE*60;
-  return `${todayCard()}${dateBar(`<div class="row gap"><button class="btn alt" data-act="blknew" title="Закрыть время">🔒</button><button class="btn alt" data-act="wait">⏳ ${WAIT.length}</button><button class="btn" data-act="new">＋ Запись</button></div>`)}
-  <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span></div>
+  return `${todayCard()}${dateBar(`<div class="row gap"><button class="btn alt" data-act="walkin" title="Клиент пришёл без записи">⚡</button><button class="btn alt" data-act="blknew" title="Закрыть время">🔒</button><button class="btn alt" data-act="wait">⏳ ${WAIT.length}</button><button class="btn" data-act="new">＋ Запись</button></div>`)}
+  <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span><span><i style="background:#fff;box-shadow:0 0 0 2px var(--ok)"></i>✔ клиент пришёл</span></div>
   <div class="jwrap"><div class="jr" style="--n:${ms.length};--rows:${rows};--row:${ROW}px">
   <div class="jh jcorner"></div>${ms.map(m=>{const mb=bs.filter(b=>b.master===m.id),busy=mb.reduce((a,b)=>a+b.dur,0);return `<div class="jh"><span class="av" style="background:${m.color}">${m.name[0]}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small><small>${mb.length} зап. · занято ${Math.round(busy/((CLOSE-OPEN)*60)*100)}%</small></div>`}).join("")}
   <div class="jt">${times}</div>${ms.map(m=>`<div class="jc" data-act="slot" data-m="${m.id}">${BLOCKS.filter(x=>x.master===m.id&&x.date===S.date).map(blkd).join("")}${bs.filter(b=>b.master===m.id).map(blk).join("")}${showNow?`<div class="now" style="top:${nowTop}px"></div>`:""}</div>`).join("")}
@@ -291,13 +318,14 @@ function openSheet(id){
   const us=usageOf(b.id),uc=usageCost(b.id),norm=NORMS[b.service]||[];
   const sal=b.paid?Math.round(b.paid.amount*m.percent/100):0;
   modal(`<div class="row"><h2 style="margin:0">${b.start}–${hm(tm(b.start)+b.dur)} · ${dLong(b.date)}</h2>${tag(b.status)}</div>
+  <div class="row gap wrap" style="margin-top:6px;justify-content:flex-start">${b.arrived&&open?`<span class="tag arr">✔ Клиент пришёл</span>`:""}${staff&&firstVisit(b)?`<span class="tag fresh">Новый клиент</span>`:""}${b.review?`<span class="tag warn">★ ${b.review.r}${b.review.t?" · "+esc(b.review.t):""}</span>`:""}</div>
   <div class="card" style="margin-top:10px"><b>${esc(c.name)}</b>${staff?` · <a href="tel:+${c.phone}">+${c.phone}</a> · № ${fmtNo(c.id)}`:""}<div class="muted">${esc(sv.name)} · мастер ${esc(m.name)}</div>${c.note?`<div class="muted">📝 ${esc(c.note)}</div>`:""}${b.note?`<div class="muted">💬 ${esc(b.note)}</div>`:""}${staff&&noshows(c.id)?`<div class="sm" style="color:var(--bad);margin-top:4px">⚠ Не приходил(а) ${noshows(c.id)} раз(а)</div>`:""}</div>
   ${staff?`<div class="card">${kv("По прайсу",rub(b.price))}${b.extras.map((x,i)=>`<div class="row sm"><span>${x.a>0?"＋":"−"} ${esc(x.t)}</span><span>${rub(Math.abs(x.a))} ${open?`<a href="#" data-act="xdel" data-id="${b.id}" data-i="${i}">✕</a>`:""}</span></div>`).join("")}${kv("Итого",rub(total(b)))}</div>`:""}
   <div class="card"><div class="row"><b>🧴 Расходные материалы</b><button class="btn alt s" data-act="mats" data-id="${b.id}">${us.length?"Изменить":"＋ Списать"}</button></div>
   ${us.length?us.map(x=>{const mt=matById(x.mat);return `<div class="row sm"><span>${esc(mt.name)}</span><span>${-x.qty} ${mt.unit}${ow?" · "+rub(-x.qty*x.cost):""}</span></div>`}).join(""):`<div class="muted">Ещё не списано.${norm.length?` Норма: ${norm.map(([i,q])=>matById(i).name.split(" (")[0]+" "+q+" "+matById(i).unit).join(", ")}.`:""}</div>`}
   ${ow&&us.length?`<div class="muted sm" style="margin-top:4px">Себестоимость материалов: ${rub(uc)}</div>`:""}</div>
   ${b.paid&&staff?`<button class="btn blue full" data-act="rebook" data-id="${b.id}" style="margin-bottom:8px">↻ Записать снова</button>`:""}${b.paid&&staff?`<div class="card">${kv("Оплачено",rub(b.paid.amount)+" · "+{card:"карта",cash:"наличные",sbp:"СБП"}[b.paid.method])}${kv("Чек",b.paid.fiscal+" (демо)")}${ow?kv("Маржа визита",rub(b.paid.amount-uc-sal)+" <span class='muted sm'>(выручка − материалы − ЗП мастера)</span>"):""}</div>`:""}
-  ${staff&&open?`<div class="row wrap gap"><button class="btn ok" data-act="payb" data-id="${b.id}">Оплатить</button><button class="btn blue" data-act="extra" data-id="${b.id}">＋ Доплата</button><button class="btn alt" data-act="editb" data-id="${b.id}">Перенести</button><button class="btn alt" data-act="remind" data-id="${b.id}">🔔 Напомнить${b.rem?" ✓":""}</button></div>
+  ${staff&&open?`<div class="row wrap gap"><button class="btn ok" data-act="payb" data-id="${b.id}">Оплатить</button><button class="btn ${b.arrived?"alt":"blue"}" data-act="arr" data-id="${b.id}">${b.arrived?"↩ Не пришёл":"✔ Пришёл"}</button><button class="btn blue" data-act="extra" data-id="${b.id}">＋ Доплата</button><button class="btn alt" data-act="editb" data-id="${b.id}">Перенести</button><button class="btn alt" data-act="remind" data-id="${b.id}">🔔 Напомнить${b.rem?" ✓":""}</button></div>
   <div class="row wrap gap" style="margin-top:8px"><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="noshow">Не пришёл</button><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="cancelled">Отменить запись</button><button class="btn alt s" data-act="close">Закрыть</button></div>`:`<button class="btn alt full" data-act="close" style="margin-top:6px">Закрыть</button>`}`);
 }
 const refresh=()=>{render()};
@@ -356,7 +384,7 @@ function bookModal(o){
     const ph=digits(q("#bp").value),nm=q("#bn").value.trim();let c=ph.length>=10&&CLIENTS.find(x=>digits(x.phone)===ph.slice(-10));
     if(!c){if(ph.length<10||nm.length<2)return err("Нужны имя и телефон");c={id:nid(),name:nm,phone:"7"+ph.slice(-10),note:"",bonus:0};CLIENTS.push(c)}
     const sv=svById(+q("#bs").value),list=freeTimes(date,+q("#bm").value,sv.dur,0,true),slot=list.find(x=>x.t===st.time),mid=+q("#bm").value||slot.free[0];
-    const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:"phone"};B.push(nb);scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
+    const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:o.walkin?"walkin":"phone",arrived:!!o.walkin};B.push(nb);scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
     if(o.waitId)WAIT=WAIT.filter(w=>w.id!==o.waitId);S.date=date;m.remove();render()};
   if(o.client&&!edit){const c=cById(o.client);q("#bp").value="+"+c.phone;q("#bp").oninput()}
   times();
@@ -399,11 +427,12 @@ function mCal(me){const ym=S.mym||S.date.slice(0,7),[Y,M]=ym.split("-").map(Numb
 function vMaster(){
   const me=mById(S.sess.master),mine=B.filter(b=>b.master===me.id&&b.date===S.date&&b.status!=="cancelled").sort((a,b)=>a.start<b.start?-1:1);
   return `<div class="muted" style="margin-bottom:8px">${esc(me.role)} · вы видите только свои записи</div>
+  ${(()=>{const sum=f=>Math.round(PAY.filter(x=>x.master===me.id&&f(x.date)).reduce((a,x)=>a+(x.kind==="tip"?x.amount:x.amount*x.pct/100),0)),m0=TODAY.slice(0,7);return `<div class="ear"><div><div class="muted sm">Заработано сегодня</div><div class="k">${rub(sum(d=>d===TODAY))}</div></div><div><div class="muted sm">За месяц (с чаевыми)</div><div class="k">${rub(sum(d=>d.slice(0,7)===m0))}</div><div class="muted sm">★ ${mRating(me)}</div></div></div>`})()}
   ${mCal(me)}
   <div class="row gap" style="justify-content:flex-start;margin-bottom:8px"><button class="btn alt s" data-act="blknew">🔒 Закрыть время (обед, выходной)</button></div>
   ${BLOCKS.filter(x=>x.master===me.id&&x.date===S.date).map(x=>`<div class="card row" style="border-style:dashed"><div>🔒 <b>${esc(x.title)}</b> <span class="muted">${x.from}–${x.to}</span></div><button class="btn alt s" data-act="blkdel" data-id="${x.id}">Снять</button></div>`).join("")}
   <h2>${S.date===TODAY?"Сегодня":dLong(S.date)}: ${mine.length?mine.length+" "+(mine.length<5?"записи":"записей"):"записей нет"}</h2>
-  ${mine.map(b=>`<div class="card" data-act="bk" data-id="${b.id}" style="cursor:pointer"><div class="row"><b style="font-size:19px">${b.start}–${hm(tm(b.start)+b.dur)}</b>${tag(b.status)}</div><div><b>${esc(cById(b.client).name)}</b> · ${esc(svById(b.service).name)}</div>${b.note||cById(b.client).note?`<div class="muted">📝 ${esc(b.note||cById(b.client).note)}</div>`:""}<div class="muted sm" style="margin-top:4px">${usageOf(b.id).length?"🧴 материалы списаны":"нажмите — списать расходники"}</div></div>`).join("")||`<div class="card muted" style="text-align:center;padding:26px">На этот день у вас нет записей 🎉</div>`}`}
+  ${mine.map(b=>`<div class="card" data-act="bk" data-id="${b.id}" style="cursor:pointer"><div class="row"><b style="font-size:19px">${b.start}–${hm(tm(b.start)+b.dur)}</b>${b.arrived&&["new","confirmed"].includes(b.status)?`<span class="tag arr">✔ пришёл</span>`:tag(b.status)}</div><div><b>${esc(cById(b.client).name)}</b>${firstVisit(b)?` <span class="tag fresh">новый</span>`:""} · ${esc(svById(b.service).name)}</div>${b.note||cById(b.client).note?`<div class="muted">📝 ${esc(b.note||cById(b.client).note)}</div>`:""}<div class="muted sm" style="margin-top:4px">${usageOf(b.id).length?"🧴 материалы списаны":"нажмите — списать расходники"}</div></div>`).join("")||`<div class="card muted" style="text-align:center;padding:26px">На этот день у вас нет записей 🎉</div>`}`}
 /* ===== клиенты (администратор) ===== */
 const lastDone=cid=>B.filter(b=>b.client===cid&&b.status==="done").map(b=>b.date).sort().pop()||"";
 const noshows=cid=>B.filter(b=>b.client===cid&&b.status==="noshow").length;
@@ -454,11 +483,20 @@ function stockModal(kind){
 }
 /* ===== владелец ===== */
 function perBar(p){return `<div class="row gap" style="margin-bottom:8px"><button class="btn ${p==="cur"?"":"alt"} s" data-act="per" data-p="cur">Этот месяц</button><button class="btn ${p==="prev"?"":"alt"} s" data-act="per" data-p="prev">Прошлый месяц</button><span class="muted">${period(p).label}</span></div>`}
+
+function qualityBlock(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to,live=B.filter(b=>inR(b.date));
+  const dn=live.filter(b=>b.status==="done"),ns=live.filter(b=>b.status==="noshow"),rep=dn.filter(b=>B.some(x=>x.client===b.client&&x.id!==b.id&&x.status==="done"&&x.date<b.date)).length;
+  const rv=B.filter(b=>b.review&&inR(b.date)),avg=rv.length?rv.reduce((a,b)=>a+b.review.r,0)/rv.length:0;
+  const load=MASTERS.filter(m=>m.active).map(m=>{const mine=live.filter(b=>b.master===m.id&&["done","confirmed","new"].includes(b.status)),days=new Set(mine.map(b=>b.date)).size,mins=mine.reduce((a,b)=>a+b.dur,0),pc=days?Math.min(100,Math.round(mins/(days*(CLOSE-OPEN)*60)*100)):0;return{m,pc,days}});
+  return `<h2>Качество и загрузка</h2><div class="grid"><div class="card"><div class="muted">Неявки</div><div class="k ${ns.length&&ns.length/(dn.length+ns.length)>.1?"neg":""}">${dn.length+ns.length?Math.round(ns.length/(dn.length+ns.length)*100):0}%</div><div class="muted sm">${ns.length} из ${dn.length+ns.length}</div></div><div class="card"><div class="muted">Повторные визиты</div><div class="k">${dn.length?Math.round(rep/dn.length*100):0}%</div><div class="muted sm">клиент уже бывал</div></div><div class="card"><div class="muted">Оценка клиентов</div><div class="k">${rv.length?"★ "+avg.toFixed(1):"—"}</div><div class="muted sm">отзывов: ${rv.length}</div></div><div class="card"><div class="muted">Новых клиентов</div><div class="k">${new Set(dn.filter(b=>firstVisit(b)).map(b=>b.client)).size}</div></div></div>
+  <div class="card"><b>Загрузка мастеров</b><div class="muted sm" style="margin-bottom:6px">доля занятого времени в рабочие дни (с записями)</div>${load.map(x=>`<div style="margin-bottom:8px"><div class="row sm"><span>${esc(x.m.name)} <span class="muted">· ${x.days} раб. дн.</span></span><b>${x.pc}%</b></div><div class="bar ${x.pc<35?"low":""}"><i style="width:${x.pc}%"></i></div></div>`).join("")}<div class="muted sm">Красная полоса — мастер загружен меньше чем на треть: есть время для акций и записи новых клиентов.</div></div>
+  ${rv.length?`<div class="card"><b>Последние отзывы</b>${rv.sort((a,b)=>a.review.date<b.review.date?1:-1).slice(0,5).map(b=>`<div class="rv ${b.review.r<=3?"low":""}" style="padding:4px 0 4px 8px;margin-top:6px"><div class="row sm"><b>${"★".repeat(b.review.r)}${"☆".repeat(5-b.review.r)}</b><span class="muted">${esc(mById(b.master).name)} · ${esc(cById(b.client).name.split(" ")[0])}</span></div>${b.review.t?`<div class="sm">${esc(b.review.t)}</div>`:""}</div>`).join("")}</div>`:""}`}
 function vSummary(){const r=calc(S.period),days=[];for(let d=r.from;d<=r.to;d=addDays(d,1))days.push(d);const mx=Math.max(1,...days.map(d=>r.byDay[d]||0));
   const over=calc("prev").pm.filter(x=>x.over>0),low=MATS.filter(m=>stockOf(m.id)<m.min);
   return `${perBar(S.period)}${over.length?`<div class="note" style="border-color:#c0392b66;background:#c0392b14">⏰ Просрочена выплата ЗП за прошлый месяц: ${over.map(x=>esc(x.m.name)+" — "+rub(x.bal)+" ("+x.over+" дн.)").join("; ")}. <a href="#" data-act="tab" data-t="pay">Открыть</a></div>`:""}${low.length?`<div class="note">🧴 Мало на складе: ${low.map(m=>esc(m.name)).join(", ")}. <a href="#" data-act="tab" data-t="st">Склад</a></div>`:""}
   <div class="grid"><div class="card"><div class="muted">Выручка</div><div class="k">${rub(r.rev)}</div></div><div class="card"><div class="muted">Прибыль</div><div class="k ${r.profit<0?"neg":"pos"}">${rub(r.profit)}</div></div><div class="card"><div class="muted">Визитов / ср. чек</div><div class="k">${r.visits} / ${rub(r.visits?r.pay.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount,0)/r.visits:0)}</div></div><div class="card"><div class="muted">ЗП мастерам</div><div class="k">${rub(r.accrued)}</div></div></div>
   <div class="card"><b>Из чего складывается прибыль</b>${kv("Выручка",rub(r.rev))}${kv("− Материалы (израсходовано)",rub(r.mats))}${kv("− Аренда, реклама, коммуналка",rub(r.other))}${kv("− Зарплата мастеров",rub(r.accrued))}<hr style="border:0;border-top:1px solid var(--line)">${kv("= Прибыль",rub(r.profit))}<div class="muted sm" style="margin-top:6px">Закуплено материалов за период на ${rub(r.bought)} — это деньги, ушедшие на склад. В прибыль идёт только то, что израсходовано, чтобы закупка не считалась дважды.</div></div>
+  ${qualityBlock(S.period)}
   <h2>Выручка по дням</h2><div class="card" style="display:flex;align-items:flex-end;gap:3px;height:130px">${days.map(d=>`<div title="${d}: ${rub(r.byDay[d]||0)}" style="flex:1;background:${d===TODAY?"var(--blue)":"var(--accent)"};height:${Math.max(2,(r.byDay[d]||0)/mx*100)}%;border-radius:3px 3px 0 0;opacity:${r.byDay[d]?1:.2}"></div>`).join("")}</div>
   <h2>Услуги</h2>${Object.entries(r.bySvc).sort((a,b)=>b[1].s-a[1].s).map(([n,v])=>`<div class="card row"><span>${esc(n)} × ${v.n}</span><b>${rub(v.s)}</b></div>`).join("")}`}
 function vPay(){const r=calc(S.period),sm=k=>r.pm.reduce((a,x)=>a+x[k],0),dueTag=x=>x.bal<=0?`<span class="tag ok">выплачено</span>`:x.over>0?`<span class="tag bad">просрочка ${x.over} дн.</span>`:`<span class="tag">до ${x.due.split("-").reverse().join(".")}</span>`;
@@ -511,12 +549,12 @@ function vClient(){const t=S.tab.client;
   return `<div class="row"><div><h1 style="margin:0">${esc(CFG.name)}</h1><div class="muted">${esc(CFG.addr)}</div></div></div>
   <div class="tabs"><button data-act="ctab" data-t="book" class="${t==="book"?"on":""}">Запись онлайн</button><button data-act="ctab" data-t="my" class="${t==="my"?"on":""}">Мои визиты и бонусы</button></div>${t==="book"?vWiz():vMy()}`}
 function vWiz(){const w=W();
-  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}${w.isNew?`<div class="note" style="text-align:left"><b>Ваш номер клиента: ${fmtNo(w.cid)}</b><br><span class="sm">Сохраните его: по нему вы заходите в личный кабинет с историей визитов и бонусами. Этот телефон мы запомнили, на другом введите номер.</span></div>`:`<div class="muted sm" style="margin-top:6px">Вы уже наш клиент: в личный кабинет входите по номеру клиента (он указан в сообщении о записи).</div>`}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
+  if(w.done){const b=B.find(x=>x.id===w.done);return `<div class="card" style="text-align:center"><div class="ok-ring">✓</div><h2 style="margin:0">Вы записаны!</h2><div style="margin:8px 0"><b>${dLong(b.date)}, ${b.start}</b><br>${esc(svById(b.service).name)}<br>мастер ${esc(mById(b.master).name)} · ${rub(b.price)}</div>${notifBlock(b)}${w.isNew?`<div class="note" style="text-align:left"><b>Ваш номер клиента: ${fmtNo(w.cid)}</b><br><span class="sm">Сохраните его: по нему вы заходите в личный кабинет с историей визитов и бонусами. Этот телефон мы запомнили, на другом введите номер.</span></div>`:`<div class="muted sm" style="margin-top:6px">Вы уже наш клиент: в личный кабинет входите по номеру клиента (он указан в сообщении о записи).</div>`}<div class="muted sm" style="margin-top:6px">Отменить бесплатно можно не позднее чем за 2 часа.</div><div class="row gap" style="margin-top:12px"><button class="btn alt full" data-act="ics" data-id="${b.id}">📅 В календарь</button><button class="btn alt full" data-act="ctab" data-t="my">Мои визиты</button><button class="btn full" data-act="wnew">Записаться ещё</button></div></div>`}
   const sv=w.service&&svById(w.service),mm=w.master!=null&&(w.master?mById(w.master):{name:"Любой мастер"});
   const head=`<div class="row"><button class="btn alt s" data-act="wback" ${w.step===1?"disabled":""}>← Назад</button><span class="muted">Шаг ${w.step} из 5</span></div><div class="steps">${[1,2,3,4,5].map(i=>`<i class="${i<=w.step?"on":""}"></i>`).join("")}</div>`;
   let body="";
   if(w.step===1){const AS=SERVICES.filter(s=>!s.off),cats=[...new Set(AS.map(s=>s.cat))];body=`<h2 style="margin-top:0">Выберите услугу</h2>`+cats.map(c=>`<h3 class="muted">${esc(c)}</h3>`+AS.filter(s=>s.cat===c).map(s=>`<div class="opt ${w.service===s.id?"on":""}" data-act="wsv" data-id="${s.id}"><div><b>${esc(s.name)}</b><div class="muted">${s.dur} мин</div></div><b>${rub(s.price)}</b></div>`).join("")).join("")}
-  if(w.step===2)body=`<h2 style="margin-top:0">Выберите мастера</h2><div class="opt ${w.master===0?"on":""}" data-act="wm" data-id="0"><div class="row gap"><span class="av2" style="background:#6c655e">★</span><div><b>Любой мастер</b><div class="muted">Ближайшее время: ${nearest(0,sv)}</div></div></div></div>`+MASTERS.filter(m=>m.active).map(m=>`<div class="opt ${w.master===m.id?"on":""}" data-act="wm" data-id="${m.id}"><div class="row gap"><span class="av2" style="background:${m.color}">${m.name[0]}</span><div><b>${esc(m.name)}</b> <span class="muted">★ ${m.rating}</span><div class="muted">${esc(m.role)} · ближайшее: ${nearest(m.id,sv)}</div></div></div></div>`).join("");
+  if(w.step===2)body=`<h2 style="margin-top:0">Выберите мастера</h2><div class="opt ${w.master===0?"on":""}" data-act="wm" data-id="0"><div class="row gap"><span class="av2" style="background:#6c655e">★</span><div><b>Любой мастер</b><div class="muted">Ближайшее время: ${nearest(0,sv)}</div></div></div></div>`+MASTERS.filter(m=>m.active).map(m=>`<div class="opt ${w.master===m.id?"on":""}" data-act="wm" data-id="${m.id}"><div class="row gap"><span class="av2" style="background:${m.color}">${m.name[0]}</span><div><b>${esc(m.name)}</b> <span class="muted">★ ${mRating(m)}</span><div class="muted">${esc(m.role)} · ближайшее: ${nearest(m.id,sv)}</div></div></div></div>`).join("");
   if(w.step===3){const list=freeTimes(w.date,w.master,sv.dur),groups=[["Утро",0,12*60],["День",12*60,17*60],["Вечер",17*60,24*60]];
     body=`<h2 style="margin-top:0">Дата и время</h2><div class="days">${Array.from({length:14},(_,i)=>{const d=addDays(TODAY,i),dt=new Date(d+"T12:00:00"),n=freeTimes(d,w.master,sv.dur).length;return `<div class="day ${d===w.date?"on":""} ${n?"":"off"}" data-act="wd" data-d="${d}"><small>${DOW[dt.getDay()]}</small><b>${dt.getDate()}</b><small>${MONG[dt.getMonth()].slice(0,3)}</small></div>`}).join("")}</div>
     ${groups.map(([n,a,b])=>{const l=list.filter(x=>tm(x.t)>=a&&tm(x.t)<b);return l.length?`<h3 class="muted">${n}</h3><div class="chips">${l.map(x=>`<div class="chip ${w.time===x.t?"on":""}" data-act="wt" data-t="${x.t}">${x.t}</div>`).join("")}</div>`:""}).join("")||"<div class='card muted'>На этот день окон нет, выберите другую дату</div>"}`}
@@ -535,8 +573,8 @@ function vCabLogin(){const demo=[1,4,8].map(i=>cById(i));
   <div class="note"><b>Демо:</b> ${demo.map(c=>`${esc(c.name)} — <a href="#" data-act="cabfill" data-id="${c.id}"><b>${fmtNo(c.id)}</b></a>`).join("; ")}. В настоящем приложении вход можно дополнительно защитить кодом из SMS или Telegram, а запомненный вход держится на телефоне, пока клиент сам не выйдет.</div>`}
 function vMy(){if(!S.me)return vCabLogin();const c=cById(S.me),bs=B.filter(b=>b.client===c.id&&b.status!=="cancelled").sort((a,b)=>a.date+a.start<b.date+b.start?1:-1),next=bs.filter(b=>b.date+" "+b.start>TODAY+" "+hm(NOWMIN)&&["new","confirmed"].includes(b.status)).sort((a,b)=>a.date+a.start>b.date+b.start?1:-1)[0];
   return `<div class="card"><div class="row"><div class="muted">Здравствуйте,</div><button class="btn alt s" data-act="cablogout">Выйти</button></div><h2 style="margin:0">${esc(c.name)}</h2><div class="muted sm">Ваш номер клиента: <b class="k" style="font-size:15px">${fmtNo(c.id)}</b></div><div class="row" style="margin-top:8px"><span>Бонусные баллы</span><b class="k" style="font-size:22px">${c.bonus}</b></div><div class="muted sm">1 балл = 1 ₽, можно оплатить до 50% чека. Начисляем 5% с каждого визита.</div></div>
-  ${next?`<div class="card"><b>Ближайшая запись</b><div>${dLong(next.date)}, ${next.start} · ${esc(svById(next.service).name)}</div><div class="muted">мастер ${esc(mById(next.master).name)}</div><button class="btn alt s" style="margin-top:6px" data-act="ccancel" data-id="${next.id}">Отменить запись</button></div>`:""}
-  <h2>История визитов</h2>${bs.slice(0,15).map(b=>`<div class="card row"><div><b>${esc(svById(b.service).name)}</b><div class="muted">${dLong(b.date)}, ${b.start} · ${esc(mById(b.master).name)}</div></div><div style="text-align:right">${rub(b.paid?b.paid.amount:total(b))}<br>${b.paid?`<span class="muted sm">+${Math.round(b.paid.amount*.05)} баллов${b.paid.bonusUsed?" · −"+b.paid.bonusUsed+" списано":""} · чек ${b.paid.fiscal}</span><br><button class="btn alt s" style="margin-top:4px" data-act="repeat" data-id="${b.id}">↻ Повторить</button>`:tag(b.status)}</div></div>`).join("")}
+  ${next?`<div class="card"><b>Ближайшая запись</b><div>${dLong(next.date)}, ${next.start} · ${esc(svById(next.service).name)}</div><div class="muted">мастер ${esc(mById(next.master).name)}</div><div class="row gap wrap" style="justify-content:flex-start;margin-top:8px"><button class="btn blue s" data-act="cmove" data-id="${next.id}">↔ Перенести</button><button class="btn alt s" data-act="ics" data-id="${next.id}">📅 В календарь</button><button class="btn alt s" data-act="ccancel" data-id="${next.id}">Отменить</button></div></div>`:""}
+  <h2>История визитов</h2>${bs.slice(0,15).map(b=>`<div class="card row"><div><b>${esc(svById(b.service).name)}</b><div class="muted">${dLong(b.date)}, ${b.start} · ${esc(mById(b.master).name)}</div></div><div style="text-align:right">${rub(b.paid?b.paid.amount:total(b))}<br>${b.paid?`<span class="muted sm">+${Math.round(b.paid.amount*.05)} баллов${b.paid.bonusUsed?" · −"+b.paid.bonusUsed+" списано":""} · чек ${b.paid.fiscal}</span><br><div class="row gap" style="justify-content:flex-end;margin-top:4px">${b.review?`<span class="tag warn">★ ${b.review.r}</span>`:`<button class="btn blue s" data-act="rate" data-id="${b.id}">★ Оценить</button>`}<button class="btn alt s" data-act="repeat" data-id="${b.id}">↻ Повторить</button></div>`:tag(b.status)}</div></div>`).join("")}
   <div class="note">В настоящем приложении вход запоминается в браузере, а с другого телефона — по номеру и коду.</div>`}
 
 /* ===== действия ===== */
@@ -663,7 +701,7 @@ Object.assign(A,{
 });
 
 /* ===== сообщения клиентам (автоматические) ===== */
-function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
+function toast(t){document.querySelectorAll(".toast").forEach(x=>x.remove());const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
 const nWhen=at=>{const d=at.slice(0,10);return (d===TODAY?"сегодня":d===addDays(TODAY,1)?"завтра":d===addDays(TODAY,-1)?"вчера":dLong(d))+" в "+at.slice(11)};
 function nText(x){const b=B.find(z=>z.id===x.b),c=cById(b.client),sv=svById(b.service),m=mById(b.master);
   if(x.kind==="confirm")return `Здравствуйте, ${first(c)}! Вы записаны в «${CFG.name}»: ${dLong(b.date)}, ${b.start} — ${sv.name}, мастер ${m.name}. Адрес: ${CFG.addr}. Ваш номер клиента: ${fmtNo(c.id)} — по нему можно войти в личный кабинет (история визитов и бонусы). Если планы изменятся, пожалуйста, предупредите заранее.`;
@@ -731,6 +769,27 @@ Object.assign(A,{
   cnow(){S.cym=TODAY.slice(0,7);S.cday=TODAY;render()},
 });
 document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.in==="cym"&&/^\d{4}-\d{2}$/.test(e.target.value)){S.cym=e.target.value;render()}});
+
+Object.assign(A,{
+  arr(el){const b=B.find(x=>x.id===+el.dataset.id);b.arrived=!b.arrived;render();openSheet(b.id);toast(b.arrived?"✔ Отмечено: клиент пришёл":"Отметка снята")},
+  walkin(){const sl=freeTimes(TODAY,0,30,0,true).find(x=>tm(x.t)+30>NOWMIN);S.date=TODAY;bookModal({date:TODAY,time:sl?sl.t:null,walkin:1})},
+  ics(el){const b=B.find(x=>x.id===+el.dataset.id),f=(d,t)=>d.replace(/-/g,"")+"T"+t.replace(":","")+"00",e=hm(tm(b.start)+b.dur);
+    const txt=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//salon//RU","BEGIN:VEVENT","UID:"+b.id+"@salon","DTSTAMP:"+f(TODAY,"00:00"),"DTSTART:"+f(b.date,b.start),"DTEND:"+f(b.date,e),"SUMMARY:"+svById(b.service).name+" — "+CFG.name,"LOCATION:"+CFG.addr,"DESCRIPTION:Мастер "+mById(b.master).name,"BEGIN:VALARM","TRIGGER:-PT2H","ACTION:DISPLAY","DESCRIPTION:Запись в салон","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"text/calendar"}));a.download="zapis.ics";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast("📅 Файл для календаря скачан")},
+  cmove(el){const b=B.find(x=>x.id===+el.dataset.id),left=(new Date(b.date+"T"+b.start+":00")-new Date())/60000;
+    if(left<120){modal(`<h2 style="margin-top:0">Перенос менее чем за 2 часа</h2><div class="muted">Пожалуйста, позвоните в салон: ${esc(CFG.addr)}.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
+    const sv=svById(b.service);let d=b.date>TODAY?b.date:TODAY,t=null;
+    const m=modal(`<h2 style="margin-top:0">Перенести запись</h2><div class="muted">${esc(sv.name)} · мастер ${esc(mById(b.master).name)}</div><div id="mv" style="margin-top:8px"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="mok" disabled>Перенести</button></div>`);
+    const draw=()=>{const list=freeTimes(d,b.master,sv.dur,b.id);
+      m.querySelector("#mv").innerHTML=`<div class="days">${Array.from({length:14},(_,i)=>{const x=addDays(TODAY,i),dt=new Date(x+"T12:00:00"),n=freeTimes(x,b.master,sv.dur,b.id).length;return `<div class="day ${x===d?"on":""} ${n?"":"off"}" data-d="${x}"><small>${DOW[dt.getDay()]}</small><b>${dt.getDate()}</b><small>${MONG[dt.getMonth()].slice(0,3)}</small></div>`}).join("")}</div><div class="chips" style="margin-top:8px">${list.map(x=>`<div class="chip ${x.t===t?"on":""}" data-t="${x.t}">${x.t}</div>`).join("")||"<span class='muted'>На этот день окон нет</span>"}</div>`;
+      m.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>{d=e.dataset.d;t=null;draw()});m.querySelectorAll("[data-t]").forEach(e=>e.onclick=()=>{t=e.dataset.t;draw()});m.querySelector("#mok").disabled=!t};
+    m.querySelector("#mok").onclick=()=>{if(!t)return;b.date=d;b.start=t;b.created=TODAY;b.arrived=false;scheduleNotifs(b,"move");m.remove();toast("✉ Запись перенесена, салон уведомлён");render()};draw()},
+  rate(el){const b=B.find(x=>x.id===+el.dataset.id);let r=b.review?b.review.r:0;
+    const m=modal(`<h2 style="margin-top:0;text-align:center">Как прошёл визит?</h2><div class="muted" style="text-align:center">${esc(svById(b.service).name)} · ${esc(mById(b.master).name)}</div><div class="stars">${[1,2,3,4,5].map(i=>`<button data-r="${i}">★</button>`).join("")}</div><textarea id="rt" rows="3" placeholder="Что понравилось или что улучшить (необязательно)">${b.review?esc(b.review.t):""}</textarea><div class="row"><button class="btn alt" data-act="close">Позже</button><button class="btn ok" id="rok" disabled>Отправить</button></div>`);
+    const paint=()=>{m.querySelectorAll("[data-r]").forEach(x=>x.classList.toggle("on",+x.dataset.r<=r));m.querySelector("#rok").disabled=!r};
+    m.querySelectorAll("[data-r]").forEach(x=>x.onclick=()=>{r=+x.dataset.r;paint()});paint();
+    m.querySelector("#rok").onclick=()=>{b.review={r,t:m.querySelector("#rt").value.trim(),date:TODAY};if(r>=4)CLIENTS.find(c=>c.id===b.client).bonus+=b.review.t?20:0;m.remove();toast("Спасибо за отзыв!");render()}},
+});
 /* ===== заставка клиента: птичка на ножницах ===== */
 function splash(){if(S.role!=="client")return;const el=document.createElement("div");el.id="splash";
   const nm=esc(CFG.name).replace(/#(\d+)/,"<b>#$1</b>");
