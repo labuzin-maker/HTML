@@ -118,9 +118,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .ear{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.ear div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .bk{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .bk.dragging{opacity:.3}
-.dg-ghost{position:fixed!important;right:auto!important;z-index:400;pointer-events:none;opacity:.96;box-shadow:0 14px 30px rgba(0,0,0,.38)!important;transform:scale(1.03) rotate(-1deg);margin:0}
-.dropm{position:absolute;left:3px;right:3px;border-radius:9px;border:2px dashed var(--ok);background:rgba(31,138,91,.18);z-index:3;pointer-events:none;font-size:12px;font-weight:800;color:var(--ok);padding:2px 6px;display:flex;align-items:flex-start}
-.dropm.bad{border-color:var(--bad);background:rgba(192,57,43,.16);color:var(--bad)}
+.dg-ghost{position:fixed!important;right:auto!important;z-index:400;pointer-events:none;opacity:.5;box-shadow:0 10px 24px rgba(0,0,0,.3)!important;transform:scale(1.02);margin:0}
+.dg-tip{position:fixed;z-index:410;pointer-events:none;background:#1d1a17;color:#fff;font-weight:800;font-size:15px;padding:6px 12px;border-radius:99px;box-shadow:0 6px 16px rgba(0,0,0,.35);white-space:nowrap}.dg-tip.bad{background:var(--bad)}
+.dropm{position:absolute;left:3px;right:3px;border-radius:9px;border:3px solid var(--ok);background:rgba(31,138,91,.38);box-shadow:0 0 0 4px rgba(31,138,91,.2);z-index:3;pointer-events:none;font-size:12px;font-weight:800;color:var(--ok);padding:2px 6px;display:flex;align-items:flex-start}
+.dropm.bad{border-color:var(--bad);background:rgba(192,57,43,.32);box-shadow:0 0 0 4px rgba(192,57,43,.2);color:var(--bad)}
 .toast .ub{margin-left:12px;border:0;border-radius:8px;padding:5px 10px;background:#fff;color:#1d1a17;font-weight:700;font-size:14px}
 .toast.ut{pointer-events:auto}
 </style>
@@ -817,16 +818,18 @@ function dropInfo(x,y){const g=DR.ghost,col=document.elementFromPoint(x,y),jc=co
   const r=jc.getBoundingClientRect(),gt=y-DR.offY,dur=DR.b.dur;let t=OPEN*60+Math.round((gt-r.top)/ROW)*30;t=Math.max(OPEN*60,Math.min(CLOSE*60-dur,t));
   const mid=+jc.dataset.m;return{jc,mid,t,ok:!conflict(S.date,mid,t,dur,DR.b.id)}}
 function dragStart(x,y){const el=DR.el,r=el.getBoundingClientRect();DR.active=true;DR.offX=x-r.left;DR.offY=y-r.top;
-  const g=el.cloneNode(true);g.classList.add("dg-ghost");g.style.width=r.width+"px";g.style.height=r.height+"px";g.style.left=r.left+"px";g.style.top=r.top+"px";document.body.appendChild(g);DR.ghost=g;el.classList.add("dragging");
+  const g=el.cloneNode(true);g.classList.add("dg-ghost");g.style.width=r.width+"px";g.style.height=r.height+"px";g.style.left=r.left+"px";g.style.top=r.top+"px";document.body.appendChild(g);DR.ghost=g;const tp=document.createElement("div");tp.className="dg-tip";tp.style.display="none";document.body.appendChild(tp);DR.tip=tp;el.classList.add("dragging");
   if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}
   DR.scr=setInterval(()=>{const j=$(".jwrap");if(!j||DR.ly==null)return;const jr=j.getBoundingClientRect(),m=48;
     if(DR.ly<jr.top+m)j.scrollTop-=14;else if(DR.ly>jr.bottom-m)j.scrollTop+=14;if(DR.lx<jr.left+m+40)j.scrollLeft-=14;else if(DR.lx>jr.right-m)j.scrollLeft+=14;dragMove(DR.lx,DR.ly)},30)}
 function dragMove(x,y){DR.lx=x;DR.ly=y;const g=DR.ghost;g.style.left=(x-DR.offX)+"px";g.style.top=(y-DR.offY)+"px";
-  document.querySelectorAll(".dropm").forEach(d=>d.remove());const di=dropInfo(x,y);DR.drop=di;if(!di)return;
+  document.querySelectorAll(".dropm").forEach(d=>d.remove());const di=dropInfo(x,y);DR.drop=di;tipUpdate(x,y);if(!di)return;
   const m=document.createElement("div");m.className="dropm"+(di.ok?"":" bad");m.style.top=((di.t-OPEN*60)/30*ROW)+"px";m.style.height=Math.max(DR.b.dur/30*ROW-2,22)+"px";
-  m.textContent=(di.ok?"":"занято · ")+hm(di.t)+"–"+hm(di.t+DR.b.dur)+" · "+mById(di.mid).name;di.jc.appendChild(m)}
+  di.jc.appendChild(m)}
+function tipUpdate(x,y){const t=DR.tip,di=DR.drop;if(!t)return;if(!di){t.style.display="none";return}t.style.display="block";t.className="dg-tip"+(di.ok?"":" bad");t.textContent=(di.ok?"":"⛔ занято · ")+hm(di.t)+"–"+hm(di.t+DR.b.dur)+" · "+mById(di.mid).name;
+  const w=t.offsetWidth,gt=y-DR.offY;let top=gt-44;if(top<6)top=y-DR.offY+DR.ghost.offsetHeight+8;t.style.top=top+"px";t.style.left=Math.max(6,Math.min(innerWidth-w-6,x-w/2))+"px"}
 function dragEnd(commit){if(!DR)return;clearTimeout(DR.timer);clearInterval(DR.scr);const d=DR;DR=null;
-  if(d.active){SUPP=true;setTimeout(()=>SUPP=false,60);d.ghost&&d.ghost.remove();d.el.classList.remove("dragging");document.querySelectorAll(".dropm").forEach(x=>x.remove());
+  if(d.active){SUPP=true;setTimeout(()=>SUPP=false,60);d.ghost&&d.ghost.remove();d.tip&&d.tip.remove();d.el.classList.remove("dragging");document.querySelectorAll(".dropm").forEach(x=>x.remove());
     const di=d.drop;if(commit&&di){if(!di.ok){toast("⛔ Это время занято");return}
       const b=d.b,newT=hm(di.t);if(b.master===di.mid&&b.start===newT)return;
       flushUndo();const old={id:b.id,master:b.master,start:b.start,created:b.created,arrived:b.arrived};
