@@ -366,8 +366,8 @@ function bookModal(o){
   const edit=o.id?B.find(b=>b.id===o.id):null,st={time:edit?edit.start:o.time||null};
   const m=modal(`<h2 style="margin-top:0">${edit?"Перенести / изменить":"Новая запись"}</h2>
   ${edit?`<div class="muted" style="margin-bottom:6px">${esc(cById(edit.client).name)} · ${esc(svById(edit.service).name)}</div>`:`
-  <label class="l">Телефон</label><input id="bp" type="tel" placeholder="+7 914 …"><div id="found" class="muted sm" style="margin:-4px 0 6px"></div>
-  <label class="l">Имя</label><input id="bn" placeholder="Имя клиента">
+  <label class="l">Телефон</label><input id="bp" type="tel" placeholder="+7 914 … (найдём в базе)" autocomplete="off">
+  <label class="l">Имя и фамилия</label><input id="bn" placeholder="Начните вводить имя — найдём в базе" autocomplete="off"><div id="sug" style="margin-bottom:6px"></div>
   <label class="l">Услуга</label><select id="bs">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}" ${o.service===s.id?"selected":""}>${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
   <label class="l">Мастер</label><select id="bm">${edit?"":'<option value="0">Любой свободный</option>'}${MASTERS.filter(x=>x.active).map(x=>`<option value="${x.id}" ${(edit?edit.master:o.master)===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
   <label class="l">Дата</label><input id="bd" type="date" value="${edit?edit.date:o.date||S.date}"><label class="l">Время</label><div class="chips" id="bt"></div>
@@ -377,7 +377,20 @@ function bookModal(o){
   const times=()=>{const sid=edit?edit.service:+q("#bs").value,dur=svById(sid).dur,list=freeTimes(q("#bd").value,+q("#bm").value,dur,edit&&edit.id,true);
     if(!list.some(x=>x.t===st.time))st.time=null;q("#bt").innerHTML=list.map(x=>`<div class="chip ${x.t===st.time?"on":""}" data-t="${x.t}">${x.t}</div>`).join("")||"<span class='muted'>Окон нет</span>"};
   ["#bs","#bm","#bd"].forEach(s=>q(s)&&(q(s).onchange=times));q("#bt").onclick=e=>{const c=e.target.closest("[data-t]");if(c){st.time=c.dataset.t;times()}};
-  if(!edit)q("#bp").oninput=()=>{const d=digits(q("#bp").value),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone)===d.slice(-10));q("#found").textContent=c?`Клиент найден: ${c.name}, визитов ${B.filter(b=>b.client===c.id&&b.status==="done").length}`:"";if(c)q("#bn").value=c.name};
+  const stats=c=>{const dn=B.filter(b=>b.client===c.id&&b.status==="done").sort((a,b)=>a.date<b.date?1:-1);return{n:dn.length,last:dn[0]}};
+  const findC=src=>{const raw=q(src).value.trim();if(!raw)return[];
+    if(/^[\d\s+()\-]+$/.test(raw)){const d=digits(raw),n6=raw.replace(/\D/g,"");if(d.length<3)return[];return CLIENTS.filter(c=>digits(c.phone).includes(d)||(n6.length===6&&clientNo(c.id)===n6)).slice(0,6)}
+    if(raw.length<2)return[];const tk=raw.toLowerCase().split(/\s+/);return CLIENTS.filter(c=>{const nm=c.name.toLowerCase();return tk.every(t=>nm.includes(t))}).sort((a,b)=>a.name.localeCompare(b.name,"ru")).slice(0,6)};
+  const showSug=src=>{if(!q("#sug"))return;const l=findC(src);
+    q("#sug").innerHTML=l.length?l.map(c=>{const s2=stats(c);return `<div class="opt" data-c="${c.id}" style="margin-bottom:4px;padding:9px 12px"><div><b>${esc(c.name)}</b><div class="muted sm">+${c.phone} · визитов ${s2.n}${s2.last?" · был(а) "+dLong(s2.last.date)+", "+esc(svById(s2.last.service).name):""}</div></div><span class="tag ok">выбрать</span></div>`}).join(""):(q(src).value.trim().length>=3?`<div class="muted sm">Такого клиента нет — будет создан новый (нужны имя и телефон)</div>`:"")};
+  const pick=c=>{const s2=stats(c),last=s2.last;q("#bp").value="+"+c.phone;q("#bn").value=c.name;
+    if(last&&!o.service&&svById(last.service)&&!svById(last.service).off)q("#bs").value=last.service;
+    const sv2=svById(+q("#bs").value);
+    let sameM=false;if(last&&mById(last.master).active&&(!st.time||!conflict(q("#bd").value,last.master,tm(st.time),sv2.dur))){q("#bm").value=last.master;sameM=true}
+    q("#sug").innerHTML=`<div class="note" style="margin:0"><b>✓ ${esc(c.name)}</b> · визитов ${s2.n}${c.bonus?` · бонусов ${c.bonus}`:""}${last?`<br>Прошлый раз: ${esc(svById(last.service).name)}, мастер ${esc(mById(last.master).name)}${sameM?" — подставили":" (в это время занят, выбран любой свободный)"}`:""}${c.note?`<br>📝 ${esc(c.note)}`:""}${noshows(c.id)?`<br><span class="neg">⚠ неявок: ${noshows(c.id)}</span>`:""}</div>`;times()};
+  if(!edit){q("#sug").onclick=e=>{const r=e.target.closest("[data-c]");if(r)pick(cById(+r.dataset.c))};
+    q("#bp").oninput=()=>{const d=digits(q("#bp").value),c=d.length>=10&&CLIENTS.find(x=>digits(x.phone)===d.slice(-10));if(c)pick(c);else showSug("#bp")};
+    q("#bn").oninput=()=>showSug("#bn")}
   q("#bok").onclick=()=>{const err=t=>q("#berr").textContent=t;if(!st.time)return err("Выберите время");
     const date=q("#bd").value,pr=q("#bpr").value;
     if(edit){const mid=+q("#bm").value;const mv=edit.date!==date||edit.start!==st.time;edit.master=mid;edit.date=date;edit.start=st.time;if(mv){edit.created=TODAY;scheduleNotifs(edit,"move");toast("✉ Клиенту ушло уведомление о переносе")}if(pr!=="")edit.price=Math.round(+pr);edit.note=q("#bnote").value;m.remove();render();openSheet(edit.id);return}
@@ -386,7 +399,7 @@ function bookModal(o){
     const sv=svById(+q("#bs").value),list=freeTimes(date,+q("#bm").value,sv.dur,0,true),slot=list.find(x=>x.t===st.time),mid=+q("#bm").value||slot.free[0];
     const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:o.walkin?"walkin":"phone",arrived:!!o.walkin};B.push(nb);scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
     if(o.waitId)WAIT=WAIT.filter(w=>w.id!==o.waitId);S.date=date;m.remove();render()};
-  if(o.client&&!edit){const c=cById(o.client);q("#bp").value="+"+c.phone;q("#bp").oninput()}
+  if(o.client&&!edit)pick(cById(o.client));
   times();
 }
 /* календарь */
