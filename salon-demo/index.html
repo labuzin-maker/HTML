@@ -346,7 +346,7 @@ function openSheet(id){
   ${us.length?us.map(x=>{const mt=matById(x.mat);return `<div class="row sm"><span>${esc(mt.name)}</span><span>${-x.qty} ${mt.unit}${ow?" · "+rub(-x.qty*x.cost):""}</span></div>`}).join(""):`<div class="muted">Ещё не списано.${norm.length?` Норма: ${norm.map(([i,q])=>matById(i).name.split(" (")[0]+" "+q+" "+matById(i).unit).join(", ")}.`:""}</div>`}
   ${ow&&us.length?`<div class="muted sm" style="margin-top:4px">Себестоимость материалов: ${rub(uc)}</div>`:""}</div>
   ${b.paid&&staff?`<button class="btn blue full" data-act="rebook" data-id="${b.id}" style="margin-bottom:8px">↻ Записать снова</button>`:""}${b.paid&&staff?`<div class="card">${kv("Оплачено",rub(b.paid.amount)+" · "+{card:"карта",cash:"наличные",sbp:"СБП"}[b.paid.method])}${kv("Чек",b.paid.fiscal+" (демо)")}${ow?kv("Маржа визита",rub(b.paid.amount-uc-sal)+" <span class='muted sm'>(выручка − материалы − ЗП мастера)</span>"):""}</div>`:""}
-  ${staff&&open?`<div class="row wrap gap"><button class="btn ok" data-act="payb" data-id="${b.id}">Оплатить</button><button class="btn ${b.arrived?"alt":"blue"}" data-act="arr" data-id="${b.id}">${b.arrived?"↩ Не пришёл":"✔ Пришёл"}</button><button class="btn blue" data-act="addsv" data-id="${b.id}">＋ Услуга</button><button class="btn blue" data-act="extra" data-id="${b.id}">＋ Доплата</button><button class="btn alt" data-act="editb" data-id="${b.id}">Перенести</button><button class="btn alt" data-act="remind" data-id="${b.id}">🔔 Напомнить${b.rem?" ✓":""}</button></div>
+  ${staff&&open?`<div class="row wrap gap"><button class="btn ok" data-act="payb" data-id="${b.id}">Оплатить</button><button class="btn alt" data-act="qpay" data-id="${b.id}" data-m="card">💳 Карта</button><button class="btn alt" data-act="qpay" data-id="${b.id}" data-m="cash">💵 Наличные</button><button class="btn ${b.arrived?"alt":"blue"}" data-act="arr" data-id="${b.id}">${b.arrived?"↩ Не пришёл":"✔ Пришёл"}</button><button class="btn blue" data-act="addsv" data-id="${b.id}">＋ Услуга</button><button class="btn blue" data-act="extra" data-id="${b.id}">＋ Доплата</button><button class="btn alt" data-act="editb" data-id="${b.id}">Перенести</button><button class="btn alt" data-act="remind" data-id="${b.id}">🔔 Напомнить${b.rem?" ✓":""}</button></div>
   <div class="row wrap gap" style="margin-top:8px"><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="noshow">Не пришёл</button><button class="btn alt s" data-act="bst" data-id="${b.id}" data-s="cancelled">Отменить запись</button><button class="btn alt s" data-act="close">Закрыть</button></div>`:`<button class="btn alt full" data-act="close" style="margin-top:6px">Закрыть</button>`}${staff?`<div style="text-align:center;margin-top:8px"><a href="#" data-act="lhist" data-id="${b.id}" class="sm">🕘 История изменений (${LOG.filter(x=>x.b===b.id).length})</a></div>`:""}`);
 }
 const refresh=()=>{render()};
@@ -401,15 +401,21 @@ function bookModal(o){
   ${edit?`<div class="muted" style="margin-bottom:6px">${esc(cById(edit.client).name)} · ${esc(svById(edit.service).name)}</div>`:`
   <label class="l">Телефон</label><input id="bp" type="tel" placeholder="+7 914 … (найдём в базе)" autocomplete="off">
   <label class="l">Имя и фамилия</label><input id="bn" placeholder="Начните вводить имя — найдём в базе" autocomplete="off"><div id="sug" style="margin-bottom:6px"></div>
-  <label class="l">Услуга</label><select id="bs">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}" ${o.service===s.id?"selected":""}>${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
+  <div id="pop"></div><label class="l">Услуга</label><select id="bs">${SERVICES.filter(s=>!s.off).map(s=>`<option value="${s.id}" ${o.service===s.id?"selected":""}>${esc(s.name)} — ${rub(s.price)}, ${s.dur} мин</option>`).join("")}</select>`}
   <label class="l">Мастер</label><select id="bm">${edit?"":'<option value="0">Любой свободный</option>'}${MASTERS.filter(x=>x.active).map(x=>`<option value="${x.id}" ${(edit?edit.master:o.master)===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select>
   <label class="l">Дата</label><input id="bd" type="date" value="${edit?edit.date:o.date||S.date}"><label class="l">Время</label><div class="chips" id="bt"></div>
   <label class="l">Цена, ₽ ${edit?"":"(если не по прайсу)"}</label><input id="bpr" type="number" value="${edit?edit.price:""}" placeholder="по прайсу"><label class="l">Заметка</label><input id="bnote" value="${edit?esc(edit.note):""}">
-  <div id="berr" class="neg"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="bok">${edit?"Сохранить":"Записать"}</button></div>`);
+  <div style="margin:6px 0"><a href="#" id="brk" class="sm">☕ Поставить технический перерыв</a></div><div id="berr" class="neg"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="bok">${edit?"Сохранить":"Записать"}</button></div>`);
   const q=s=>m.querySelector(s);
   const times=()=>{const sid=edit?edit.service:+q("#bs").value,dur=svById(sid).dur,list=freeTimes(q("#bd").value,+q("#bm").value,dur,edit&&edit.id,true);
     if(!list.some(x=>x.t===st.time))st.time=null;q("#bt").innerHTML=list.map(x=>`<div class="chip ${x.t===st.time?"on":""}" data-t="${x.t}">${x.t}</div>`).join("")||"<span class='muted'>Окон нет</span>"};
-  ["#bs","#bm","#bd"].forEach(s=>q(s)&&(q(s).onchange=times));q("#bt").onclick=e=>{const c=e.target.closest("[data-t]");if(c){st.time=c.dataset.t;times()}};
+  const popular=()=>{if(edit||!q("#pop"))return;const mid=+q("#bm").value;if(!mid){q("#pop").innerHTML="";return}
+    const cnt={};B.filter(b=>b.master===mid&&b.status!=="cancelled").forEach(b=>{cnt[b.service]=(cnt[b.service]||0)+1});
+    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([i])=>svById(+i)).filter(x=>x&&!x.off).slice(0,3);
+    q("#pop").innerHTML=top.length?`<div class="muted sm" style="margin-top:6px">Популярные у мастера «${esc(mById(mid).name)}»:</div><div class="chips">${top.map(x=>`<div class="chip" data-sv="${x.id}">${esc(x.name)} · ${rub(x.price)}</div>`).join("")}</div>`:""};
+  if(q("#pop"))q("#pop").onclick=e=>{const c=e.target.closest("[data-sv]");if(c){q("#bs").value=c.dataset.sv;times()}};
+  if(q("#brk"))q("#brk").onclick=e=>{e.preventDefault();const dd=q("#bd").value,mm=+q("#bm").value||0;closeModal();blockModal({date:dd,master:mm,time:st.time||undefined})};
+  ["#bs","#bm","#bd"].forEach(s=>q(s)&&(q(s).onchange=()=>{times();popular()}));q("#bt").onclick=e=>{const c=e.target.closest("[data-t]");if(c){st.time=c.dataset.t;times()}};
   const stats=c=>{const dn=B.filter(b=>b.client===c.id&&b.status==="done").sort((a,b)=>a.date<b.date?1:-1);return{n:dn.length,last:dn[0]}};
   const findC=src=>{const raw=q(src).value.trim();if(!raw)return[];
     if(/^[\d\s+()\-]+$/.test(raw)){const d=digits(raw),n6=raw.replace(/\D/g,"");if(d.length<3)return[];return CLIENTS.filter(c=>digits(c.phone).includes(d)||(n6.length===6&&clientNo(c.id)===n6)).slice(0,6)}
@@ -433,7 +439,7 @@ function bookModal(o){
     const nb={id:nid(),created:TODAY,date,master:mid,start:st.time,dur:sv.dur,service:sv.id,client:c.id,status:"confirmed",price:pr!==""?Math.round(+pr):sv.price,extras:[],note:q("#bnote").value,source:o.walkin?"walkin":"phone",arrived:!!o.walkin};B.push(nb);logIt(nb,"Запись создана ("+(o.walkin?"без записи":"по телефону")+"): "+svName(nb));scheduleNotifs(nb,"new");toast("✉ Клиенту ушло подтверждение в "+chanName[c.chan||"whatsapp"]);
     if(o.waitId)WAIT=WAIT.filter(w=>w.id!==o.waitId);S.date=date;m.remove();render()};
   if(o.client&&!edit)pick(cById(o.client));
-  times();
+  times();popular();
 }
 /* календарь */
 function calModal(){let ym=S.date.slice(0,7);const m=modal(`<div id="cal"></div>`);
@@ -700,6 +706,7 @@ const A={
   close(){closeModal()},payb(el){payModal(+el.dataset.id)},extra(el){extraModal(+el.dataset.id)},editb(el){closeModal();bookModal({id:+el.dataset.id})},mats(el){matsModal(+el.dataset.id)},
   lhist(el,e){e.preventDefault();const id=+el.dataset.id;closeModal();const l=LOG.filter(x=>x.b===id);
     modal(`<h2 style="margin-top:0">История изменений</h2>${l.map(x=>`<div class="card"><div class="row sm"><b>${esc(x.who)}</b><span class="muted">${x.at}</span></div><div>${esc(x.text)}</div></div>`).join("")||'<div class="muted">Изменений с момента запуска нет.</div>'}<button class="btn alt full" data-act="close">Закрыть</button>`)},
+  qpay(el){payModal(+el.dataset.id);const m=document.querySelector("#pt");m.value=el.dataset.m;document.querySelector("#pok").click()},
   addsv(el){addSvcModal(+el.dataset.id)},
   sdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id),r=b.more.splice(+el.dataset.i,1)[0];b.dur=Math.max(30,b.dur-svById(r.s).dur);logIt(b,"Удалена услуга: "+svById(r.s).name);render();openSheet(b.id)},
   xdel(el,e){e.preventDefault();const b=B.find(x=>x.id===+el.dataset.id);logIt(b,"Удалена доплата: "+b.extras[+el.dataset.i].t);b.extras.splice(+el.dataset.i,1);render();openSheet(b.id)},
