@@ -155,10 +155,10 @@ let seq=1000;const nid=()=>++seq;
 let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)%n};
 
 /* ===== справочники ===== */
-let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS,BLOCKS,WAIT,NOTIF,LOG=[],LOGIN=[];
+let MASTERS,SERVICES,MATS,NORMS,CLIENTS,B,PAY,EXP,MOV,CFG,USERS,BLOCKS,WAIT,NOTIF,LOG=[],LOGIN=[],CASHOPS=[],SHIFTS=[],ADJ=[],SCHEMES=[];
 function seed(){
   seq=1000;rs=20261028;
-  CFG={ntf:{confirm:1,remind:1,hours:2,from:"09:00"},payDay:5,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
+  CFG={ntf:{confirm:1,remind:1,hours:2,from:"09:00"},payDay:5,open:{cash:5000,card:0,safe:30000},since:TODAY,name:"Парикмахерская #8",addr:"г. Владивосток, ул. Примерная, 1"};
   USERS={admin:{login:"admin",pass:"admin123",name:"Администратор"},owner:{login:"owner",pass:"owner123",name:"Владелец"}};
   MASTERS=[
     {id:1,name:"Анна",role:"Стилист-колорист",percent:40,login:"anna",pass:"anna123",color:"#b8432f",rating:4.9,active:1},
@@ -181,7 +181,7 @@ function seed(){
   CLIENTS=[["Мария Иванова","79141000001","любит каре, аллергия на аммиак"],["Сергей Петров","79141000002",""],["Алексей Громов","79141000003","борода 3 мм"],["Ольга Смирнова","79141000004","окрашивание блонд, формула 7/1 + 6%"],["Дмитрий Орлов","79141000005",""],["Екатерина Волкова","79141000006","стрижка боб"],["Иван Козлов","79141000007","сын 7 лет — детская"],["Наталья Белова","79141000008","тонирование раз в 6 недель"],["Андрей Нестеров","79141000009",""],["Виктория Лис","79141000010",""],["Павел Морозов","79141000011","борода"]].map((c,i)=>({id:i+1,name:c[0],phone:c[1],note:c[2],bonus:0}));
   {const fn=["Анна","Елена","Ирина","Светлана","Татьяна","Юлия","Алексей","Андрей","Максим","Роман","Денис","Артём","Кирилл","Мария","Оксана","Игорь"],ln=["Кузнецов","Соколов","Попов","Лебедев","Новиков","Морозов","Волков","Зайцев","Павлов","Семёнов","Фёдоров","Михайлов","Беляев","Тарасов","Белоусов","Комаров"];
    for(let i=0;i<40;i++){const f=fn[(i*7)%fn.length],l=ln[(i*5+3)%ln.length],fem=/[ая]$/.test(f);CLIENTS.push({id:12+i,name:f+" "+l+(fem&&!/[ая]$/.test(l)?"а":""),phone:"791420"+String(10000+i*37).slice(-5),note:"",bonus:0})}}
-  B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];
+  B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];CASHOPS=[];SHIFTS=[];LOG=[];LOGIN=[];ADJ=[];SCHEMES=[{id:1,name:"Стандарт 35%",pct:35,rate:0},{id:2,name:"Мастер 40%",pct:40,rate:0},{id:3,name:"Топ-мастер 50%",pct:50,rate:0}];MASTERS.forEach(m=>m.scheme=m.percent>=50?3:m.percent>=40?2:1);
   const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
     const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
   const settle=(b,withUse=true)=>{const m=MASTERS.find(x=>x.id===b.master),total=b.price+b.extras.reduce((a,x)=>a+x.a,0);
@@ -272,8 +272,9 @@ function calc(p){const {from,to}=period(p),inR=d=>d>=from&&d<=to;
   const pm=MASTERS.map(m=>{const mp=pay.filter(x=>x.master===m.id),sv=mp.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount,0),tips=mp.filter(x=>x.kind==="tip").reduce((a,x)=>a+x.amount,0);
     const pct=Math.round(mp.filter(x=>x.kind==="service").reduce((a,x)=>a+x.amount*x.pct,0)/100),paid=EXP.filter(e=>e.cat==="salary"&&e.master===m.id&&inR(e.date)).reduce((a,e)=>a+e.amount,0);
     const visits=new Set(mp.filter(x=>x.kind==="service").map(x=>x.booking)).size,mc=MOV.filter(x=>x.type==="out"&&inR(x.date)&&x.master===m.id).reduce((a,x)=>a-x.qty*x.cost,0);
-    const [y,mo]=to.split("-").map(Number),due=`${mo===12?y+1:y}-${pad(mo===12?1:mo+1)}-${pad(CFG.payDay)}`,sal=pct+tips,bal=sal-paid;
-    return{m,visits,sv,pct,tips,sal,paid,bal,mats:mc,due,over:bal>0&&TODAY>due?Math.round((new Date(TODAY)-new Date(due))/864e5):0}});
+    const adj=ADJ.filter(a=>a.master===m.id&&inR(a.date)).reduce((t,a)=>t+a.amount,0),sch=SCHEMES.find(z=>z.id===m.scheme),days=new Set(mp.filter(x=>x.kind==="service").map(x=>x.date)).size,rate=(sch&&sch.rate||0)*days,extra=adj+rate;
+    const [y,mo]=to.split("-").map(Number),due=`${mo===12?y+1:y}-${pad(mo===12?1:mo+1)}-${pad(CFG.payDay)}`,sal=pct+tips+extra,bal=sal-paid;
+    return{m,visits,sv,pct,tips,adj,rate,extra,days,sal,paid,bal,mats:mc,due,over:bal>0&&TODAY>due?Math.round((new Date(TODAY)-new Date(due))/864e5):0}});
   const accrued=pm.reduce((a,x)=>a+x.sal,0);
   const byDay={};pay.forEach(x=>byDay[x.date]=(byDay[x.date]||0)+x.amount);
   const bySvc={};pay.filter(x=>x.kind==="service").forEach(x=>{const b=B.find(z=>z.id===x.booking);if(!b)return;const tt=total(b)||1,parts=[{i:b.service,w:b.price+b.extras.reduce((a,e)=>a+e.a,0)},...(b.more||[]).map(m=>({i:m.s,w:m.p}))];let left=x.amount;parts.forEach((p,k)=>{const n=svById(p.i).name,a=k===parts.length-1?left:Math.round(x.amount*p.w/tt);left-=a;bySvc[n]=bySvc[n]||{n:0,s:0};bySvc[n].n++;bySvc[n].s+=a})});
@@ -311,7 +312,7 @@ function vLogin(role){
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
   const r=S.role,t=S.tab[r];let body;
-  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:vCash,cal:vCashCal,rep:vReport,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,log:vLog,recs:vRecs,set:vSettings,msg:vOutbox}[t]();
+  if(r==="master")body=vMaster();else body={jr:vJournal,cl:vClients,cash:()=>cashPanel()+vCash(),cal:()=>cashPanel()+vCashCal(),rep:vReport,st:vStock,sum:vSummary,pay:vPay,acc:vAccess,log:vLog,recs:vRecs,set:vSettings,msg:vOutbox}[t]();
   const who=r==="master"?"Здравствуйте, "+mById(S.sess.master).name:r==="admin"?"Администратор":"Владелец";
   return `<div class="row"><h1>${who}</h1><button class="btn alt s" data-act="logout">Выйти</button></div>
   ${r==="master"?body:`<div class="shell"><div class="tabs side">${TABS[r].map(([k,v])=>`<button data-act="tab" data-t="${k}" class="${k===t?"on":""}">${v}</button>`).join("")}</div><div class="main">${body}</div></div>`}`}
@@ -587,12 +588,38 @@ function payHist(r){const l=EXP.filter(e=>e.cat==="salary"&&e.date>=r.from&&e.da
 function actToast(t,label,fn,ms=8000){document.querySelectorAll(".toast").forEach(x=>x.remove());const e=document.createElement("div");e.className="toast ut";e.textContent=t;const b=document.createElement("button");b.className="ub";b.textContent=label;b.onclick=()=>{e.remove();fn()};e.appendChild(b);document.body.appendChild(e);setTimeout(()=>e.remove(),ms)}
 function vPay(){const r=calc(S.period),sm=k=>r.pm.reduce((a,x)=>a+x[k],0),dueTag=x=>x.bal<=0?`<span class="tag ok">выплачено</span>`:x.over>0?`<span class="tag bad">просрочка ${x.over} дн.</span>`:`<span class="tag">до ${x.due.split("-").reverse().join(".")}</span>`;
   return `${perBar(S.period)}<div class="card row"><span>Отчётная дата выплаты ЗП за период</span><b>${r.pm[0].due.split("-").reverse().join(".")}</b></div>
-  <div class="tw"><table class="t"><thead><tr><th>Мастер</th><th>Визитов</th><th>Услуги</th><th>%</th><th>ЗП от %</th><th>Чаевые</th><th>Итого ЗП</th><th>Выплачено</th><th>Остаток</th><th>Материалы</th><th>Срок ЗП</th><th></th></tr></thead><tbody>
-  ${r.pm.map(x=>`<tr><td>${esc(x.m.name)}</td><td>${x.visits}</td><td>${rub(x.sv)}</td><td>${x.m.percent}%</td><td>${rub(x.pct)}</td><td>${rub(x.tips)}</td><td class="hl">${rub(x.sal)}</td><td>${rub(x.paid)}</td><td class="${x.bal>0?"neg":"pos"}">${rub(x.bal)}</td><td>${rub(x.mats)}</td><td>${dueTag(x)}</td><td>${x.bal>0?`<button class="btn ok s" data-act="paym" data-id="${x.m.id}" data-b="${x.bal}">Выплатить</button>`:""}</td></tr>`).join("")}</tbody>
-  <tfoot><tr><td>Итого</td><td>${sm("visits")}</td><td>${rub(sm("sv"))}</td><td></td><td>${rub(sm("pct"))}</td><td>${rub(sm("tips"))}</td><td>${rub(sm("sal"))}</td><td>${rub(sm("paid"))}</td><td>${rub(sm("bal"))}</td><td>${rub(sm("mats"))}</td><td></td><td></td></tr></tfoot></table></div>
+  <div class="tw"><table class="t"><thead><tr><th>Мастер</th><th>Визитов</th><th>Услуги</th><th>%</th><th>ЗП от %</th><th>Чаевые</th><th>Ставка и премии</th><th>Итого ЗП</th><th>Выплачено</th><th>Остаток</th><th>Материалы</th><th>Срок ЗП</th><th></th></tr></thead><tbody>
+  ${r.pm.map(x=>`<tr><td>${esc(x.m.name)}</td><td>${x.visits}</td><td>${rub(x.sv)}</td><td>${x.m.percent}%</td><td>${rub(x.pct)}</td><td>${rub(x.tips)}</td><td class="${x.extra<0?"neg":""}">${rub(x.extra)}</td><td class="hl">${rub(x.sal)}</td><td>${rub(x.paid)}</td><td class="${x.bal>0?"neg":"pos"}">${rub(x.bal)}</td><td>${rub(x.mats)}</td><td>${dueTag(x)}</td><td>${x.bal>0?`<button class="btn ok s" data-act="paym" data-id="${x.m.id}" data-b="${x.bal}">Выплатить</button>`:""} <button class="btn alt s" data-act="stmt" data-id="${x.m.id}">📄</button> <button class="btn alt s" data-act="adjm" data-id="${x.m.id}">±</button></td></tr>`).join("")}</tbody>
+  <tfoot><tr><td>Итого</td><td>${sm("visits")}</td><td>${rub(sm("sv"))}</td><td></td><td>${rub(sm("pct"))}</td><td>${rub(sm("tips"))}</td><td>${rub(sm("extra"))}</td><td>${rub(sm("sal"))}</td><td>${rub(sm("paid"))}</td><td>${rub(sm("bal"))}</td><td>${rub(sm("mats"))}</td><td></td><td></td></tr></tfoot></table></div>
+  <div class="muted sm" style="margin:-2px 0 8px">📄 — ведомость мастера по дням, ± — премия или штраф. «Ставка и премии» = ставка за рабочий день по схеме + премии − штрафы.</div>
+  ${schemesCard()}
   ${payHist(r)}
   <div class="card"><b>День выплаты ЗП</b><div class="muted sm" style="margin-bottom:6px">Если срок прошёл, а остаток есть — красная метка «просрочка».</div><div class="row gap"><input id="pdy" type="number" min="1" max="28" value="${CFG.payDay}" style="margin:0;width:90px"><button class="btn s" data-act="payday">Сохранить</button></div></div>
   <div class="muted sm">«Материалы» — сколько расходников списано на клиентов мастера: видно, кто расходует больше нормы.</div>`}
+/* схемы зарплаты, премии и штрафы, ведомость */
+const ADJP=[["Премия за результат",1000],["Премия за отзыв",300],["Штраф за опоздание",-500],["Штраф за брак",-1000],["Удержание за материалы",-300]];
+function schemesCard(){return `<h2>Схемы зарплаты</h2><div class="card">${SCHEMES.map(z=>`<div class="row" style="margin-bottom:6px"><div><b>${esc(z.name)}</b><div class="muted sm">${z.pct}% с услуг${z.rate?` + ${rub(z.rate)} за рабочий день`:""} · мастеров: ${MASTERS.filter(m=>m.scheme===z.id).map(m=>esc(m.name)).join(", ")||"—"}</div></div><button class="btn alt s" data-act="schedit" data-id="${z.id}">✎</button></div>`).join("")}
+  <button class="btn alt s" data-act="schedit" data-id="0">＋ Новая схема</button>
+  <h3 style="margin:12px 0 6px">Кому какая схема (назначается вручную)</h3>${MASTERS.map(m=>`<div class="row" style="margin-bottom:6px"><span>${esc(m.name)}</span><select data-schm="${m.id}" style="margin:0;width:auto">${SCHEMES.map(z=>`<option value="${z.id}" ${m.scheme===z.id?"selected":""}>${esc(z.name)}</option>`).join("")}</select></div>`).join("")}
+  <div class="muted sm">Схема действует на будущие оплаты, прошлые месяцы не пересчитываются.</div></div>`}
+function schemeModal(id){const z=id?SCHEMES.find(x=>x.id===id):null;
+  const m=modal(`<h2 style="margin-top:0">${z?"Схема зарплаты":"Новая схема"}</h2><label class="l">Название</label><input id="zn" value="${z?esc(z.name):""}"><label class="l">Процент с услуг, %</label><input id="zp" type="number" min="0" max="100" value="${z?z.pct:40}"><label class="l">Ставка за рабочий день, ₽ (0 — без ставки)</label><input id="zr" type="number" min="0" value="${z?z.rate:0}"><div id="zer" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button>${z&&!MASTERS.some(x=>x.scheme===z.id)?`<button class="btn alt" id="zdel">Удалить</button>`:""}<button class="btn ok" id="zok">Сохранить</button></div>`);
+  const q=i=>m.querySelector(i);q("#zok").onclick=()=>{const n=q("#zn").value.trim();if(!n){q("#zer").textContent="Введите название";return}
+    const o=z||{id:nid()};o.name=n;o.pct=Math.min(100,Math.max(0,Math.round(+q("#zp").value||0)));o.rate=Math.max(0,Math.round(+q("#zr").value||0));if(!z)SCHEMES.push(o);else MASTERS.filter(x=>x.scheme===o.id).forEach(x=>x.percent=o.pct);m.remove();render()};
+  if(q("#zdel"))q("#zdel").onclick=()=>{SCHEMES=SCHEMES.filter(x=>x.id!==z.id);m.remove();render()}}
+function adjModal(mid){const mm=mById(mid),m=modal(`<h2 style="margin-top:0">Премия / штраф · ${esc(mm.name)}</h2><div class="chips">${ADJP.map((p,i)=>`<div class="chip" data-i="${i}">${p[0]} ${p[1]>0?"+":""}${p[1]}</div>`).join("")}</div>
+  <label class="l">Что именно</label><input id="at"><label class="l">Сумма (минус — штраф), ₽</label><input id="aa" type="number"><div id="aer" class="neg"></div><div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="aok">Записать</button></div>`);
+  m.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const p=ADJP[+c.dataset.i];m.querySelector("#at").value=p[0];m.querySelector("#aa").value=p[1]});
+  m.querySelector("#aok").onclick=()=>{const t=m.querySelector("#at").value.trim(),a=Math.round(+m.querySelector("#aa").value);if(!t||!a){m.querySelector("#aer").textContent="Нужны описание и сумма";return}
+    ADJ.push({id:nid(),master:mid,date:TODAY,amount:a,note:t,who:actor()});m.remove();render();toast("✓ Записано")}}
+function stmtModal(mid){const mm=mById(mid),{from,to}=period(S.period),inR=d=>d>=from&&d<=to,sch=SCHEMES.find(z=>z.id===mm.scheme);
+  const rows=PAY.filter(x=>x.master===mid&&inR(x.date)).sort((a,b)=>a.date<b.date?-1:1);
+  const m=modal(`<h2 style="margin-top:0">Ведомость · ${esc(mm.name)}</h2><div class="muted sm" style="margin-bottom:6px">${from.split("-").reverse().join(".")} — ${to.split("-").reverse().join(".")} · схема: ${sch?esc(sch.name):"—"}</div>
+  ${htmlTable(["Дата","Клиент","Сумма","%","ЗП"],rows.map(x=>{const b=B.find(z=>z.id===x.booking),k=x.kind==="tip";return [x.date.split("-").reverse().slice(0,2).join("."),b?esc(cById(b.client).name):"—",nbs(x.amount)+(k?" (чаевые)":""),k?"100%":x.pct+"%",nbs(k?x.amount:Math.round(x.amount*x.pct/100))]}),null)}
+  ${ADJ.filter(a=>a.master===mid&&inR(a.date)).map(a=>`<div class="card row sm"><span>${a.date.split("-").reverse().slice(0,2).join(".")} · ${esc(a.note)}</span><b class="${a.amount<0?"neg":"pos"}">${rub(a.amount)}</b></div>`).join("")}
+  <button class="btn alt full" data-act="close">Закрыть</button>`)}
+document.addEventListener("change",e=>{const id=e.target.dataset&&e.target.dataset.schm;if(id){const m=mById(+id),z=SCHEMES.find(x=>x.id===+e.target.value);m.scheme=z.id;m.percent=z.pct;render();toast("Схема назначена: "+z.name)}});
 /* реестр записей */
 const crOf=b=>b.created||b.date;
 const SRCN={app:"Онлайн",phone:"Телефон",walkin:"Без записи"};
@@ -979,7 +1006,7 @@ function finReport(from,to){const inR=d=>d>=from&&d<=to,r=calc({from,to,label:ym
   const ex={};EXP.filter(e=>inR(e.date)&&e.cat!=="salary").forEach(e=>{const k=EXPL[e.cat]||e.note||"Прочее";ex[k]=(ex[k]||0)+e.amount});
   const svc=sum(svcP),tips=sum(tipP),exps=Object.entries(ex),expT=exps.reduce((a,x)=>a+x[1],0),rev=svc+tips,matsR=Math.round(r.mats),profit=rev-matsR-expT-r.accrued;
   const services=Object.entries(r.bySvc).sort((a,b)=>b[1].s-a[1].s).map(([n,v])=>({n,cnt:v.n,s:v.s}));
-  return{from,to,r,days,svc,tips,rev,mats:Math.round(r.mats),exps,expT,accrued:r.accrued,profit,visits:r.visits,masters:r.pm,services,bought:r.bought}}
+  return{from,to,r,days,svc,tips,rev,mats:Math.round(r.mats),exps,expT,accrued:r.accrued,profit,visits:r.visits,masters:r.pm.map(x=>({...x,pct:x.pct+x.extra})),services,bought:r.bought}}
 const nbs=n=>Math.round(n).toLocaleString("ru-RU").replace(/\s/g," ")+" ₽";
 const pc=(a,b)=>b?(Math.round(a/b*1000)/10).toLocaleString("ru-RU")+"%":"—";
 function htmlTable(head,rows,foot,cls=""){return `<div class="tw rep ${cls}"><table class="t"><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>${foot?`<tfoot><tr>${foot.map(c=>`<td>${c}</td>`).join("")}</tr></tfoot>`:""}</table></div>`}
@@ -1085,6 +1112,45 @@ Object.assign(A,{
 });
 document.addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.in;if((k==="rfr"||k==="rto")&&/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){repRange();if(k==="rfr")S.fr=e.target.value;else S.fto=e.target.value;render()}});
 
+/* ===== кассы: наличные, карта/QR, сейф; закрытие смены ===== */
+const BOX={cash:"💵 Наличные",card:"💳 Карта / QR",safe:"🔐 Сейф"},BOXK=Object.keys(BOX);
+const ARTS=[["rent","Аренда"],["ads","Реклама"],["utilities","Коммунальные"],["goods","Закупка материалов"],["other","Хозяйственные расходы"]];
+const payBox=m=>m==="cash"?"cash":"card";
+function boxBal(box,upTo=TODAY){let v=CFG.open[box]||0;
+  PAY.forEach(x=>{if(x.date>=CFG.since&&x.date<=upTo&&payBox(x.method)===box)v+=x.amount});
+  CASHOPS.forEach(o=>{if(o.date>upTo)return;if(o.from===box)v-=o.amount;if(o.to===box)v+=o.amount});return v}
+function cashOf(date){const rec=PAY.filter(x=>x.date===date&&x.method==="cash").reduce((a,x)=>a+x.amount,0);return rec}
+function cashPanel(){const adm=S.role==="admin",sh=SHIFTS.find(x=>x.date===S.date),ops=CASHOPS.filter(o=>o.date===S.date);
+  return `<div class="grid">${BOXK.map(k=>`<div class="card"><div class="muted">${BOX[k]}</div><div class="k">${rub(boxBal(k))}</div></div>`).join("")}</div>
+  <div class="muted sm" style="margin:-2px 0 8px">Остатки на сегодня, считаются с ${CFG.since.split("-").reverse().join(".")} (начальные остатки внесены вручную).</div>
+  <div class="row wrap gap" style="margin-bottom:10px;justify-content:flex-start"><button class="btn ok s" data-act="cop" data-k="in">＋ Внесение</button><button class="btn alt s" data-act="cop" data-k="out">− Расход</button><button class="btn alt s" data-act="cop" data-k="move">⇄ Перемещение</button>${adm||isOwner()?`<button class="btn blue s" data-act="shift">🔒 Закрыть смену</button>`:""}</div>
+  ${sh?`<div class="note" style="margin-top:0">🔒 Смена ${S.date.split("-").reverse().join(".")} закрыта (${esc(sh.who)}): по учёту ${rub(sh.expected)}, пересчитали ${rub(sh.actual)}${sh.diff?`, <b style="color:${sh.diff<0?"var(--bad)":"var(--ok)"}">${sh.diff>0?"излишек":"недостача"} ${rub(Math.abs(sh.diff))}</b>`:" — сошлось"}${sh.toSafe?`, в сейф ${rub(sh.toSafe)}`:""}</div>`:""}
+  ${ops.length?`<h2 style="margin-top:4px">Операции за день</h2>${ops.map(o=>`<div class="card row"><div><b>${{in:"Внесение",out:"Расход",move:"Перемещение",adj:"Корректировка"}[o.type]}</b>${o.art?` · ${esc(o.art)}`:""}<div class="muted sm">${o.from?BOX[o.from]:""}${o.from&&o.to?" → ":""}${o.to?BOX[o.to]:""}${o.note?" · "+esc(o.note):""} · ${esc(o.who)}</div></div><b>${rub(o.amount)}</b></div>`).join("")}`:""}`}
+function copModal(k){const bx=(id,d)=>`<select id="${id}">${BOXK.map(x=>`<option value="${x}" ${x===d?"selected":""}>${BOX[x]}</option>`).join("")}</select>`;
+  const m=modal(`<h2 style="margin-top:0">${{in:"Внесение в кассу",out:"Расход",move:"Перемещение между кассами"}[k]}</h2>
+  ${k==="move"?`<label class="l">Откуда</label>${bx("cf","cash")}<label class="l">Куда</label>${bx("ct","safe")}`:`<label class="l">${k==="in"?"В какую кассу":"Из какой кассы"}</label>${bx("cb","cash")}`}
+  ${k==="out"?`<label class="l">Статья расхода</label><select id="ca">${ARTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join("")}</select>`:""}
+  <label class="l">Сумма, ₽</label><input id="cs" type="number"><label class="l">Комментарий</label><input id="cn"><div id="cer" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="cok">Провести</button></div>`);
+  m.querySelector("#cok").onclick=()=>{const a=Math.round(+m.querySelector("#cs").value),note=m.querySelector("#cn").value.trim(),er=t=>m.querySelector("#cer").textContent=t;if(!(a>0))return er("Введите сумму");
+    const o={id:nid(),date:S.date>TODAY?TODAY:S.date,type:k,amount:a,note,who:actor()};
+    if(k==="move"){o.from=m.querySelector("#cf").value;o.to=m.querySelector("#ct").value;if(o.from===o.to)return er("Выберите разные кассы")}
+    else if(k==="in")o.to=m.querySelector("#cb").value;else{o.from=m.querySelector("#cb").value;const ar=ARTS.find(x=>x[0]===m.querySelector("#ca").value);o.art=ar[1];o.cat=ar[0]}
+    if(o.from&&boxBal(o.from)<a)return er("В кассе «"+BOX[o.from].slice(3)+"» только "+rub(boxBal(o.from)));
+    CASHOPS.push(o);if(k==="out"&&o.cat!=="goods")EXP.push({id:nid(),date:o.date,amount:a,cat:o.cat,note:note||o.art,master:0,op:o.id});
+    m.remove();render();toast("✓ Операция проведена")}}
+function shiftModal(){const d=S.date>TODAY?TODAY:S.date;if(SHIFTS.find(x=>x.date===d)){toast("Смена за этот день уже закрыта");return}
+  const exp=boxBal("cash",d);
+  const m=modal(`<h2 style="margin-top:0">Закрытие смены · ${d.split("-").reverse().join(".")}</h2><div class="card">${kv("Наличные по учёту",rub(exp))}${kv("Принято наличными за день",rub(cashOf(d)))}</div>
+  <label class="l">Пересчитали в кассе, ₽</label><input id="sa" type="number" value="${exp}"><label class="l">Сколько убрать в сейф, ₽</label><input id="ss" type="number" value="0"><div id="sd" class="note"></div><div id="ser" class="neg"></div>
+  <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="sok">Закрыть смену</button></div>`);
+  const q=i=>m.querySelector(i),upd=()=>{const diff=Math.round(+q("#sa").value)-exp;q("#sd").innerHTML=diff===0?"✓ Сходится":`<b style="color:${diff<0?"var(--bad)":"var(--ok)"}">${diff>0?"Излишек":"Недостача"} ${rub(Math.abs(diff))}</b> — запишется как корректировка`};q("#sa").oninput=upd;upd();
+  q("#sok").onclick=()=>{const act=Math.round(+q("#sa").value),sf=Math.max(0,Math.round(+q("#ss").value||0));if(sf>act)return q("#ser").textContent="В сейф нельзя больше, чем в кассе";
+    const diff=act-exp;if(diff)CASHOPS.push({id:nid(),date:d,type:"adj",to:diff>0?"cash":undefined,from:diff<0?"cash":undefined,amount:Math.abs(diff),note:"Итог смены",who:actor()});
+    if(sf)CASHOPS.push({id:nid(),date:d,type:"move",from:"cash",to:"safe",amount:sf,note:"Инкассация в сейф при закрытии смены",who:actor()});
+    SHIFTS.push({id:nid(),date:d,expected:exp,actual:act,diff,toSafe:sf,who:actor()});m.remove();render();toast("🔒 Смена закрыта")}}
+Object.assign(A,{cop(el){copModal(el.dataset.k)},shift(){shiftModal()}});
+Object.assign(A,{schedit(el){schemeModal(+el.dataset.id)},adjm(el){adjModal(+el.dataset.id)},stmt(el){stmtModal(+el.dataset.id)}});
 /* ===== администратор: импорт клиентов из Excel / CSV / вставки ===== */
 function parseDelim(text){text=text.replace(/^\uFEFF/,"");const first=text.split(/\r?\n/).find(l=>l.trim())||"";
   const cnt=c=>(first.match(new RegExp(c==="\t"?"\t":"\\"+c,"g"))||[]).length,d=[";","\t",","].sort((a,b)=>cnt(b)-cnt(a))[0];
