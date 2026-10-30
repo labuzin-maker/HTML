@@ -390,7 +390,7 @@ function payModal(id){
     m.remove();receiptModal(b,items,amount,method,used);render()};
 }
 function receiptModal(b,items,amount,method,used=0){
-  modal(`<div class="ok-ring">✓</div><h2 style="text-align:center;margin:0">Чек пробит${b.paid.fp?"":" (демо)"}</h2><div class="muted" style="text-align:center;margin-bottom:10px">Так программа передаст данные кассе</div>
+  modal(`<div class="ok-ring">✓</div><h2 style="text-align:center;margin:0">Чек пробит${b.paid.fp?(b.paid.sim?" (имитация кассы)":""):" (демо)"}</h2><div class="muted" style="text-align:center;margin-bottom:10px">Так программа передаст данные кассе</div>
   <div class="card" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#fffdf6;color:#222"><div style="text-align:center"><b>КАССОВЫЙ ЧЕК · ПРИХОД</b><br>${esc(CFG.name)} · ИП …<br>${b.date.split("-").reverse().join(".")} ${(d=>hm(d.getHours()*60+d.getMinutes()))(new Date())}</div><hr style="border:0;border-top:1px dashed #999">
   ${items.map(i=>`<div class="row"><span>${esc(i.n)}</span><span>${i.p.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">1 × ${i.p.toFixed(2)} · услуга · без НДС</div>`).join("")}
   <hr style="border:0;border-top:1px dashed #999">${used?`<div class="row"><span>Оплачено баллами</span><span>−${used.toFixed(2)}</span></div>`:""}<div class="row"><b>ИТОГО К ОПЛАТЕ</b><b>${amount.toFixed(2)}</b></div><div class="row"><span>${{card:"Безналичными",cash:"Наличными",sbp:"СБП",acct:"расчётный счёт",prepay:"предоплата",cert:"сертификат"}[method]}</span><span>${amount.toFixed(2)}</span></div><div class="muted" style="font-size:11px;color:#777">ФД №${b.paid.fiscal.slice(1)} · ФП ${b.paid.fp||"(демо)"} · чек отправлен клиенту</div></div>
@@ -1485,7 +1485,17 @@ const KVAT={none:"Без НДС",vat0:"НДС 0%",vat5:"НДС 5%",vat7:"НДС 
 const kcfg=()=>Object.assign({mode:"demo",url:"http://127.0.0.1:16732",tax:"usn_income",vat:"none",operator:""},CFG.kassa||{});
 function kassaSet(k,v){CFG.kassa=Object.assign(kcfg(),{[k]:v})}
 const kuuid=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():"k"+Date.now()+Math.random().toString(16).slice(2);
-async function kassaCall(task){const k=kcfg(),base=String(k.url||"").replace(/\/+$/,"");let r;
+const KSIM=(()=>{let o={open:0,shift:0,doc:0};try{o=Object.assign(o,JSON.parse(localStorage.getItem("ksim")||"{}"))}catch(e){}return o})();
+const ksimSave=()=>{try{localStorage.setItem("ksim",JSON.stringify(KSIM))}catch(e){}};
+async function ksimCall(task){await new Promise(z=>setTimeout(z,900));const r=task.request||{},t=r.type,names=(r.items||[]).map(i=>i.name).join(" ");
+  if(t==="openShift"){if(KSIM.open)return{ok:false,error:"Смена уже открыта"};KSIM.open=1;KSIM.shift++;ksimSave();return{ok:true,res:{shiftNumber:KSIM.shift}}}
+  if(t==="closeShift"){if(!KSIM.open)return{ok:false,error:"Смена уже закрыта"};KSIM.open=0;ksimSave();return{ok:true,res:{shiftNumber:KSIM.shift}}}
+  if(!KSIM.open)return{ok:false,error:"Смена закрыта: откройте смену на кассе (Настройки → Касса → «Открыть смену на кассе»)"};
+  if(/БУМАГА/.test(names))return{ok:false,error:"Нет бумаги в принтере"};
+  if(/ОШИБКА/.test(names))return{ok:false,error:"Ошибка кассы (проверка)"};
+  KSIM.doc++;ksimSave();const n=1000+KSIM.doc;
+  return{ok:true,res:{fiscalParams:{fiscalDocumentNumber:n,fiscalDocumentSign:String(2000000000+Math.floor(Math.random()*999999999)),shiftNumber:KSIM.shift}}}}
+async function kassaCall(task){if(kcfg().mode==="sim")return ksimCall(task);const k=kcfg(),base=String(k.url||"").replace(/\/+$/,"");let r;
   try{r=await fetch(base+"/requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(task)})}
   catch(e){return{ok:false,error:"Нет связи с кассой ("+base+"). Запущена ли программа кассы на этом компьютере и разрешён ли доступ из браузера?"}}
   if(!r.ok)return{ok:false,error:"Касса ответила ошибкой "+r.status};
@@ -1502,11 +1512,11 @@ async function kassaSell(items,amount,method){const r=await kassaCall(kassaTask(
   return{ok:true,doc:f.fiscalDocumentNumber,fp:String(f.fiscalDocumentSign||""),shift:f.shiftNumber}}
 const _rm0=receiptModal;
 receiptModal=function(b,items,amount,method,used){const k=kcfg();b.paid.kitems=items;b.paid.kamount=amount;b.paid.kmethod=method;
-  if(k.mode!=="atol"||!["cash","card","sbp"].includes(method)||!(amount>0)){_rm0(b,items,amount,method,used);return}
+  if(!["atol","sim"].includes(k.mode)||!["cash","card","sbp"].includes(method)||!(amount>0)){_rm0(b,items,amount,method,used);return}
   kassaRun(b,items,amount,method,used)};
 async function kassaRun(b,items,amount,method,used){const w=modal(`<div class="muted" style="text-align:center;padding:24px">⏳ Пробиваю чек на кассе…</div>`);
   const r=await kassaSell(items,amount,method);w.remove();
-  if(r.ok){b.paid.fiscal="№"+r.doc;b.paid.fp=r.fp;b.paid.shift=r.shift;delete b.paid.fiscalError;logIt(b,"Чек пробит: ФД №"+r.doc);_rm0(b,items,amount,method,used);render();return}
+  if(r.ok){b.paid.fiscal="№"+r.doc;b.paid.fp=r.fp;b.paid.shift=r.shift;b.paid.sim=kcfg().mode==="sim"?1:0;delete b.paid.fiscalError;logIt(b,"Чек пробит: ФД №"+r.doc);_rm0(b,items,amount,method,used);render();return}
   b.paid.fiscalError=r.error;logIt(b,"Чек НЕ пробит: "+r.error);
   modal(`<h2 style="margin-top:0;color:var(--bad,#c0392b)">Оплата записана, но чек не пробит</h2><div class="card neg">${esc(r.error)}</div><div class="muted sm">Деньги учтены в программе. Устраните причину (бумага, смена, связь) и нажмите «Пробить чек». Пока чек не пробит, визит помечен в журнале.</div><div class="row gap" style="margin-top:8px"><button class="btn alt" data-act="close">Закрыть</button><button class="btn" data-act="refiscal" data-id="${b.id}">Пробить чек</button></div>`);render()}
 const fiscalWarn=b=>`<div class="card neg"><b>⚠ Чек не пробит</b><div class="sm">${esc(b.paid.fiscalError)}</div><button class="btn s" data-act="refiscal" data-id="${b.id}" style="margin-top:6px">Пробить чек</button></div>`;
@@ -1515,8 +1525,8 @@ A.kshift=async function(el){const open=el.dataset.v==="open";const r=await kassa
   toast(r.ok?(open?"Смена на кассе открыта":"Смена на кассе закрыта"):r.error)};
 function kassaCard(){const k=kcfg(),opt=(o,v)=>Object.entries(o).map(([a,b])=>`<option value="${a}" ${v===a?"selected":""}>${b}</option>`).join("");
   return `<h2>Касса (чеки)</h2><div class="card"><div class="muted sm" style="margin-bottom:6px">«Демо» — чек только показывается на экране. «АТОЛ» — программа отправляет чек на кассу АТОЛ, которая подключена к компьютеру администратора.</div>
-  <label class="l">Режим</label><select onchange="kassaSet('mode',this.value);render()"><option value="demo" ${k.mode==="demo"?"selected":""}>Демо (без кассы)</option><option value="atol" ${k.mode==="atol"?"selected":""}>АТОЛ (боевой)</option></select>
-  ${k.mode==="atol"?`<label class="l">Адрес веб-сервера кассы</label><input value="${esc(k.url)}" onchange="kassaSet('url',this.value.trim())">
+  <label class="l">Режим</label><select onchange="kassaSet('mode',this.value);render()"><option value="demo" ${k.mode==="demo"?"selected":""}>Демо (без кассы)</option><option value="sim" ${k.mode==="sim"?"selected":""}>АТОЛ — имитация (показать, как это работает)</option><option value="atol" ${k.mode==="atol"?"selected":""}>АТОЛ (боевой)</option></select>
+  ${k.mode==="sim"?`<div class="note" style="margin:8px 0 0"><b>Имитация.</b> Программа ведёт себя так же, как с настоящей кассой АТОЛ: нужно открыть смену, чек получает номер ФД и фискальный признак, возможны ошибки. Но ничего не печатается и никуда не отправляется. Чтобы проверить ошибку, добавьте к услуге доплату со словом БУМАГА или ОШИБКА.</div><div class="row gap" style="margin-top:8px"><button class="btn alt s" data-act="kshift" data-v="open">Открыть смену на кассе</button><button class="btn alt s" data-act="kshift" data-v="close">Закрыть смену на кассе</button></div>`:""}${k.mode==="atol"?`<label class="l">Адрес веб-сервера кассы</label><input value="${esc(k.url)}" onchange="kassaSet('url',this.value.trim())">
   <label class="l">Система налогообложения</label><select onchange="kassaSet('tax',this.value)">${opt(KTAX,k.tax)}</select>
   <label class="l">НДС</label><select onchange="kassaSet('vat',this.value)">${opt(KVAT,k.vat)}</select>
   <label class="l">Кассир (ФИО на чеке)</label><input value="${esc(k.operator)}" placeholder="Как в кассе" onchange="kassaSet('operator',this.value.trim())">
