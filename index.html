@@ -318,7 +318,7 @@ function after(){const j=$(".jwrap");if(j&&S.role!=="client"){const n=(TODAY===S
 function vLogin(role){
   const L={master:["Вход для сотрудников","Каждый мастер видит только свои записи","anna","anna123","Анна · igor / igor123 — Игорь · marina / marina123 — Марина"],admin:["Рабочее место администратора","Журнал всех мастеров, клиенты, касса, склад","admin","admin123",""],owner:["Кабинет владельца","Всё: выручка, зарплаты, склад, доступы","owner","owner123",""]}[role];
   return `<div style="max-width:420px;margin:30px auto"><h1>${L[0]}</h1><div class="muted" style="margin-bottom:10px">${L[1]}</div>
-  <div class="card"><label class="l">Логин</label><input id="lg" name="salon-l" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"><label class="l">Пароль</label><input id="pw" name="salon-p" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore data-form-type="other">
+  <div class="card"><label class="l">Логин</label><input id="lg" name="salon-l" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"><label class="l">Пароль</label><div style="position:relative"><input id="pw" name="salon-p" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore data-form-type="other" style="padding-right:48px"><button type="button" class="eye" data-act="eye" aria-label="Показать пароль" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:20px;padding:6px 8px;cursor:pointer">👁</button></div>
   <div id="lerr" class="neg"></div><button class="btn full" data-act="login">Войти</button></div>
   ${SERVER?"":`<div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div>`}</div>`}
 function vStaff(){
@@ -708,7 +708,7 @@ function vLog(){const roleN={master:"Мастер",admin:"Администрат
   <h2>Входы в программу</h2>${LOGIN.slice(0,50).map(x=>`<div class="card row sm"><span>${x.ok?"✓":"✕"} ${roleN[x.role]||x.role} · ${esc(x.login||"—")}</span><span class="muted">${x.at}</span></div>`).join("")||'<div class="card muted">Входов ещё не было.</div>'}`}
 function vAccess(){const rows=[...MASTERS.map(m=>({n:m.name,r:"Мастер",l:m.login,p:m.pass,id:m.id,a:m.active,m:1})),{n:"Администратор",r:"Администратор",l:USERS.admin.login,p:USERS.admin.pass,k:"admin"},{n:"Владелец",r:"Владелец",l:USERS.owner.login,p:USERS.owner.pass,k:"owner"}];
   return `<div class="note" style="margin-top:0">Каждый сотрудник входит под своим логином и видит только своё: мастер — свои записи, администратор — всех мастеров и клиентов, владелец — всё.</div>
-  <div class="tw"><table class="t"><thead><tr><th>Сотрудник</th><th>Роль</th><th>Логин</th><th>Пароль</th><th>Доступ</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.r}</td><td>${esc(x.l)}</td><td>••••••</td><td>${x.m?(x.a?`<span class="tag ok">включён</span>`:`<span class="tag bad">закрыт</span>`):`<span class="tag ok">включён</span>`}</td><td><button class="btn alt s" data-act="reset" data-id="${x.id||""}" data-k="${x.k||""}">Новый пароль</button> ${x.m?`<button class="btn alt s" data-act="toggle" data-id="${x.id}">${x.a?"Отключить":"Включить"}</button> <button class="btn alt s" data-act="delstaff" data-id="${x.id}">Удалить</button>`:""}</td></tr>`).join("")}</tbody></table></div>
+  <div class="tw"><table class="t"><thead><tr><th>Сотрудник</th><th>Роль</th><th>Логин</th><th>Пароль</th><th>Доступ</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.n)}</td><td>${x.r}</td><td>${esc(x.l)}</td><td>${x.p?`<span class="pwv" data-p="${esc(x.p)}">••••••</span> <button type="button" class="btn alt s" data-act="pweye" aria-label="Показать пароль">👁</button>`:`<span class="muted" title="На сервере пароли хранятся в зашифрованном виде и не показываются. Чтобы выдать новый, нажмите «Новый пароль».">••••••</span>`}</td><td>${x.m?(x.a?`<span class="tag ok">включён</span>`:`<span class="tag bad">закрыт</span>`):`<span class="tag ok">включён</span>`}</td><td><button class="btn alt s" data-act="reset" data-id="${x.id||""}" data-k="${x.k||""}">Новый пароль</button> ${x.m?`<button class="btn alt s" data-act="toggle" data-id="${x.id}">${x.a?"Отключить":"Включить"}</button> <button class="btn alt s" data-act="delstaff" data-id="${x.id}">Удалить</button>`:""}</td></tr>`).join("")}</tbody></table></div>
   <button class="btn" data-act="addstaff">＋ Добавить сотрудника</button>`}
 /* ===== настройки владельца ===== */
 function secCard(){return `<h2>Данные и безопасность</h2><div class="card"><div class="muted sm" style="margin-bottom:8px">В программе хранятся персональные данные клиентов (имя, телефон, дата рождения, история визитов). По 152-ФЗ у клиента есть право получить свои данные и потребовать их удаления.</div>
@@ -1174,6 +1174,8 @@ function packXlsx(sheets){
 Object.assign(A,{
   rapply(){const g=i=>document.getElementById(i).value;S.rf={vf:g("rvf")||addDays(TODAY,-30),vt:g("rvt")||addDays(TODAY,30),cf:g("rcf"),ct:g("rct"),m:g("rm"),st:g("rst"),src:g("rsrc"),pay:g("rpay"),q:g("rq")};render()},
   rreset(){S.rf=null;render()},
+  eye(el){const i=document.getElementById("pw");if(!i)return;const show=i.type==="password";i.type=show?"text":"password";el.textContent=show?"🙈":"👁";el.setAttribute("aria-label",show?"Скрыть пароль":"Показать пароль");i.focus()},
+  pweye(el){const sp=el.parentNode.querySelector(".pwv");if(!sp)return;const shown=sp.dataset.on==="1";sp.textContent=shown?"••••••":sp.dataset.p;sp.dataset.on=shown?"0":"1";el.textContent=shown?"👁":"🙈"},
   dayrev(el){const d=el.dataset.d;const m=document.querySelectorAll("[data-act=dayrev]");m.forEach(x=>x.style.outline="");el.style.outline="2px solid var(--ink)";toast(dShort(d)+": "+rub(((S.lastRev||{})[d])||0))},
   rxlsx(){A.rapply();const l=recFilter(),f=S.rf,T=t=>({v:t,s:XS.title}),H=a=>a.map(x=>({v:x,s:XS.hdr}));
     const rows=[[T("Записи · "+CFG.name)],[{v:"Визиты: "+ymd2ru(f.vf)+" — "+ymd2ru(f.vt)+" · найдено "+l.length,s:XS.note}],[],H(["Визит","Время","Клиент","Телефон","Услуги","Мастер","Статус","Источник","Создана","Сумма, ₽","Оплачено, ₽"])];
@@ -1455,7 +1457,7 @@ Object.assign(A,{
     const ok=await loadState();if(!ok){$("#lerr").textContent="Не удалось загрузить данные";return}render()},
   async logout(){if(!SERVER){delete S.sess[S.role];render();return}
     await api("POST","/api/logout");S.sess={};S.open=0;location.hash="";S.role="client";await loadPublic();render()},
-  reset(el,e){if(SERVER)return;return A._reset0(el,e)}});
+  reset(el,e){if(SERVER&&!(el.dataset.k||el.dataset.id))return;return A._reset0(el,e)}});
 {const _wn=A.wnext;A.wnext=async function(){if(!SERVER||S.role!=="client")return _wn.apply(this,arguments);
   const w=W();if(w.step<5){w.step++;render();return}
   const sv=svById(w.service),slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);
