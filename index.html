@@ -1447,8 +1447,10 @@ Object.assign(A,{
   const w=W();if(w.step<5){w.step++;render();return}
   const sv=svById(w.service),slot=freeTimes(w.date,w.master,sv.dur).find(x=>x.t===w.time);
   if(!slot){w.step=3;render();modal(`<h2 style="margin-top:0">Это время только что заняли</h2><div class="muted">Выберите другое.</div><button class="btn full" data-act="close" style="margin-top:8px">Понятно</button>`);return}
+  if(w.busy)return;w.busy=1;{const bt=document.querySelector(".sticky .btn");if(bt){bt.disabled=true;bt.textContent="Записываем…"}}
   const mid=w.master||slot.free[0];
   const r=await api("POST","/api/public/book",{name:w.name,phone:w.phone,master:mid,service:sv.id,date:w.date,start:w.time,note:w.note||""});
+  w.busy=0;
   if(!r.ok){toast(r.data.error||"Не удалось записаться");await loadPublic();w.step=3;render();return}
   const c={id:-1,name:w.name,phone:"7"+digits(w.phone).slice(-10),note:"",bonus:0,chan:w.chan||"whatsapp"};CLIENTS=[c];
   const b={id:r.data.id,date:w.date,master:mid,start:w.time,dur:sv.dur,service:sv.id,client:-1,status:"new",price:r.data.price,extras:[],note:w.note||"",source:"app",created:TODAY};B.push(b);
