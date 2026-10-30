@@ -306,6 +306,7 @@ const kv=(a,b)=>`<div class="row kvr"><span class="muted">${a}</span><i class="l
 function render(){
   document.querySelectorAll("#demo [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.role));
   let h;
+  if((S.role==="owner"||S.role==="admin")&&S.sess[S.role])MASTERS.forEach(m=>{if(!m.sched)m.sched={days:[1,1,1,1,1,1,1],from:"09:00",to:"21:00"}});
   if(S.role==="client")h=vClient();else if(!S.sess[S.role])h=vLogin(S.role);else h=vStaff();
   const y=window.scrollY,tb=document.querySelector(".tabs"),ts=tb?tb.scrollLeft:0,same=S._last===S.role+"|"+S.tab[S.role];
   $("#app").innerHTML=h;S._last=S.role+"|"+S.tab[S.role];after();
@@ -676,9 +677,9 @@ function vAnalytics(){const {from,to}=period(S.period),inR=d=>d>=from&&d<=to,end
 /* реестр записей */
 const crOf=b=>b.created||b.date;
 const SRCN={app:"Онлайн",phone:"Телефон",walkin:"Без записи"};
-function recFilter(){const f=S.rf||(S.rf={vf:addDays(TODAY,-30),vt:addDays(TODAY,30),cf:"",ct:"",m:"0",st:"",src:"",pay:"",q:""});
+function recFilter(){const f=S.rf||(S.rf={vf:addDays(TODAY,-30),vt:addDays(TODAY,30),cf:"",ct:"",m:"0",st:"active",src:"",pay:"",q:""});
   const q=f.q.trim().toLowerCase(),pd=digits(f.q);
-  return B.filter(b=>b.date>=f.vf&&b.date<=f.vt&&(!f.cf||crOf(b)>=f.cf)&&(!f.ct||crOf(b)<=f.ct)&&(f.m==="0"||b.master===+f.m)&&(!f.st||b.status===f.st)&&(!f.src||b.source===f.src)
+  return B.filter(b=>b.date>=f.vf&&b.date<=f.vt&&(!f.cf||crOf(b)>=f.cf)&&(!f.ct||crOf(b)<=f.ct)&&(f.m==="0"||b.master===+f.m)&&(f.st==="active"?b.status!=="cancelled":(!f.st||b.status===f.st))&&(!f.src||b.source===f.src)
    &&(!f.pay||(f.pay==="paid"?!!b.paid:!b.paid))&&(!q||(()=>{const c=cById(b.client);return (c.name+" "+svName(b)).toLowerCase().includes(q)||(pd.length>=3&&digits(c.phone).includes(pd))})()))
    .sort((a,b)=>a.date+a.start<b.date+b.start?1:-1)}
 function vRecs(){const f=S.rf||(recFilter(),S.rf),l=recFilter(),sum=l.filter(b=>b.status!=="cancelled").reduce((a,b)=>a+total(b),0);
@@ -688,7 +689,7 @@ function vRecs(){const f=S.rf||(recFilter(),S.rf),l=recFilter(),sum=l.filter(b=>
    <div><label class="l">Визит с</label><input id="rvf" type="date" value="${f.vf}"></div><div><label class="l">Визит по</label><input id="rvt" type="date" value="${f.vt}"></div>
    <div><label class="l">Создана с</label><input id="rcf" type="date" value="${f.cf}"></div><div><label class="l">Создана по</label><input id="rct" type="date" value="${f.ct}"></div>
    <div><label class="l">Мастер</label>${sel("rm",[["0","Все"],...MASTERS.map(m=>[m.id,m.name])],f.m)}</div>
-   <div><label class="l">Статус</label>${sel("rst",[["","Все"],...Object.entries(ST)],f.st)}</div>
+   <div><label class="l">Статус</label>${sel("rst",[["active","Без отменённых"],["","Все, включая отменённые"],...Object.entries(ST)],f.st)}</div>
    <div><label class="l">Источник</label>${sel("rsrc",[["","Все"],...Object.entries(SRCN)],f.src)}</div>
    <div><label class="l">Оплата</label>${sel("rpay",[["","Все"],["paid","Оплачены"],["unpaid","Не оплачены"]],f.pay)}</div>
    <div><label class="l">Клиент / телефон / услуга</label><input id="rq" value="${esc(f.q)}" placeholder="Поиск"></div></div>
