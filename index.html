@@ -312,7 +312,7 @@ function after(){const j=$(".jwrap");if(j&&S.role!=="client"){const n=(TODAY===S
 function vLogin(role){
   const L={master:["Вход для сотрудников","Каждый мастер видит только свои записи","anna","anna123","Анна · igor / igor123 — Игорь · marina / marina123 — Марина"],admin:["Рабочее место администратора","Журнал всех мастеров, клиенты, касса, склад","admin","admin123",""],owner:["Кабинет владельца","Всё: выручка, зарплаты, склад, доступы","owner","owner123",""]}[role];
   return `<div style="max-width:420px;margin:30px auto"><h1>${L[0]}</h1><div class="muted" style="margin-bottom:10px">${L[1]}</div>
-  <div class="card"><label class="l">Логин</label><input id="lg" autocomplete="username"><label class="l">Пароль</label><input id="pw" type="password" autocomplete="current-password">
+  <div class="card"><label class="l">Логин</label><input id="lg" name="salon-l" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"><label class="l">Пароль</label><input id="pw" name="salon-p" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore data-form-type="other">
   <div id="lerr" class="neg"></div><button class="btn full" data-act="login">Войти</button></div>
   <div class="note">Демо-доступ: <b>${L[2]} / ${L[3]}</b> ${L[4]?"<br><span class='sm'>"+L[4]+"</span>":""}<br><button class="btn alt s" style="margin-top:6px" data-act="fill" data-l="${L[2]}" data-p="${L[3]}">Подставить</button></div></div>`}
 function vStaff(){
@@ -1484,6 +1484,7 @@ function kassaCard(){const k=kcfg(),opt=(o,v)=>Object.entries(o).map(([a,b])=>`<
 
 {const _bm=bookModal;bookModal=function(o){if(!SERVICES.length||!MASTERS.some(m=>m.active)){toast("Сначала добавьте услуги (Настройки) и мастеров (Доступ)");return}return _bm.apply(this,arguments)}}
 
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&(e.target.id==="lg"||e.target.id==="pw")){e.preventDefault();A.login()}});
 bootServer();
 
 splash();
