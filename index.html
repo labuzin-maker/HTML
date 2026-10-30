@@ -149,7 +149,7 @@ const tm=s=>+s.slice(0,2)*60+ +s.slice(3);
 const hm=m=>pad(Math.floor(m/60))+":"+pad(m%60);
 const DOW=["вс","пн","вт","ср","чт","пт","сб"],MONG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],MONN=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const dLong=s=>{const d=new Date(s+"T12:00:00");return DOW[d.getDay()]+", "+d.getDate()+" "+MONG[d.getMonth()]};
-const OPEN=10,CLOSE=20,ROW=44;
+const OPEN=9,CLOSE=20,ROW=44;
 const ST={new:"Ожидает",confirmed:"Подтверждена",done:"Оплачена",noshow:"Не пришёл",cancelled:"Отмена"};
 let seq=1000;const nid=()=>++seq;
 let rs=20261028;const rnd=n=>{rs=(rs*1103515245+12345)&0x7fffffff;return (rs>>8)%n};
@@ -184,7 +184,7 @@ function seed(){
   B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];CASHOPS=[];SHIFTS=[];LOG=[];LOGIN=[];ADJ=[];SCHEMES=[{id:1,name:"Стандарт 35%",pct:35,rate:0},{id:2,name:"Мастер 40%",pct:40,rate:0},{id:3,name:"Топ-мастер 50%",pct:50,rate:0}];GOODS=[{id:1,name:"Шампунь профессиональный 250 мл",sku:"4600101",price:1200,cost:700,qty:8,min:3},{id:2,name:"Маска для волос 200 мл",sku:"4600102",price:1500,cost:850,qty:5,min:2},{id:3,name:"Воск для укладки",sku:"4600103",price:900,cost:480,qty:6,min:2},{id:4,name:"Масло для кончиков",sku:"4600104",price:1100,cost:600,qty:2,min:3},{id:5,name:"Лак для волос сильной фиксации",sku:"4600105",price:800,cost:420,qty:10,min:3}];
   SUPPL=[{id:1,name:"ООО «Профбьюти»",phone:"+7 423 200-00-01",note:"краска, окислители, шампуни"},{id:2,name:"ИП Сидоров (уходовая косметика)",phone:"+7 914 000-00-02",note:"маски, масла"}];
   PROMOS=[{id:1,name:"Скидка на мужскую стрижку по будням",pct:10,from:TODAY,to:addDays(TODAY,30),svc:0,on:1}];SALES=[];CERTS=[];
-  MASTERS.forEach(m=>m.sched={days:[1,1,1,1,1,1,m.id===3?0:1],from:"10:00",to:"20:00"});
+  MASTERS.forEach(m=>m.sched={days:[1,1,1,1,1,1,m.id===3?0:1],from:"09:00",to:"20:00"});
   MASTERS.forEach(m=>m.scheme=m.percent>=50?3:m.percent>=40?2:1);
   const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
     const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
@@ -328,7 +328,7 @@ function blk(b){const top=(tm(b.start)-OPEN*60)/30*ROW,h=Math.max(b.dur/30*ROW-2
   return `<div class="bk ${b.status}${b.arrived&&["new","confirmed"].includes(b.status)?" arr":""}" data-act="bk" data-id="${b.id}" style="top:${top}px;height:${h}px"><b>${b.arrived&&["new","confirmed"].includes(b.status)?"✔ ":""}${b.rem?"🔔 ":""}${b.start} ${esc(c.name)}</b>${h>40?esc(sv.name):""}${h>62?`<br>${rub(total(b))}${b.paid?" ✓":""}${usageOf(b.id).length?" 🧴":""}`:""}</div>`}
 function vJournal(){
   const ms=MASTERS.filter(m=>m.active),rows=(CLOSE-OPEN)*2,bs=B.filter(b=>b.date===S.date&&b.status!=="cancelled");
-  const times=Array.from({length:CLOSE-OPEN},(_,i)=>`<span style="top:${i*2*ROW}px">${pad(OPEN+i)}:00</span>`).join("");
+  const times=Array.from({length:CLOSE-OPEN},(_,i)=>`<span style="top:${i*2*ROW}px${i===0?";transform:translateY(3px)":""}">${pad(OPEN+i)}:00</span>`).join("");
   const nowTop=(NOWMIN-OPEN*60)/30*ROW,showNow=S.date===TODAY&&NOWMIN>=OPEN*60&&NOWMIN<=CLOSE*60;
   return `${todayCard()}${dateBar(`<div class="row gap"><button class="btn alt" data-act="walkin" title="Клиент пришёл без записи">⚡</button><button class="btn alt" data-act="blknew" title="Закрыть время">🔒</button><button class="btn alt" data-act="wait">⏳ ${WAIT.length}</button><button class="btn" data-act="new">＋ Запись</button></div>`)}
   <div class="legend"><span><i style="background:#f3cf75"></i>ожидает</span><span><i style="background:#8fb5e8"></i>подтверждена</span><span><i style="background:#7fd0a6"></i>оплачена</span><span><i style="background:#ee9a90"></i>не пришёл</span><span><i style="background:#8884"></i>занято (обед, выходной)</span><span>🔔 напомнили</span><span>🧴 списаны расходники</span><span>нажмите на пустое место — новая запись</span><span>⇅ перетащите запись, чтобы перенести (на телефоне — подержите палец)</span><span><i style="background:#fff;box-shadow:0 0 0 2px var(--ok)"></i>✔ клиент пришёл</span></div>
