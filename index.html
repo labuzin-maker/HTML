@@ -16,7 +16,7 @@ button{font:inherit;cursor:pointer}
 h1{font-size:21px;margin:6px 0}h2{font-size:17px;margin:16px 0 8px}h3{font-size:15px;margin:10px 0 4px}
 .muted{color:var(--muted);font-size:14px}.sm{font-size:13px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.kvr{align-items:baseline;gap:6px}.kvr .ld{flex:1;min-width:14px;border-bottom:1px dotted #a99f90;transform:translateY(-3px)}.wrap{flex-wrap:wrap}.gap{gap:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.half{max-width:50%}@media(max-width:760px){.half{max-width:none}}.kvr{align-items:baseline;gap:6px}.kvr .ld{flex:1;min-width:14px;border-bottom:1px dotted #a99f90;transform:translateY(-3px)}.wrap{flex-wrap:wrap}.gap{gap:8px}
 .btn{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;font-weight:700;font-size:15px}
 .btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn.ok{background:var(--ok)}.btn.blue{background:var(--blue)}.btn.s{padding:6px 10px;font-size:13px}.btn.full{width:100%}
 .btn[disabled]{opacity:.4}
@@ -968,10 +968,10 @@ function vCashCal(){
   <label class="l">Перейти к месяцу</label><input type="month" lang="ru" data-in="cym" value="${ym}" style="margin-bottom:10px">
   <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${cells}</div><div class="muted sm" style="margin-top:6px">Цифра под числом — выручка за день. Чем зеленее, тем больше. Нажмите на день, чтобы увидеть оплаты.</div></div>
   <h2>За месяц</h2><div class="grid"><div class="card"><div class="muted">Выручка</div><div class="k">${rub(tot)}</div></div><div class="card"><div class="muted">Визитов оплачено</div><div class="k">${visits}</div></div><div class="card"><div class="muted">Средний чек</div><div class="k">${rub(visits?(tot-tips)/visits:0)}</div></div><div class="card"><div class="muted">Лучший день</div><div class="k" style="font-size:18px">${best?best.slice(8)+" · "+rub(byDay[best]):"—"}</div></div></div>
-  <div class="card sm">${["cash","card","sbp","acct"].map(k=>kv(MLAB[k],rub(byM[k]||0))).join("")}${kv("в т.ч. чаевые",rub(tips))}</div>
+  <div class="card sm half">${["cash","card","sbp","acct"].map(k=>kv(MLAB[k],rub(byM[k]||0))).join("")}${kv("в т.ч. чаевые",rub(tips))}</div>
   <h2>${dLong(S.cday)}${S.cday===TODAY?" · сегодня":""}</h2>
   <div class="grid"><div class="card"><div class="muted">Принято за день</div><div class="k">${rub(dp.reduce((a,x)=>a+x.amount,0))}</div></div>${["cash","card","sbp"].map(k=>`<div class="card"><div class="muted">${MLAB[k]}</div><div class="k">${rub(dby[k]||0)}</div></div>`).join("")}</div>
-  ${Object.keys(dm).length?`<div class="card sm">${Object.entries(dm).map(([id,v])=>kv(+id?"Мастер "+esc(mById(+id).name):"Магазин, сертификаты",rub(v))).join("")}</div>`:""}
+  ${Object.keys(dm).length?`<div class="card sm half">${Object.entries(dm).map(([id,v])=>kv(+id?"Мастер "+esc(mById(+id).name):"Магазин, сертификаты",rub(v))).join("")}</div>`:""}
   ${dp.map(x=>{const b=B.find(z=>z.id===x.booking);return `<div class="card row"><div><b>${b?esc(cById(b.client).name):"—"}</b><div class="muted">${b?esc(svName(b)):""} · ${esc((mById(x.master)||{name:"Магазин"}).name)} · ${MLAB[x.method]}${x.kind==="tip"?" · чаевые":""}</div></div><b style="white-space:nowrap">${rub(x.amount)}</b></div>`}).join("")||"<div class='card muted'>Оплат за этот день нет</div>"}`}
 Object.assign(A,{
   cmon(el){const [y,m]=(S.cym||TODAY.slice(0,7)).split("-").map(Number),d=new Date(y,m-1+ +el.dataset.n,1);S.cym=d.getFullYear()+"-"+pad(d.getMonth()+1);render()},
