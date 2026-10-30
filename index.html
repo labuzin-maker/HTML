@@ -1071,7 +1071,7 @@ function finReport(from,to){const inR=d=>d>=from&&d<=to,r=calc({from,to,label:ym
   const pay=r.pay,svcP=pay.filter(x=>x.kind==="service"||x.kind==="goods"),tipP=pay.filter(x=>x.kind==="tip"),sum=a=>a.reduce((s,x)=>s+x.amount,0);
   const days=[];for(let d=from,n=0;d<=to&&n<400;d=addDays(d,1),n++){const dp=pay.filter(x=>x.date===d),sv=dp.filter(x=>x.kind==="service"||x.kind==="goods"),by=m=>dp.filter(x=>x.method===m).reduce((s,x)=>s+x.amount,0),dt=new Date(d+"T12:00:00");
     days.push({d,dow:DOW[dt.getDay()],visits:new Set(sv.filter(x=>x.booking).map(x=>x.booking)).size,svc:sum(sv),tips:sum(dp.filter(x=>x.kind==="tip")),cash:by("cash"),card:by("card"),sbp:by("sbp")})}
-  const ex={};EXP.filter(e=>inR(e.date)&&e.cat!=="salary").forEach(e=>{const k=EXPL[e.cat]||e.note||"Прочее";ex[k]=(ex[k]||0)+e.amount});
+  const ex={};EXP.filter(e=>inR(e.date)&&e.cat!=="salary").forEach(e=>{const k=EXPL[e.cat]||e.art||e.note||"Прочее";ex[k]=(ex[k]||0)+e.amount});
   const svc=sum(svcP),tips=sum(tipP),exps=Object.entries(ex),expT=exps.reduce((a,x)=>a+x[1],0),rev=svc+tips,matsR=Math.round(r.mats),profit=rev-matsR-expT-r.accrued;
   const services=Object.entries(r.bySvc).sort((a,b)=>b[1].s-a[1].s).map(([n,v])=>({n,cnt:v.n,s:v.s}));
   return{from,to,r,days,svc,tips,rev,mats:Math.round(r.mats),exps,expT,accrued:r.accrued,profit,visits:r.visits,masters:r.pm.map(x=>({...x,pct:x.pct+x.extra})),services,bought:r.bought}}
@@ -1182,7 +1182,8 @@ document.addEventListener("change",e=>{const k=e.target.dataset&&e.target.datase
 
 /* ===== кассы: наличные, карта/QR, сейф; закрытие смены ===== */
 const BOX={cash:"💵 Основная",card:"💳 Безнал",acct:"🏦 Расчётный счёт",safe:"🔐 Сейф"},BOXK=Object.keys(BOX);
-const ARTS=[["rent","Аренда"],["ads","Реклама"],["utilities","Коммунальные"],["goods","Закупка материалов"],["other","Хозяйственные расходы"]];
+const ARTS0=[["rent","Аренда"],["ads","Реклама"],["utilities","Коммунальные"],["goods","Закупка материалов"],["other","Хозяйственные расходы"]];
+const artsAll=()=>[...ARTS0,...((CFG.arts||[]).map(a=>[a.id,a.name]))];
 const payBox=m=>m==="cash"?"cash":(m==="card"||m==="sbp")?"card":m==="acct"?"acct":"";
 function boxBal(box,upTo=TODAY){let v=CFG.open[box]||0;
   PAY.forEach(x=>{if(x.date>=CFG.since&&x.date<=upTo&&payBox(x.method)===box)v+=x.amount});
@@ -1197,15 +1198,19 @@ function cashPanel(){const adm=S.role==="admin",sh=SHIFTS.find(x=>x.date===S.dat
 function copModal(k){const bx=(id,d)=>`<select id="${id}">${BOXK.map(x=>`<option value="${x}" ${x===d?"selected":""}>${BOX[x]}</option>`).join("")}</select>`;
   const m=modal(`<h2 style="margin-top:0">${{in:"Внесение в кассу",out:"Расход",move:"Перемещение между кассами"}[k]}</h2>
   ${k==="move"?`<label class="l">Откуда</label>${bx("cf","cash")}<label class="l">Куда</label>${bx("ct","safe")}`:`<label class="l">${k==="in"?"В какую кассу":"Из какой кассы"}</label>${bx("cb","cash")}`}
-  ${k==="out"?`<label class="l">Статья расхода</label><select id="ca">${ARTS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join("")}</select>`:""}
+  ${k==="out"?`<label class="l">Статья расхода</label><select id="ca">${artsAll().map(a=>`<option value="${a[0]}">${esc(a[1])}</option>`).join("")}<option value="__new">➕ Новая статья…</option></select><input id="can" placeholder="Название статьи, например: Интернет" style="display:none">`:""}
   <label class="l">Сумма, ₽</label><input id="cs" type="number"><label class="l">Комментарий</label><input id="cn"><div id="cer" class="neg"></div>
   <div class="row"><button class="btn alt" data-act="close">Отмена</button><button class="btn ok" id="cok">Провести</button></div>`);
+  {const ca=m.querySelector("#ca");if(ca)ca.onchange=()=>{const i=m.querySelector("#can");i.style.display=ca.value==="__new"?"":"none";if(ca.value==="__new")i.focus()}}
   m.querySelector("#cok").onclick=()=>{const a=Math.round(+m.querySelector("#cs").value),note=m.querySelector("#cn").value.trim(),er=t=>m.querySelector("#cer").textContent=t;if(!(a>0))return er("Введите сумму");
     const o={id:nid(),date:S.date>TODAY?TODAY:S.date,type:k,amount:a,note,who:actor()};
     if(k==="move"){o.from=m.querySelector("#cf").value;o.to=m.querySelector("#ct").value;if(o.from===o.to)return er("Выберите разные кассы")}
-    else if(k==="in")o.to=m.querySelector("#cb").value;else{o.from=m.querySelector("#cb").value;const ar=ARTS.find(x=>x[0]===m.querySelector("#ca").value);o.art=ar[1];o.cat=ar[0]}
+    else if(k==="in")o.to=m.querySelector("#cb").value;else{o.from=m.querySelector("#cb").value;let cv=m.querySelector("#ca").value;
+      if(cv==="__new"){const nn=m.querySelector("#can").value.trim().slice(0,40);if(!nn)return er("Введите название новой статьи");
+        const ex=artsAll().find(x=>x[1].toLowerCase()===nn.toLowerCase());if(ex)cv=ex[0];else{CFG.arts=CFG.arts||[];const id="c"+nid();CFG.arts.push({id,name:nn});cv=id}}
+      const ar=artsAll().find(x=>x[0]===cv);o.art=ar[1];o.cat=ar[0]}
     if(o.from&&boxBal(o.from)<a)return er("В кассе «"+BOX[o.from].slice(3)+"» только "+rub(boxBal(o.from)));
-    CASHOPS.push(o);if(k==="out"&&o.cat!=="goods")EXP.push({id:nid(),date:o.date,amount:a,cat:o.cat,note:note||o.art,master:0,op:o.id});
+    CASHOPS.push(o);if(k==="out"&&o.cat!=="goods")EXP.push({id:nid(),date:o.date,amount:a,cat:o.cat,art:o.art,note:note||o.art,master:0,op:o.id});
     m.remove();render();toast("✓ Операция проведена")}}
 function shiftModal(){const d=S.date>TODAY?TODAY:S.date;if(SHIFTS.find(x=>x.date===d)){toast("Смена за этот день уже закрыта");return}
   const exp=boxBal("cash",d);
