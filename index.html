@@ -1459,7 +1459,7 @@ Object.assign(A,{
 /* ===== импорт прайс-листа из Excel / CSV ===== */
 function svGuess(h){const t=String(h||"").toLowerCase();if(/раздел|катег|групп/.test(t))return"cat";if(/назван|услуг|наимен/.test(t))return"name";if(/цен|стоим|руб/.test(t))return"price";if(/длит|врем|мин/.test(t))return"dur";if(/показ|онлайн|скры/.test(t))return"show";return"skip"}
 function svPlan(rows,hdr){const map=hdr?rows[0].map(svGuess):["cat","name","price","dur","show"],body=hdr?rows.slice(1):rows,add=[],upd=[],bad=[];
-  body.forEach((r,n)=>{const g=k=>{const i=map.indexOf(k);return i<0?"":String(r[i]==null?"":r[i]).trim()};const name=g("name"),cat=g("cat")||"Прочее",price=Math.round(parseFloat(g("price").replace(/\s/g,"").replace(",","."))),dr=parseInt(g("dur"))||60,dur=Math.max(15,Math.min(480,Math.round(dr/15)*15)),sh=g("show").toLowerCase(),off=/^(нет|no|0|скры|н)/.test(sh)?1:0;
+  body.forEach((r,n)=>{const g=k=>{const i=map.indexOf(k);return i<0?"":String(r[i]==null?"":r[i]).trim()};const name=g("name"),cat=g("cat")||"Прочее",price=Math.round(parseFloat(g("price").replace(/\s/g,"").replace(",","."))),dr=parseInt(g("dur"))||60,dur=Math.max(30,Math.min(240,Math.ceil(dr/30)*30)),sh=g("show").toLowerCase(),off=/^(нет|no|0|скры|н)/.test(sh)?1:0;
     if(!name||!(price>0)){bad.push((hdr?n+2:n+1)+": "+(name||"без названия")+" — нет цены");return}
     const ex=SERVICES.find(x=>x.name.toLowerCase()===name.toLowerCase()&&x.cat.toLowerCase()===cat.toLowerCase());
     if(ex)upd.push({ex,price,dur,off,cat,name});else if(!add.some(x=>x.name.toLowerCase()===name.toLowerCase()&&x.cat.toLowerCase()===cat.toLowerCase()))add.push({cat,name,price,dur,off})});
