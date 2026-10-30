@@ -149,7 +149,7 @@ const tm=s=>+s.slice(0,2)*60+ +s.slice(3);
 const hm=m=>pad(Math.floor(m/60))+":"+pad(m%60);
 const DOW=["вс","пн","вт","ср","чт","пт","сб"],MONG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],MONN=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const dLong=s=>{const d=new Date(s+"T12:00:00");return DOW[d.getDay()]+", "+d.getDate()+" "+MONG[d.getMonth()]};
-const OPEN=9,CLOSE=20,ROW=44;
+const OPEN=9,CLOSE=21,ROW=44;
 const calOth=d=>`<div style="text-align:center;padding:7px 0;border-radius:10px;border:1px dashed var(--line);color:var(--muted);opacity:.55;min-width:0">${d}<div style="font-size:10px;line-height:1.1;min-height:11px"></div></div>`;
 function calLead(Y,M,first){const pm=new Date(Y,M-1,0).getDate();return Array.from({length:first},(_,i)=>calOth(pm-first+1+i)).join("")}
 function calTrail(Y,M,first,n){const t=(7-(first+n)%7)%7;return Array.from({length:t},(_,i)=>calOth(i+1)).join("")}
@@ -188,7 +188,7 @@ function seed(){
   B=[];PAY=[];EXP=[];MOV=[];BLOCKS=[];WAIT=[];NOTIF=[];CASHOPS=[];SHIFTS=[];LOG=[];LOGIN=[];ADJ=[];SCHEMES=[{id:1,name:"Стандарт 35%",pct:35,rate:0},{id:2,name:"Мастер 40%",pct:40,rate:0},{id:3,name:"Топ-мастер 50%",pct:50,rate:0}];GOODS=[{id:1,name:"Шампунь профессиональный 250 мл",sku:"4600101",price:1200,cost:700,qty:8,min:3},{id:2,name:"Маска для волос 200 мл",sku:"4600102",price:1500,cost:850,qty:5,min:2},{id:3,name:"Воск для укладки",sku:"4600103",price:900,cost:480,qty:6,min:2},{id:4,name:"Масло для кончиков",sku:"4600104",price:1100,cost:600,qty:2,min:3},{id:5,name:"Лак для волос сильной фиксации",sku:"4600105",price:800,cost:420,qty:10,min:3}];
   SUPPL=[{id:1,name:"ООО «Профбьюти»",phone:"+7 423 200-00-01",note:"краска, окислители, шампуни"},{id:2,name:"ИП Сидоров (уходовая косметика)",phone:"+7 914 000-00-02",note:"маски, масла"}];
   PROMOS=[{id:1,name:"Скидка на мужскую стрижку по будням",pct:10,from:TODAY,to:addDays(TODAY,30),svc:0,on:1}];SALES=[];CERTS=[];
-  MASTERS.forEach(m=>m.sched={days:[1,1,1,1,1,1,m.id===3?0:1],from:"09:00",to:"20:00"});
+  MASTERS.forEach(m=>m.sched={days:[1,1,1,1,1,1,m.id===3?0:1],from:"09:00",to:"21:00"});
   MASTERS.forEach(m=>m.scheme=m.percent>=50?3:m.percent>=40?2:1);
   const addB=(date,master,start,sid,status,cid,extra={})=>{const sv=SERVICES.find(s=>s.id===sid);
     const b={id:nid(),date,master,start,dur:sv.dur,service:sid,client:cid,status,price:sv.price,extras:[],note:"",source:["app","phone","walkin","phone"][rnd(4)],...extra};B.push(b);return b};
