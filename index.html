@@ -1432,18 +1432,19 @@ async function pull(){if(!SERVER||!S.sess[S.role]||SVC.busy)return;const r=await
   if(COLN.some(n=>JSON.stringify(COL[n].get())!==SVC.snap[n]))return;
   const a=document.activeElement;if(document.querySelector(".ov")||(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))return;
   if(await loadState())render()}
-function barState(){const bar=$("#demo");if(!bar)return;const has=!!S.sess[S.role];const show=!has&&location.hash==="#staff";bar.style.display=show?"":"none";
+const isStaffUrl=()=>location.hash==="#staff"||location.pathname.replace(/\/+$/,"")==="/staff";
+function barState(){const bar=$("#demo");if(!bar)return;const has=!!S.sess[S.role];const show=!has&&isStaffUrl();bar.style.display=show?"":"none";
   if(!bar._srv){bar._srv=1;bar.querySelector("b").textContent="ВХОД ДЛЯ СОТРУДНИКОВ:";bar.querySelectorAll('[data-v="client"],[data-act="reset"]').forEach(x=>x.remove())}}
 async function bootServer(){
   $("#app").style.visibility="hidden";let ok=false;
   if(/^https?:$/.test(location.protocol)&&!/github\.io$/.test(location.hostname)){try{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),2500);const r=await fetch("/api/health",{cache:"no-store",signal:ac.signal});clearTimeout(t);ok=r.ok&&(await r.json()).ok===true}catch(e){}}
   if(!ok){render();$("#app").style.visibility="";return}
   SERVER=true;emptyState();
-  const _r=render;render=function(){_r();barState();if(S.role==="client"&&!$("#stafflink")){const d=document.createElement("div");d.id="stafflink";d.style.cssText="text-align:center;margin:18px 0 6px;font-size:12px";d.innerHTML='<a href="#staff" style="color:var(--mut,#888)">Вход для сотрудников</a>';$("#app").appendChild(d)}};
+  const _r=render;render=function(){_r();barState()};
   const me=await api("GET","/api/me");
-  if(me.ok){S.role=me.data.role;S.sess={};S.sess[S.role]=S.role==="master"?me.data.master:1;await loadState()}else{if(location.hash==="#staff")S.role="admin";await loadPublic()}
+  if(me.ok){S.role=me.data.role;S.sess={};S.sess[S.role]=S.role==="master"?me.data.master:1;await loadState()}else{if(isStaffUrl())S.role="admin";await loadPublic()}
   render();$("#app").style.visibility="";
-  window.addEventListener("hashchange",()=>{if(!S.sess[S.role]){if(location.hash==="#staff"&&S.role==="client")S.role="admin";else if(location.hash!=="#staff")S.role="client"}render()});
+  window.addEventListener("hashchange",()=>{if(!S.sess[S.role]){if(isStaffUrl()&&S.role==="client")S.role="admin";else if(!isStaffUrl())S.role="client"}render()});
   setInterval(pushAll,1500);setInterval(pull,5000);
   setInterval(async()=>{if(S.role==="client"&&!S.sess.client&&(S.w.step||1)<=2&&!document.querySelector(".ov")){if(await loadPublic())render()}},60000)}
 Object.assign(A,{
